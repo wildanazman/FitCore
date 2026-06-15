@@ -1,0 +1,136 @@
+// FitCore domain types — single source of truth for app data shapes.
+
+export type Sex = 'male' | 'female'
+export type Goal = 'lose' | 'maintain' | 'gain'
+export type Sport = 'running' | 'strength' | 'badminton' | 'pickleball'
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete'
+
+export interface NotifPrefs {
+  morningBrief: boolean
+  underFuelAlert: boolean
+  preRace: boolean
+}
+
+export interface Wearables {
+  appleHealth: boolean
+  garmin: boolean
+  strava: boolean
+}
+
+export interface UserProfile {
+  name: string
+  sex: Sex
+  age: number
+  heightCm: number
+  startWeightKg: number
+  goal: Goal
+  sports: Sport[]
+  /** ISO yyyy-mm-dd of the goal race, or null if none. */
+  raceDate: string | null
+  /** target half-marathon finish in minutes, or null */
+  targetFinishMin: number | null
+  activity: ActivityLevel
+  /** Daily calorie target. If null, computed from TDEE + goal. */
+  calorieTargetOverride: number | null
+  /** Protein target in g per kg bodyweight. */
+  proteinPerKg: number
+  units: 'metric' | 'imperial'
+  wearables: Wearables
+  notif: NotifPrefs
+  /** Optional Anthropic API key — enables real Claude vision food detection + live coach. */
+  anthropicApiKey: string
+  onboarded: boolean
+}
+
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+
+export interface FoodEntry {
+  id: string
+  name: string
+  emoji: string
+  /** ISO yyyy-mm-dd */
+  date: string
+  /** ISO timestamp of when logged */
+  loggedAt: string
+  slot: MealSlot
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+  servings: number
+  /** 0..1 AI detection confidence; 1 for manual entries */
+  confidence: number
+  /** base64 data URL thumbnail if captured via photo */
+  photo?: string
+}
+
+export interface WeightEntry {
+  id: string
+  /** ISO yyyy-mm-dd */
+  date: string
+  weightKg: number
+  neckCm?: number
+  waistCm?: number
+  hipCm?: number
+}
+
+export interface ProgressPhoto {
+  id: string
+  date: string
+  /** on-device base64 data URL */
+  dataUrl: string
+}
+
+export type SessionType = 'run' | 'strength' | 'sport' | 'rest'
+
+export interface PlanSession {
+  id: string
+  /** ISO yyyy-mm-dd */
+  date: string
+  type: SessionType
+  title: string
+  /** short technical descriptor, e.g. "45 min • Z2 HR" */
+  detail: string
+  durationMin: number
+  /** estimated distance for runs (km) */
+  distanceKm?: number
+  zone?: string
+  /** estimated calorie burn */
+  kcal: number
+  completed: boolean
+  /** identifies which plan generated it */
+  plan: 'half-marathon' | 'strength' | 'sport'
+  icon: string
+}
+
+export interface AppState {
+  profile: UserProfile
+  foods: FoodEntry[]
+  weights: WeightEntry[]
+  photos: ProgressPhoto[]
+  sessions: PlanSession[]
+  /** version for migrations */
+  v: number
+}
+
+export interface MacroTargets {
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+}
+
+export interface DayFuel {
+  date: string
+  baseTarget: number
+  trainingBonus: number
+  budget: number
+  consumed: number
+  remaining: number
+  protein: number
+  carbs: number
+  fat: number
+  proteinTarget: number
+  carbTarget: number
+  fatTarget: number
+}
