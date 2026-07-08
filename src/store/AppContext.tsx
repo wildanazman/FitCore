@@ -17,6 +17,7 @@ type Action =
   | { type: 'addSession'; session: PlanSession }
   | { type: 'removeSession'; id: string }
   | { type: 'toggleSession'; id: string }
+  | { type: 'refresh' }
   | { type: 'reset' }
 
 function currentWeight(state: AppState): number {
@@ -66,6 +67,9 @@ function reducer(state: AppState, action: Action): AppState {
         sessions: state.sessions.map((s) => (s.id === action.id ? { ...s, completed: !s.completed } : s)),
       }
 
+    case 'refresh':
+      return loadState() ?? state
+
     case 'reset':
       return emptyState()
   }
@@ -98,6 +102,7 @@ interface Ctx {
   addSession: (session: PlanSession) => void
   removeSession: (id: string) => void
   toggleSession: (id: string) => void
+  refresh: () => void
   reset: () => void
 }
 
@@ -127,6 +132,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addSession: (session) => dispatch({ type: 'addSession', session }),
       removeSession: (id) => dispatch({ type: 'removeSession', id }),
       toggleSession: (id) => dispatch({ type: 'toggleSession', id }),
+      refresh: () => dispatch({ type: 'refresh' }),
       reset: () => {
         clearState()
         dispatch({ type: 'reset' })
