@@ -16,7 +16,10 @@ export const DEFAULT_PROFILE: UserProfile = {
   goal: 'lose',
   sports: ['running', 'strength', 'badminton'],
   raceDate: null,
-  targetFinishMin: 105,
+  halfMarathonGoal: 'sub230',
+  targetFinishMin: null,
+  bestRunDistanceKm: 5,
+  bestRunPaceSecPerKm: 360,
   activity: 'high',
   calorieTargetOverride: null,
   proteinPerKg: 1.8,
@@ -40,11 +43,38 @@ export function loadState(): AppState | null {
     if (!raw) return null
     const parsed = JSON.parse(raw) as AppState
     if (parsed.v !== STATE_VERSION) return null
+    const hadCapability =
+      typeof parsed.profile.bestRunDistanceKm === 'number' &&
+      typeof parsed.profile.bestRunPaceSecPerKm === 'number'
+    const legacyProfile = parsed.profile as Partial<UserProfile> & { targetFinishMin?: number | null }
+    const migratedGoal = legacyProfile.halfMarathonGoal
+      ? legacyProfile.halfMarathonGoal
+      : legacyProfile.targetFinishMin
+        ? goalFromMinutes(legacyProfile.targetFinishMin)
+        : DEFAULT_PROFILE.halfMarathonGoal
     parsed.profile = { ...DEFAULT_PROFILE, ...parsed.profile }
+    parsed.profile.halfMarathonGoal = migratedGoal
+    parsed.profile.targetFinishMin = null
+    if (!hadCapability) {
+      const manual = parsed.sessions.filter((s) => s.plan === 'manual' || s.manual)
+      const completedKeys = new Set(parsed.sessions.filter((s) => s.completed).map((s) => `${s.date}|${s.plan}|${s.title}`))
+      const fresh = generatePlan(parsed.profile, parsed.profile.startWeightKg).map((s) =>
+        completedKeys.has(`${s.date}|${s.plan}|${s.title}`) ? { ...s, completed: true } : s,
+      )
+      parsed.sessions = [...fresh, ...manual].sort((a, b) => a.date.localeCompare(b.date))
+    }
     return parsed
   } catch {
     return null
   }
+}
+
+function goalFromMinutes(min: number): UserProfile['halfMarathonGoal'] {
+  if (min <= 105) return 'sub145'
+  if (min <= 120) return 'sub200'
+  if (min <= 135) return 'sub215'
+  if (min <= 150) return 'sub230'
+  return 'finish'
 }
 
 export function saveState(state: AppState): void {

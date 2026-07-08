@@ -6,7 +6,8 @@ import { Icon } from '../components/Icon'
 import { baseCalorieTarget, tdee } from '../lib/nutrition'
 import { downloadCSV } from '../lib/csv'
 import { DIET_LIST } from '../lib/diet'
-import type { DietMode, UserProfile } from '../types'
+import { formatPace, HALF_MARATHON_GOALS, halfMarathonGoalLabel, halfMarathonGoalPace } from '../lib/plan'
+import type { DietMode, HalfMarathonGoal, UserProfile } from '../types'
 
 export function Settings() {
   const { state, profile, weightKg, updateProfile, reset } = useApp()
@@ -100,10 +101,19 @@ export function Settings() {
           <Row label="Race date">
             <input type="date" className={inp} value={profile.raceDate ?? ''} onChange={(e) => updateProfile({ raceDate: e.target.value || null }, true)} />
           </Row>
-          <Row label="Target finish (min)">
-            <input type="number" className={inp} value={profile.targetFinishMin ?? ''} onChange={(e) => updateProfile({ targetFinishMin: e.target.value ? +e.target.value : null })} />
+          <Row label="HM goal">
+            <select className={inp} value={profile.halfMarathonGoal} onChange={(e) => updateProfile({ halfMarathonGoal: e.target.value as HalfMarathonGoal }, true)}>
+              {HALF_MARATHON_GOALS.map((goal) => {
+                const pace = halfMarathonGoalPace(goal)
+                return (
+                  <option key={goal} value={goal}>
+                    {halfMarathonGoalLabel(goal)}{pace ? ` - ${formatPace(pace)}` : ''}
+                  </option>
+                )
+              })}
+            </select>
           </Row>
-          <p className="px-md font-data-mono text-[12px] text-on-surface-variant">Changing the race date or activity regenerates your plan (completed sessions are kept).</p>
+          <p className="px-md font-data-mono text-[12px] text-on-surface-variant">Goal pace is shown per km. Changing race goal, date or activity regenerates your plan.</p>
         </Group>
 
         {/* Wearables */}

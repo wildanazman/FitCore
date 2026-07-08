@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
-import type { AppState, FoodEntry, ProgressPhoto, UserProfile, WeightEntry } from '../types'
+import type { AppState, FoodEntry, PlanSession, ProgressPhoto, UserProfile, WeightEntry } from '../types'
 import { clearState, emptyState, loadState, saveState, seedForProfile } from '../lib/storage'
 import { generatePlan } from '../lib/plan'
 import { latestMeasured } from '../lib/body'
@@ -14,6 +14,8 @@ type Action =
   | { type: 'removeWeight'; id: string }
   | { type: 'addPhoto'; photo: ProgressPhoto }
   | { type: 'removePhoto'; id: string }
+  | { type: 'addSession'; session: PlanSession }
+  | { type: 'removeSession'; id: string }
   | { type: 'toggleSession'; id: string }
   | { type: 'reset' }
 
@@ -53,6 +55,11 @@ function reducer(state: AppState, action: Action): AppState {
     case 'removePhoto':
       return { ...state, photos: state.photos.filter((p) => p.id !== action.id) }
 
+    case 'addSession':
+      return { ...state, sessions: [...state.sessions, action.session] }
+    case 'removeSession':
+      return { ...state, sessions: state.sessions.filter((s) => s.id !== action.id) }
+
     case 'toggleSession':
       return {
         ...state,
@@ -67,8 +74,12 @@ function reducer(state: AppState, action: Action): AppState {
 /** Regenerate the plan after a profile change but preserve completed-state on matching dates+plans. */
 function regenerateKeepingProgress(state: AppState, profile: UserProfile): AppState['sessions'] {
   const fresh = generatePlan(profile, currentWeight(state))
+  const manual = state.sessions.filter((s) => s.plan === 'manual' || s.manual)
   const completedKeys = new Set(state.sessions.filter((s) => s.completed).map((s) => `${s.date}|${s.plan}|${s.title}`))
-  return fresh.map((s) => (completedKeys.has(`${s.date}|${s.plan}|${s.title}`) ? { ...s, completed: true } : s))
+  return [
+    ...fresh.map((s) => (completedKeys.has(`${s.date}|${s.plan}|${s.title}`) ? { ...s, completed: true } : s)),
+    ...manual,
+  ].sort((a, b) => a.date.localeCompare(b.date))
 }
 
 interface Ctx {
@@ -84,6 +95,8 @@ interface Ctx {
   removeWeight: (id: string) => void
   addPhoto: (photo: ProgressPhoto) => void
   removePhoto: (id: string) => void
+  addSession: (session: PlanSession) => void
+  removeSession: (id: string) => void
   toggleSession: (id: string) => void
   reset: () => void
 }
@@ -111,6 +124,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       removeWeight: (id) => dispatch({ type: 'removeWeight', id }),
       addPhoto: (photo) => dispatch({ type: 'addPhoto', photo }),
       removePhoto: (id) => dispatch({ type: 'removePhoto', id }),
+      addSession: (session) => dispatch({ type: 'addSession', session }),
+      removeSession: (id) => dispatch({ type: 'removeSession', id }),
       toggleSession: (id) => dispatch({ type: 'toggleSession', id }),
       reset: () => {
         clearState()

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useApp } from '../store/AppContext'
 import { DEFAULT_PROFILE } from '../lib/storage'
-import type { Goal, Sport, UserProfile } from '../types'
+import type { Goal, HalfMarathonGoal, Sport, UserProfile } from '../types'
 import { Icon } from '../components/Icon'
 import { GhostButton, PrimaryButton } from '../components/ui'
 import { baseCalorieTarget, tdee } from '../lib/nutrition'
 import { DIET_LIST } from '../lib/diet'
+import { formatPace, HALF_MARATHON_GOALS, halfMarathonGoalLabel, halfMarathonGoalPace } from '../lib/plan'
 
 const STEPS = ['Profile', 'Goal', 'Sports', 'Race', 'Targets', 'Diet']
 
@@ -131,8 +132,24 @@ export function Onboarding() {
             <Field label="Race date (optional)">
               <input type="date" className={inputCls} value={p.raceDate ?? ''} onChange={(e) => set({ raceDate: e.target.value || null })} />
             </Field>
-            <Field label="Target finish time (minutes)">
-              <input type="number" className={inputCls} value={p.targetFinishMin ?? ''} onChange={(e) => set({ targetFinishMin: e.target.value ? +e.target.value : null })} placeholder="e.g. 105" />
+            <Field label="Half marathon goal">
+              <div className="grid grid-cols-2 gap-sm">
+                {HALF_MARATHON_GOALS.map((goal) => {
+                  const pace = halfMarathonGoalPace(goal)
+                  return (
+                    <button
+                      key={goal}
+                      onClick={() => set({ halfMarathonGoal: goal as HalfMarathonGoal })}
+                      className={`p-sm rounded-xl border text-left transition ${
+                        p.halfMarathonGoal === goal ? 'bg-primary-container/30 border-primary text-on-surface' : 'bg-tile border-tile-border text-on-surface-variant'
+                      }`}
+                    >
+                      <span className="block font-metric-md text-[14px]">{halfMarathonGoalLabel(goal)}</span>
+                      <span className="block font-data-mono text-[11px]">{pace ? formatPace(pace) : 'Build finish confidence'}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </Field>
             <p className="font-data-mono text-data-mono text-on-surface-variant">Leave the date blank to start with a rolling base block instead.</p>
           </Stepper>
