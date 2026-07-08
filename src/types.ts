@@ -5,6 +5,9 @@ export type Goal = 'lose' | 'maintain' | 'gain'
 export type Sport = 'running' | 'strength' | 'badminton' | 'pickleball'
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete'
 
+/** Eating protocol / diet mode layered on top of calorie tracking. */
+export type DietMode = 'standard' | 'omad' | '16:8' | 'keto' | 'egg'
+
 export interface NotifPrefs {
   morningBrief: boolean
   underFuelAlert: boolean
@@ -34,6 +37,12 @@ export interface UserProfile {
   calorieTargetOverride: number | null
   /** Protein target in g per kg bodyweight. */
   proteinPerKg: number
+  /** Active eating protocol. Shapes macro split, fasting window, and warnings. */
+  dietMode: DietMode
+  /** Net-carb ceiling for keto (grams/day). */
+  netCarbCapG: number
+  /** Hour (0-23) the eating window opens for OMAD / 16:8. */
+  eatingWindowStartHour: number
   units: 'metric' | 'imperial'
   wearables: Wearables
   notif: NotifPrefs

@@ -5,7 +5,8 @@ import { SectionLabel } from '../components/ui'
 import { Icon } from '../components/Icon'
 import { baseCalorieTarget, tdee } from '../lib/nutrition'
 import { downloadCSV } from '../lib/csv'
-import type { UserProfile } from '../types'
+import { DIET_LIST } from '../lib/diet'
+import type { DietMode, UserProfile } from '../types'
 
 export function Settings() {
   const { state, profile, weightKg, updateProfile, reset } = useApp()
@@ -71,6 +72,27 @@ export function Settings() {
           <Row label="Protein g/kg">
             <input type="number" step="0.1" className={inp} value={profile.proteinPerKg} onChange={(e) => updateProfile({ proteinPerKg: +e.target.value })} />
           </Row>
+        </Group>
+
+        {/* Diet mode */}
+        <Group label="Diet mode">
+          <Row label="Protocol">
+            <select className={inp} value={profile.dietMode} onChange={(e) => updateProfile({ dietMode: e.target.value as DietMode })}>
+              {DIET_LIST.map((d) => (
+                <option key={d.id} value={d.id}>{d.label}</option>
+              ))}
+            </select>
+          </Row>
+          {profile.dietMode === 'keto' && (
+            <Row label="Net carb cap (g)">
+              <input type="number" className={inp} value={profile.netCarbCapG} onChange={(e) => updateProfile({ netCarbCapG: +e.target.value })} />
+            </Row>
+          )}
+          {(profile.dietMode === 'omad' || profile.dietMode === '16:8') && (
+            <Row label="Window opens (hour)">
+              <input type="number" min={0} max={23} className={inp} value={profile.eatingWindowStartHour} onChange={(e) => updateProfile({ eatingWindowStartHour: Math.max(0, Math.min(23, +e.target.value)) })} />
+            </Row>
+          )}
         </Group>
 
         {/* Race */}
@@ -160,8 +182,8 @@ function Toggle({ label, on, onClick }: { label: string; on: boolean; onClick: (
   return (
     <button onClick={onClick} className="w-full flex items-center justify-between px-md py-3 hover:bg-surface-container-high transition">
       <span className="font-body-md text-body-md text-on-surface">{label}</span>
-      <span className={`w-12 h-7 rounded-full p-1 transition-colors ${on ? 'bg-primary' : 'bg-surface-container-highest'}`}>
-        <span className={`block w-5 h-5 rounded-full bg-on-surface transition-transform ${on ? 'translate-x-5 bg-on-primary' : ''}`} />
+      <span className={`w-12 h-7 rounded-full p-1 transition-colors ${on ? 'bg-lime' : 'bg-surface-container-highest'}`}>
+        <span className={`block w-5 h-5 rounded-full bg-on-surface transition-transform ${on ? 'translate-x-5 bg-on-lime' : ''}`} />
       </span>
     </button>
   )

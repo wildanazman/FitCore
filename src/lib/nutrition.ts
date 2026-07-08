@@ -53,6 +53,14 @@ export function trainingBonus(base: number, daySessions: PlanSession[]): number 
 
 export function macroTargets(p: UserProfile, weightKg: number, budget: number): MacroTargets {
   const protein = Math.round(p.proteinPerKg * weightKg)
+
+  // Low-carb protocols pin carbs and let fat fill the remaining energy.
+  if (p.dietMode === 'keto' || p.dietMode === 'egg') {
+    const carbs = p.dietMode === 'keto' ? p.netCarbCapG : 30
+    const fat = Math.max(0, Math.round((budget - protein * 4 - carbs * 4) / 9))
+    return { kcal: budget, protein, carbs, fat }
+  }
+
   const fatKcal = budget * 0.25
   const fat = Math.round(fatKcal / 9)
   const carbKcal = budget - protein * 4 - fat * 9

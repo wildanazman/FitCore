@@ -52,7 +52,7 @@ export function Body() {
               key={t}
               onClick={() => setTab(t)}
               className={`whitespace-nowrap px-md py-sm rounded-full font-label-caps text-label-caps tracking-wider uppercase transition ${
-                tab === t ? 'bg-primary text-on-primary' : 'bg-transparent border border-outline-variant text-on-surface-variant'
+                tab === t ? 'bg-lime text-on-lime' : 'bg-transparent border border-outline-variant text-on-surface-variant'
               }`}
             >
               {t}
@@ -63,26 +63,24 @@ export function Body() {
         {tab === 'weight' && (
           <>
             <div className="grid grid-cols-2 gap-gutter">
-              <div className="bg-tile border border-tile-border rounded-xl p-md flex flex-col justify-between min-h-[130px] relative overflow-hidden">
-                <SectionLabel>Current Weight</SectionLabel>
+              <div className="bg-lilac text-on-lilac rounded-[24px] p-md flex flex-col justify-between min-h-[130px]">
+                <span className="font-label-caps text-label-caps uppercase opacity-70">Current Weight</span>
                 <div className="mt-auto flex items-baseline gap-xs">
-                  <span className="font-display-hero text-display-hero text-on-surface leading-none">{latestDisp.toFixed(1)}</span>
-                  <span className="font-metric-md text-metric-md text-on-surface-variant">{unit}</span>
+                  <span className="font-display-hero text-display-hero leading-none">{latestDisp.toFixed(1)}</span>
+                  <span className="font-metric-md text-metric-md opacity-70">{unit}</span>
                 </div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-surface-container-high" />
               </div>
-              <div className="bg-tile border border-tile-border rounded-xl p-md flex flex-col justify-between min-h-[130px] relative overflow-hidden">
-                <SectionLabel>8-Week Change</SectionLabel>
-                <div className={`mt-auto flex items-baseline gap-xs ${change <= 0 ? 'text-secondary' : 'text-tertiary'}`}>
+              <div className="bg-pink text-on-pink rounded-[24px] p-md flex flex-col justify-between min-h-[130px]">
+                <span className="font-label-caps text-label-caps uppercase opacity-70">8-Week Change</span>
+                <div className="mt-auto flex items-baseline gap-xs">
                   <Icon name={change <= 0 ? 'trending_down' : 'trending_up'} fill size={24} />
                   <span className="font-display-hero text-display-hero leading-none">{change <= 0 ? '-' : '+'}{dispChange.toFixed(1)}</span>
-                  <span className="font-metric-md text-metric-md">{unit}</span>
+                  <span className="font-metric-md text-metric-md opacity-70">{unit}</span>
                 </div>
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-surface-container-high" />
               </div>
             </div>
 
-            <section className="bg-tile border border-tile-border rounded-xl p-md flex flex-col gap-md">
+            <section className="bg-ink-card border border-white/5 rounded-[24px] p-md flex flex-col gap-md">
               <div className="flex justify-between items-center">
                 <SectionLabel>Weight Trend</SectionLabel>
                 <span className="font-data-mono text-[12px] text-on-surface-variant">7-day rolling avg</span>
@@ -99,7 +97,7 @@ export function Body() {
         )}
 
         {tab === 'measurements' && (
-          <section className="bg-tile border border-tile-border rounded-xl p-lg flex flex-col gap-lg">
+          <section className="bg-ink-card border border-white/5 rounded-[24px] p-lg flex flex-col gap-lg">
             <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Composition Estimates</h3>
             {bf == null ? (
               <p className="font-body-md text-body-md text-on-surface-variant">
@@ -107,8 +105,8 @@ export function Body() {
               </p>
             ) : (
               <div className="flex flex-col gap-md">
-                <CompRow label="Body Fat" value={`${bf}%`} pct={bf} bar="bg-tertiary" note={fat ? `${fat} kg fat mass` : ''} />
-                <CompRow label="Lean Mass" value={`${lean} kg`} pct={lean && latest ? (lean / latest.weightKg) * 100 : 0} bar="bg-primary" note="Navy method estimate" />
+                <CompRow label="Body Fat" value={`${bf}%`} pct={bf} bar="bg-pink" note={fat ? `${fat} kg fat mass` : ''} />
+                <CompRow label="Lean Mass" value={`${lean} kg`} pct={lean && latest ? (lean / latest.weightKg) * 100 : 0} bar="bg-lime" note="Navy method estimate" />
               </div>
             )}
           </section>
@@ -133,12 +131,12 @@ export function Body() {
           </section>
         )}
 
-        <div className="bg-primary/10 border-l-2 border-primary rounded-r-xl rounded-bl-xl p-md flex gap-md items-start">
-          <Icon name="lightbulb" fill className="text-primary mt-0.5" />
+        <div className="bg-lime/10 border-l-2 border-lime rounded-r-[20px] rounded-bl-[20px] p-md flex gap-md items-start">
+          <Icon name="lightbulb" fill className="text-lime mt-0.5" />
           <p className="font-body-md text-body-md text-on-surface leading-relaxed">{leanMassInsight(profile, state.weights)}</p>
         </div>
 
-        <button onClick={() => setShowLog(true)} className="w-full py-3 rounded-full bg-primary text-on-primary font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-[0.98] transition">
+        <button onClick={() => setShowLog(true)} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-[0.98] transition">
           <Icon name="add" /> Log weigh-in
         </button>
       </div>
@@ -196,7 +194,7 @@ function WeighInSheet({ onClose, onSave, units }: { onClose: () => void; onSave:
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60" />
-      <div className="relative w-full max-w-[480px] bg-[#26262A] rounded-t-[24px] p-margin-mobile pb-xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+      <div className="relative w-full max-w-[480px] bg-ink-card border-t border-white/10 rounded-t-[28px] p-margin-mobile pb-xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
         <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-lg">Log weigh-in</h2>
         <div className="flex flex-col gap-md">
@@ -210,7 +208,7 @@ function WeighInSheet({ onClose, onSave, units }: { onClose: () => void; onSave:
             <label className="flex flex-col gap-1"><span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Waist</span><input type="number" className={cls} value={waist} onChange={(e) => setWaist(e.target.value)} /></label>
             <label className="flex flex-col gap-1"><span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Hip</span><input type="number" className={cls} value={hip} onChange={(e) => setHip(e.target.value)} /></label>
           </div>
-          <button onClick={save} className="py-3 rounded-full bg-primary text-on-primary font-metric-md text-metric-md mt-sm">Save</button>
+          <button onClick={save} className="py-3 rounded-full bg-lime text-on-lime font-metric-md text-metric-md mt-sm">Save</button>
         </div>
       </div>
     </div>

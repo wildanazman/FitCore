@@ -55,6 +55,19 @@ export default {
         // Design-spec card tiers (DESIGN.md Elevation)
         'tile': '#1E1E21',
         'tile-border': '#2E2E32',
+        // Vibrant fitness palette (motion redesign)
+        'lime': '#c9f24e',
+        'lime-dim': '#a8d43a',
+        'on-lime': '#141a05',
+        'lilac': '#cdbdf2',
+        'lilac-deep': '#b7a2ec',
+        'on-lilac': '#241a3d',
+        'pink': '#f0b8db',
+        'pink-deep': '#e79ecb',
+        'on-pink': '#3d1a30',
+        'violet': '#7c6cf0',
+        'ink': '#151517',
+        'ink-card': '#1c1c1f',
       },
       borderRadius: {
         DEFAULT: '0.25rem',

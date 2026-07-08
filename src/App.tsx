@@ -8,6 +8,7 @@ import { Camera } from './screens/Camera'
 import { Train } from './screens/Train'
 import { Body } from './screens/Body'
 import { Settings } from './screens/Settings'
+import { DietPlan } from './screens/DietPlan'
 
 export default function App() {
   const { profile } = useApp()
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/food" element={<Food />} />
         <Route path="/train" element={<Train />} />
         <Route path="/body" element={<Body />} />
+        <Route path="/diet" element={<DietPlan />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

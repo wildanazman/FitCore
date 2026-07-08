@@ -5,8 +5,9 @@ import type { Goal, Sport, UserProfile } from '../types'
 import { Icon } from '../components/Icon'
 import { GhostButton, PrimaryButton } from '../components/ui'
 import { baseCalorieTarget, tdee } from '../lib/nutrition'
+import { DIET_LIST } from '../lib/diet'
 
-const STEPS = ['Profile', 'Goal', 'Sports', 'Race', 'Targets']
+const STEPS = ['Profile', 'Goal', 'Sports', 'Race', 'Targets', 'Diet']
 
 const GOALS: { id: Goal; label: string; sub: string; icon: string }[] = [
   { id: 'lose', label: 'Lose fat', sub: 'Calorie deficit, preserve muscle', icon: 'trending_down' },
@@ -165,6 +166,26 @@ export function Onboarding() {
                 ))}
               </div>
             </Field>
+          </Stepper>
+        )}
+
+        {step === 5 && (
+          <Stepper title="Eating protocol" sub="Pick a diet mode. Shapes your macros, fasting window, and daily nudges.">
+            <div className="flex flex-col gap-sm">
+              {DIET_LIST.map((d) => (
+                <SelectCard key={d.id} active={p.dietMode === d.id} icon={d.icon} title={d.label} sub={d.tagline} onClick={() => set({ dietMode: d.id })} />
+              ))}
+            </div>
+            {p.dietMode === 'keto' && (
+              <Field label="Net carb cap (g/day)">
+                <input type="number" className={inputCls} value={p.netCarbCapG} onChange={(e) => set({ netCarbCapG: +e.target.value })} />
+              </Field>
+            )}
+            {(p.dietMode === 'omad' || p.dietMode === '16:8') && (
+              <Field label="Eating window opens (hour, 0–23)">
+                <input type="number" min={0} max={23} className={inputCls} value={p.eatingWindowStartHour} onChange={(e) => set({ eatingWindowStartHour: Math.max(0, Math.min(23, +e.target.value)) })} />
+              </Field>
+            )}
           </Stepper>
         )}
       </div>

@@ -1,5 +1,7 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Icon } from './Icon'
+import { spring } from './motion'
 
 const TABS = [
   { to: '/', icon: 'home', label: 'Home', end: true },
@@ -10,51 +12,42 @@ const TABS = [
 
 export function BottomNav() {
   const nav = useNavigate()
-  return (
-    <nav className="absolute bottom-0 left-0 w-full z-50 bg-surface-container-low h-20 px-2 shadow-[0_-4px_24px_rgba(0,0,0,0.4)] flex items-center justify-around">
-      {TABS.slice(0, 2).map((t) => (
-        <Tab key={t.to} {...t} />
-      ))}
+  const { pathname } = useLocation()
 
-      {/* Center camera FAB (quick-log) */}
-      <button
+  return (
+    <div className="absolute bottom-4 inset-x-4 z-50 flex items-end justify-center gap-3">
+      <nav className="flex-1 h-16 rounded-full bg-ink-card/95 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.5)] flex items-center justify-around px-2">
+        {TABS.map((t) => {
+          const active = t.end ? pathname === '/' : pathname.startsWith(t.to)
+          return (
+            <NavLink key={t.to} to={t.to} aria-label={t.label} className="relative w-12 h-12 flex items-center justify-center">
+              {active && (
+                <motion.span
+                  layoutId="nav-pill"
+                  transition={spring}
+                  className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-violet"
+                />
+              )}
+              <Icon
+                name={t.icon}
+                fill={active}
+                className={`relative z-10 transition-colors ${active ? 'text-white' : 'text-on-surface-variant'}`}
+              />
+            </NavLink>
+          )
+        })}
+      </nav>
+
+      {/* Lime quick-log FAB */}
+      <motion.button
         onClick={() => nav('/camera')}
         aria-label="Snap food photo"
-        className="relative -mt-8 w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-[0_8px_24px_rgba(197,192,255,0.35)] active:scale-95 transition"
+        whileTap={{ scale: 0.9 }}
+        transition={spring}
+        className="w-16 h-16 rounded-full bg-lime text-on-lime flex items-center justify-center shadow-[0_10px_28px_rgba(201,242,78,0.35)] shrink-0"
       >
         <Icon name="photo_camera" fill size={30} />
-      </button>
-
-      {TABS.slice(2).map((t) => (
-        <Tab key={t.to} {...t} />
-      ))}
-    </nav>
-  )
-}
-
-function Tab({ to, icon, label, end }: { to: string; icon: string; label: string; end: boolean }) {
-  return (
-    <NavLink
-      to={to}
-      end={end}
-      className="flex flex-col items-center justify-center gap-0.5 w-16 active:scale-90 transition"
-    >
-      {({ isActive }) => (
-        <>
-          <span
-            className={
-              isActive
-                ? 'bg-primary-container text-on-primary-container rounded-full px-4 py-1 flex items-center justify-center'
-                : 'text-on-surface-variant'
-            }
-          >
-            <Icon name={icon} fill={isActive} />
-          </span>
-          <span className={`font-label-caps text-label-caps ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>
-            {label}
-          </span>
-        </>
-      )}
-    </NavLink>
+      </motion.button>
+    </div>
   )
 }

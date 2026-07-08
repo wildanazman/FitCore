@@ -165,7 +165,7 @@ export function Camera() {
                 <button onClick={() => setPhase('edit')} className="flex-1 py-4 rounded-xl border border-outline-variant bg-transparent text-on-surface font-metric-md text-metric-md hover:bg-surface-variant transition active:scale-95 flex justify-center items-center gap-2">
                   <Icon name="edit" /> Edit
                 </button>
-                <button onClick={confirm} className="flex-[2] py-4 rounded-xl bg-inverse-primary text-white font-metric-md text-metric-md hover:opacity-90 transition active:scale-95 shadow-[0_0_15px_rgba(88,79,188,0.3)] flex justify-center items-center gap-2">
+                <button onClick={confirm} className="flex-[2] py-4 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md hover:opacity-90 transition active:scale-95 shadow-[0_0_18px_rgba(201,242,78,0.35)] flex justify-center items-center gap-2">
                   Confirm <Icon name="check" />
                 </button>
               </div>
