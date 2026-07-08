@@ -15,7 +15,7 @@ export function BottomNav() {
   const { pathname } = useLocation()
 
   return (
-    <div className="absolute bottom-4 inset-x-4 z-50 flex items-end justify-center gap-3">
+    <div data-testid="bottom-nav" className="absolute bottom-4 inset-x-4 z-50 flex items-end justify-center gap-3">
       <nav className="flex-1 h-16 rounded-full bg-ink-card/95 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.5)] flex items-center justify-around px-2">
         {TABS.map((t) => {
           const active = t.end ? pathname === '/' : pathname.startsWith(t.to)

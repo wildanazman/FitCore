@@ -1,7 +1,6 @@
 // Photo calorie detection (PRD 3.2).
-// Real path: Anthropic Claude vision (claude-sonnet-4-6) when an API key is configured.
-// Fallback: deterministic on-device estimator over a South-East-Asian food set so the
-// confirm/edit flow is fully functional offline.
+// Real path: same-origin /api/detect-food, backed by Gemini vision on the server.
+// Fallbacks: optional Claude browser key, then a clearly-marked rough offline estimate.
 
 export interface Detection {
   name: string
@@ -11,20 +10,23 @@ export interface Detection {
   carbs: number
   fat: number
   confidence: number
+  source?: 'gemini' | 'openai' | 'claude' | 'local'
+  note?: string
 }
 
-// Local SEA / Malaysian food reference (per standard serving).
+// Local SEA / Malaysian food reference (per standard serving). Confidence is
+// deliberately low because this path does not inspect the image.
 const FOOD_DB: Detection[] = [
-  { name: 'Nasi Lemak', emoji: '🍚', kcal: 644, protein: 17, carbs: 80, fat: 28, confidence: 0.82 },
-  { name: 'Mee Goreng', emoji: '🍜', kcal: 577, protein: 18, carbs: 76, fat: 21, confidence: 0.8 },
-  { name: 'Roti Canai', emoji: '🫓', kcal: 301, protein: 7, carbs: 41, fat: 12, confidence: 0.86 },
-  { name: 'Char Kway Teow', emoji: '🍳', kcal: 742, protein: 23, carbs: 76, fat: 38, confidence: 0.78 },
-  { name: 'Chicken Rice', emoji: '🍗', kcal: 607, protein: 30, carbs: 75, fat: 20, confidence: 0.84 },
-  { name: 'Grilled Salmon Bowl', emoji: '🐟', kcal: 640, protein: 42, carbs: 58, fat: 24, confidence: 0.91 },
-  { name: 'Protein Oats & Eggs', emoji: '🥣', kcal: 540, protein: 38, carbs: 52, fat: 18, confidence: 0.88 },
-  { name: 'Laksa', emoji: '🍲', kcal: 520, protein: 21, carbs: 55, fat: 24, confidence: 0.79 },
-  { name: 'Satay (6 sticks)', emoji: '🍢', kcal: 360, protein: 34, carbs: 12, fat: 20, confidence: 0.83 },
-  { name: 'Caesar Salad w/ Chicken', emoji: '🥗', kcal: 420, protein: 32, carbs: 12, fat: 26, confidence: 0.87 },
+  { name: 'Nasi Lemak', emoji: '\uD83C\uDF5A', kcal: 644, protein: 17, carbs: 80, fat: 28, confidence: 0.52, source: 'local' },
+  { name: 'Mee Goreng', emoji: '\uD83C\uDF5C', kcal: 577, protein: 18, carbs: 76, fat: 21, confidence: 0.5, source: 'local' },
+  { name: 'Roti Canai', emoji: '\uD83E\uDED3', kcal: 301, protein: 7, carbs: 41, fat: 12, confidence: 0.55, source: 'local' },
+  { name: 'Char Kway Teow', emoji: '\uD83C\uDF73', kcal: 742, protein: 23, carbs: 76, fat: 38, confidence: 0.49, source: 'local' },
+  { name: 'Chicken Rice', emoji: '\uD83C\uDF57', kcal: 607, protein: 30, carbs: 75, fat: 20, confidence: 0.54, source: 'local' },
+  { name: 'Grilled Salmon Bowl', emoji: '\uD83D\uDC1F', kcal: 640, protein: 42, carbs: 58, fat: 24, confidence: 0.56, source: 'local' },
+  { name: 'Protein Oats & Eggs', emoji: '\uD83E\uDD63', kcal: 540, protein: 38, carbs: 52, fat: 18, confidence: 0.53, source: 'local' },
+  { name: 'Laksa', emoji: '\uD83C\uDF72', kcal: 520, protein: 21, carbs: 55, fat: 24, confidence: 0.5, source: 'local' },
+  { name: 'Satay (6 sticks)', emoji: '\uD83C\uDF62', kcal: 360, protein: 34, carbs: 12, fat: 20, confidence: 0.52, source: 'local' },
+  { name: 'Caesar Salad w/ Chicken', emoji: '\uD83E\uDD57', kcal: 420, protein: 32, carbs: 12, fat: 26, confidence: 0.54, source: 'local' },
 ]
 
 /** Hash a string to a stable index (deterministic mock selection). */
@@ -38,9 +40,11 @@ function hashIndex(seed: string, mod: number): number {
 }
 
 export async function detectFromMock(seed: string): Promise<Detection> {
-  // Simulate model latency (PRD target < 3s).
-  await new Promise((r) => setTimeout(r, 1100))
-  return FOOD_DB[hashIndex(seed, FOOD_DB.length)]
+  await new Promise((r) => setTimeout(r, 700))
+  return {
+    ...FOOD_DB[hashIndex(seed, FOOD_DB.length)],
+    note: 'Live AI was unavailable, so this is a rough offline estimate. Review before saving.',
+  }
 }
 
 const SYSTEM_PROMPT =
@@ -58,6 +62,37 @@ interface AnthropicResponse {
   content?: AnthropicContentBlock[]
 }
 
+function normalizeDetection(value: Partial<Detection>, source: Detection['source']): Detection {
+  return {
+    name: String(value.name ?? 'Detected meal'),
+    emoji: String(value.emoji ?? '\uD83C\uDF7D\uFE0F'),
+    kcal: Math.max(0, Math.round(Number(value.kcal) || 0)),
+    protein: Math.max(0, Math.round(Number(value.protein) || 0)),
+    carbs: Math.max(0, Math.round(Number(value.carbs) || 0)),
+    fat: Math.max(0, Math.round(Number(value.fat) || 0)),
+    confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0.7)),
+    source,
+  }
+}
+
+function parseJsonObject(text: string): Partial<Detection> {
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start < 0 || end < start) throw new Error('No JSON object in AI response')
+  return JSON.parse(text.slice(start, end + 1)) as Partial<Detection>
+}
+
+async function detectWithServer(dataUrl: string): Promise<Detection> {
+  const res = await fetch('/api/detect-food', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ image: dataUrl }),
+  })
+  const json = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(json?.error || `Food AI ${res.status}`)
+  return normalizeDetection(json ?? {}, 'gemini')
+}
+
 /** Live Claude vision call. dataUrl must be a base64 data URL (image/jpeg|png). */
 export async function detectWithClaude(apiKey: string, dataUrl: string): Promise<Detection> {
   const match = /^data:(image\/\w+);base64,(.+)$/.exec(dataUrl)
@@ -73,7 +108,7 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-4-5',
       max_tokens: 300,
       system: SYSTEM_PROMPT,
       messages: [
@@ -90,27 +125,25 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
   if (!res.ok) throw new Error(`Claude API ${res.status}`)
   const json = (await res.json()) as AnthropicResponse
   const text = json.content?.find((c) => c.type === 'text')?.text ?? ''
-  const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1))
-  return {
-    name: String(parsed.name ?? 'Detected meal'),
-    emoji: String(parsed.emoji ?? '🍽️'),
-    kcal: Math.round(Number(parsed.kcal) || 0),
-    protein: Math.round(Number(parsed.protein) || 0),
-    carbs: Math.round(Number(parsed.carbs) || 0),
-    fat: Math.round(Number(parsed.fat) || 0),
-    confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.7)),
-  }
+  return normalizeDetection(parseJsonObject(text), 'claude')
 }
 
-/** Top-level detect: tries Claude when a key exists, falls back to local estimator. */
+/** Top-level detect: tries server Gemini vision, optional Claude, then rough local fallback. */
 export async function detectFood(dataUrl: string, apiKey: string): Promise<Detection> {
+  try {
+    return await detectWithServer(dataUrl)
+  } catch {
+    // Continue to optional user-provided fallback below.
+  }
+
   if (apiKey.trim()) {
     try {
       return await detectWithClaude(apiKey.trim(), dataUrl)
     } catch {
-      // Network/key failure → graceful local fallback.
+      // Continue to rough local fallback.
     }
   }
+
   return detectFromMock(dataUrl.slice(-64))
 }
 

@@ -21,7 +21,8 @@ export function Camera() {
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const dataUrl = await fileToDataUrl(file)
+    const dataUrl = await fileToCompressedDataUrl(file)
+    e.target.value = ''
     setPhoto(dataUrl)
     setPhase('analyzing')
     setError(null)
@@ -95,7 +96,7 @@ export function Camera() {
           <div>
             <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Snap your meal</h1>
             <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
-              {profile.anthropicApiKey ? 'Claude vision will estimate macros.' : 'AI estimates calories & macros in seconds.'}
+              {profile.anthropicApiKey ? 'Live AI will estimate macros.' : 'Gemini vision estimates calories & macros in seconds.'}
             </p>
           </div>
           <button onClick={() => fileRef.current?.click()} className="w-20 h-20 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-[0_0_24px_rgba(197,192,255,0.4)] active:scale-95 transition">
@@ -131,6 +132,12 @@ export function Camera() {
                     <Icon name={confidenceHigh ? 'verified' : 'help'} size={16} />
                     <span className="font-label-caps text-label-caps uppercase">{Math.round(det.confidence * 100)}% {confidenceHigh ? 'confident' : 'review'}</span>
                   </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-data-mono text-[11px] text-on-surface-variant uppercase">
+                    Source: {det.source === 'gemini' ? 'Gemini vision' : det.source === 'openai' ? 'OpenAI vision' : det.source === 'claude' ? 'Claude vision' : 'rough offline estimate'}
+                  </span>
+                  {det.note && <span className="font-data-mono text-[11px] text-tertiary">{det.note}</span>}
                 </div>
                 <div className="flex items-baseline gap-2 mt-sm">
                   <span className="font-display-hero text-display-hero text-primary">{Math.round(det.kcal * servings)}</span>
@@ -196,7 +203,7 @@ function MacroChip({ label, v, color, bar }: { label: string; v: number; color: 
 
 function EditForm({ det, onChange, onDone }: { det: Detection; onChange: (d: Detection) => void; onDone: () => void }) {
   const cls = 'w-full bg-surface border border-outline-variant rounded-lg px-md py-2 text-on-surface font-data-mono focus:border-primary focus:outline-none'
-  const num = (k: keyof Detection) => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...det, [k]: +e.target.value })
+  const num = (k: 'kcal' | 'protein' | 'carbs' | 'fat') => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...det, [k]: +e.target.value })
   return (
     <div className="flex flex-col gap-md">
       <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Edit meal</h2>
@@ -224,10 +231,30 @@ function NumField({ label, value, onChange, cls }: { label: string; value: numbe
   )
 }
 
-function fileToDataUrl(file: File): Promise<string> {
+function fileToCompressedDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        const maxSide = 1280
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(img.width * scale))
+        canvas.height = Math.max(1, Math.round(img.height * scale))
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Could not prepare image'))
+          return
+        }
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.86))
+      }
+      img.onerror = () => reject(new Error('Could not read image'))
+      img.src = reader.result as string
+    }
     reader.onerror = reject
     reader.readAsDataURL(file)
   })

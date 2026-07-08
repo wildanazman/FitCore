@@ -121,12 +121,15 @@ export function Settings() {
         </Group>
 
         {/* AI */}
-        <Group label="AI vision (optional)">
-          <Row label="Anthropic API key">
+        <Group label="AI vision">
+          <div className="px-md py-3 font-data-mono text-[12px] text-on-surface-variant">
+            Accurate photo calorie detection uses server-side GEMINI_API_KEY. Set it in Vercel env vars for this personal app.
+          </div>
+          <Row label="Claude fallback key">
             <input type="password" className={inp} placeholder="sk-ant-…" value={profile.anthropicApiKey} onChange={(e) => updateProfile({ anthropicApiKey: e.target.value })} />
           </Row>
           <p className="px-md font-data-mono text-[12px] text-on-surface-variant">
-            Set a key to use live Claude vision for photo food detection. Stored on-device only. Without it, FitCore uses the built-in offline estimator.
+            Optional and stored on-device only. If server AI is unavailable, FitCore can try this key before showing a rough offline estimate.
           </p>
         </Group>
 
