@@ -4,6 +4,7 @@ import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { Icon } from '../components/Icon'
 import { Press, Reveal, listContainer, spring } from '../components/motion'
+import { Rings } from '../components/Decor'
 import { todayISO, uid, weekday } from '../lib/date'
 import { formatPace, kcalActivity, planCapability, planMeta, sessionsForWeek } from '../lib/plan'
 import { ACTIVITIES, ACTIVITY_CATEGORIES, activityById, metForRun, type ActivityCategory } from '../lib/activities'
@@ -20,10 +21,10 @@ const FILTERS: { id: Filter; label: string }[] = [
 ]
 
 const PASTELS: Record<SessionType, { bg: string; fg: string }> = {
-  run: { bg: 'bg-lime', fg: 'text-on-lime' },
-  strength: { bg: 'bg-surface-container-highest', fg: 'text-on-surface' },
-  sport: { bg: 'bg-lime', fg: 'text-on-lime' },
-  rest: { bg: 'bg-ink-card', fg: 'text-on-surface' },
+  run: { bg: 'bg-gradient-to-br from-lilac to-lilac-deep glow-soft', fg: 'text-on-lilac' },
+  strength: { bg: 'bg-gradient-to-br from-pink to-pink-deep glow-soft', fg: 'text-on-pink' },
+  sport: { bg: 'bg-gradient-to-br from-lime to-lime-dim glow-soft', fg: 'text-on-lime' },
+  rest: { bg: 'bg-ink-card border border-white/5', fg: 'text-on-surface' },
 }
 
 export function Train() {
@@ -60,19 +61,24 @@ export function Train() {
 
       {meta ? (
         <Reveal>
-          <div className="rounded-[28px] bg-lime text-on-lime p-lg relative overflow-hidden">
-            <div className="absolute -right-6 -bottom-8 opacity-10">
-              <Icon name="directions_run" size={150} fill />
-            </div>
+          <div className="rounded-[28px] bg-gradient-to-br from-lime to-lime-dim text-on-lime p-lg relative overflow-hidden glow-lime">
+            <Rings size={200} className="absolute -right-12 -top-12 text-on-lime opacity-[0.12]" />
             <div className="relative flex justify-between items-start">
               <div>
-                <p className="font-label-caps text-label-caps uppercase opacity-70">Plan progress</p>
+                <p className="font-label-caps text-label-caps uppercase opacity-60 tracking-widest">Plan progress</p>
                 <h2 className="font-display-hero text-headline-lg mt-1">Week {meta.week} / {meta.totalWeeks}</h2>
               </div>
-              <span className="bg-on-lime text-lime rounded-full px-md py-1 font-data-mono text-[12px]">{meta.daysLeft}d left</span>
+              <span className="bg-on-lime text-lime rounded-full px-md py-1.5 font-data-mono text-[12px]">{meta.daysLeft}d left</span>
             </div>
-            <div className="relative w-full h-2 bg-on-lime/20 rounded-full mt-md overflow-hidden">
-              <motion.div className="h-full bg-on-lime rounded-full" initial={{ width: 0 }} animate={{ width: `${meta.pct}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+            <div className="relative w-full h-2.5 bg-on-lime/15 rounded-full mt-md">
+              <motion.div
+                className="relative h-full bg-on-lime rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.max(3, meta.pct)}%` }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <span className="absolute -right-1 -top-[3px] w-4 h-4 rounded-full bg-on-lime border-2 border-lime" />
+              </motion.div>
             </div>
             <p className="relative font-body-md text-[13px] opacity-80 mt-md">{taperMessage(meta.taperIn)}</p>
           </div>
@@ -99,9 +105,9 @@ export function Train() {
 
       <Reveal>
         <div className="grid grid-cols-3 gap-sm">
-          <StatTile label="Compliance" value={`${compliance}%`} sub={`${done}/${planned} sessions`} tone="border border-lime/30 bg-lime/10 text-lime" />
-          <StatTile label="Volume" value={`${volume.toFixed(0)} km`} sub="running this week" tone="border border-white/10 bg-ink-card text-on-surface" />
-          <StatTile label="Burned" value={`${burned}`} sub="kcal logged" tone="bg-lime text-on-lime" />
+          <StatTile icon="task_alt" label="Compliance" value={`${compliance}%`} sub={`${done}/${planned} sessions`} tone="border border-lime/25 bg-lime/10 text-lime glow-soft" />
+          <StatTile icon="conversion_path" label="Volume" value={`${volume.toFixed(0)} km`} sub="running this week" tone="border border-white/10 bg-ink-card text-on-surface glow-soft" />
+          <StatTile icon="local_fire_department" label="Burned" value={`${burned}`} sub="kcal logged" tone="bg-gradient-to-br from-lime to-lime-dim text-on-lime glow-lime" />
         </div>
       </Reveal>
 
@@ -157,10 +163,13 @@ export function Train() {
   )
 }
 
-function StatTile({ label, value, sub, tone }: { label: string; value: string; sub: string; tone: string }) {
+function StatTile({ icon, label, value, sub, tone }: { icon: string; label: string; value: string; sub: string; tone: string }) {
   return (
-    <div className={`rounded-[22px] p-md ${tone}`}>
-      <span className="font-label-caps text-[10px] uppercase opacity-70">{label}</span>
+    <div className={`relative overflow-hidden rounded-[22px] p-md ${tone}`}>
+      <div className="flex items-center justify-between">
+        <span className="font-label-caps text-[10px] uppercase opacity-70">{label}</span>
+        <Icon name={icon} size={15} className="opacity-60" />
+      </div>
       <div className="font-display-hero text-headline-lg-mobile leading-none mt-xs">{value}</div>
       <span className="font-data-mono text-[11px] opacity-70">{sub}</span>
     </div>
@@ -334,16 +343,16 @@ function SessionCard({ session: s, index, today, onToggle, onDelete }: { session
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04, ...spring }}>
       <div className={`rounded-[24px] p-md flex items-center justify-between cursor-pointer ${done ? 'bg-ink-card border border-white/5' : `${pastel.bg} ${pastel.fg}`} ${isToday && !done ? 'ring-2 ring-lime ring-offset-2 ring-offset-ink' : ''}`}>
         <Press as="div" onClick={onToggle} className="flex items-center gap-md flex-1 min-w-0">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-secondary/20 text-secondary' : 'bg-on-lime/15'}`}>
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-secondary/20 text-secondary' : 'bg-black/10'}`}>
             <Icon name={done ? 'check' : s.icon} fill />
           </div>
           <div className="min-w-0">
             <p className={`font-metric-md text-metric-md truncate ${done ? 'text-on-surface line-through' : ''}`}>{s.title}</p>
             <p className={`font-data-mono text-[12px] ${done ? 'text-on-surface-variant' : 'opacity-70'}`}>{weekday(s.date)} - {s.detail}</p>
-            <p className="font-data-mono text-[11px] text-lime">{s.kcal} kcal burned{s.manual ? ' - logged' : ''}</p>
+            <p className={`font-data-mono text-[11px] ${done ? 'text-lime' : 'opacity-80'}`}>{s.kcal} kcal burned{s.manual ? ' - logged' : ''}</p>
           </div>
         </Press>
-        <div className={`w-12 h-12 rounded-full flex flex-col items-center justify-center shrink-0 ${done ? '' : 'bg-on-lime text-lime'}`}>
+        <div className={`w-12 h-12 rounded-full flex flex-col items-center justify-center shrink-0 ${done ? '' : 'bg-black/85 text-lime'}`}>
           {done ? <Icon name="check_circle" fill className="text-secondary" /> : s.durationMin > 0 ? (
             <>
               <span className="font-display-hero text-[15px] leading-none">{s.durationMin}</span>
