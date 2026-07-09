@@ -1,6 +1,10 @@
 // Photo calorie detection (PRD 3.2).
 // Real path: same-origin /api/detect-food, backed by Gemini vision on the server.
 // Fallbacks: optional Claude browser key, then a clearly-marked rough offline estimate.
+// Detected names are grounded against the local Malaysian food reference (MyFCD /
+// Kal) so calories for local dishes come from vetted values.
+
+import { LOCAL_FOODS, matchLocalFood } from './localFoods'
 
 export interface Detection {
   name: string
@@ -14,21 +18,6 @@ export interface Detection {
   note?: string
 }
 
-// Local SEA / Malaysian food reference (per standard serving). Confidence is
-// deliberately low because this path does not inspect the image.
-const FOOD_DB: Detection[] = [
-  { name: 'Nasi Lemak', emoji: '\uD83C\uDF5A', kcal: 644, protein: 17, carbs: 80, fat: 28, confidence: 0.52, source: 'local' },
-  { name: 'Mee Goreng', emoji: '\uD83C\uDF5C', kcal: 577, protein: 18, carbs: 76, fat: 21, confidence: 0.5, source: 'local' },
-  { name: 'Roti Canai', emoji: '\uD83E\uDED3', kcal: 301, protein: 7, carbs: 41, fat: 12, confidence: 0.55, source: 'local' },
-  { name: 'Char Kway Teow', emoji: '\uD83C\uDF73', kcal: 742, protein: 23, carbs: 76, fat: 38, confidence: 0.49, source: 'local' },
-  { name: 'Chicken Rice', emoji: '\uD83C\uDF57', kcal: 607, protein: 30, carbs: 75, fat: 20, confidence: 0.54, source: 'local' },
-  { name: 'Grilled Salmon Bowl', emoji: '\uD83D\uDC1F', kcal: 640, protein: 42, carbs: 58, fat: 24, confidence: 0.56, source: 'local' },
-  { name: 'Protein Oats & Eggs', emoji: '\uD83E\uDD63', kcal: 540, protein: 38, carbs: 52, fat: 18, confidence: 0.53, source: 'local' },
-  { name: 'Laksa', emoji: '\uD83C\uDF72', kcal: 520, protein: 21, carbs: 55, fat: 24, confidence: 0.5, source: 'local' },
-  { name: 'Satay (6 sticks)', emoji: '\uD83C\uDF62', kcal: 360, protein: 34, carbs: 12, fat: 20, confidence: 0.52, source: 'local' },
-  { name: 'Caesar Salad w/ Chicken', emoji: '\uD83E\uDD57', kcal: 420, protein: 32, carbs: 12, fat: 26, confidence: 0.54, source: 'local' },
-]
-
 /** Hash a string to a stable index (deterministic mock selection). */
 function hashIndex(seed: string, mod: number): number {
   let h = 2166136261
@@ -41,11 +30,41 @@ function hashIndex(seed: string, mod: number): number {
 
 export async function detectFromMock(seed: string, reason?: string): Promise<Detection> {
   await new Promise((r) => setTimeout(r, 700))
+  const f = LOCAL_FOODS[hashIndex(seed, LOCAL_FOODS.length)]
   const why = reason ? ` (${reason})` : ''
   return {
-    ...FOOD_DB[hashIndex(seed, FOOD_DB.length)],
-    note: `Live AI was unavailable${why}, so this is a rough offline estimate. Review before saving.`,
+    name: f.name,
+    emoji: f.emoji,
+    kcal: f.kcal,
+    protein: f.protein,
+    carbs: f.carbs,
+    fat: f.fat,
+    confidence: 0.5,
+    source: 'local',
+    note: `Live AI was unavailable${why}. Rough estimate from the local food reference \u2014 review before saving.`,
   }
+}
+
+/**
+ * Ground an AI detection against the local Malaysian food reference (MyFCD / Kal).
+ * Strong local match + low AI confidence \u2192 snap macros to the vetted local values;
+ * otherwise keep the AI's (image-informed) estimate but attach the local reference.
+ */
+export function groundDetection(det: Detection): Detection {
+  const match = matchLocalFood(det.name)
+  if (!match) return det
+  if (det.source === 'local' || det.confidence < 0.7) {
+    return {
+      ...det,
+      kcal: match.kcal,
+      protein: match.protein,
+      carbs: match.carbs,
+      fat: match.fat,
+      emoji: det.emoji || match.emoji,
+      note: `Calories from local reference: ${match.name} (${match.serving}).`,
+    }
+  }
+  return { ...det, note: `Local ref \u2014 ${match.name}: ${match.kcal} kcal / ${match.serving}.` }
 }
 
 const SYSTEM_PROMPT =
@@ -133,14 +152,14 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
 export async function detectFood(dataUrl: string, apiKey: string): Promise<Detection> {
   let reason: string | undefined
   try {
-    return await detectWithServer(dataUrl)
+    return groundDetection(await detectWithServer(dataUrl))
   } catch (err) {
     reason = err instanceof Error ? err.message : 'server error'
   }
 
   if (apiKey.trim()) {
     try {
-      return await detectWithClaude(apiKey.trim(), dataUrl)
+      return groundDetection(await detectWithClaude(apiKey.trim(), dataUrl))
     } catch (err) {
       reason = err instanceof Error ? err.message : reason
     }

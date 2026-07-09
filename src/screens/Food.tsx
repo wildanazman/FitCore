@@ -10,6 +10,7 @@ import { dayFuel } from '../lib/nutrition'
 import { dietDef, dietWarnings, nowMinutes, windowState } from '../lib/diet'
 import { slotForNow } from '../lib/foodAI'
 import { QUICK_FOODS } from '../lib/quickFoods'
+import { searchLocalFoods, type LocalFood } from '../lib/localFoods'
 import type { DietWarning } from '../lib/diet'
 import type { FoodEntry } from '../types'
 
@@ -18,6 +19,7 @@ export function Food() {
   const nav = useNavigate()
   const today = todayISO()
   const [editing, setEditing] = useState<FoodEntry | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const fuel = dayFuel(profile, weightKg, today, state.foods, state.sessions)
   const todayFoods = state.foods.filter((f) => f.date === today).sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
@@ -28,11 +30,16 @@ export function Food() {
   const warnings = dietWarnings(profile.dietMode, { foods: state.foods, date: today, netCarbCapG: profile.netCarbCapG, window: win })
   const quickFoods = QUICK_FOODS[profile.dietMode] ?? []
 
-  const quickAdd = (q: (typeof quickFoods)[number]) => {
+  const quickAdd = (q: { name: string; emoji: string; kcal: number; protein: number; carbs: number; fat: number }) => {
     addFood({
       id: uid(), name: q.name, emoji: q.emoji, date: today, loggedAt: new Date().toISOString(),
       slot: slotForNow(), kcal: q.kcal, protein: q.protein, carbs: q.carbs, fat: q.fat, servings: 1, confidence: 1,
     })
+  }
+
+  const addLocal = (f: LocalFood) => {
+    quickAdd(f)
+    setSearchOpen(false)
   }
 
   return (
@@ -110,7 +117,12 @@ export function Food() {
       {/* Log */}
       <Reveal>
         <div>
-          <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Today's log</span>
+          <div className="flex items-center justify-between">
+            <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Today's log</span>
+            <Press onClick={() => setSearchOpen(true)} className="flex items-center gap-1 text-lime font-data-mono text-[12px]">
+              <Icon name="search" size={16} /> Search food
+            </Press>
+          </div>
           <div className="space-y-sm mt-sm">
             {todayFoods.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No meals yet. Snap one above.</p>}
             {todayFoods.map((f, i) => (
@@ -134,6 +146,8 @@ export function Food() {
         </div>
       </Reveal>
 
+      {searchOpen && <SearchSheet onClose={() => setSearchOpen(false)} onPick={addLocal} />}
+
       {editing && (
         <EditSheet
           entry={editing}
@@ -142,6 +156,51 @@ export function Food() {
           onDelete={() => { removeFood(editing.id); setEditing(null) }}
         />
       )}
+    </motion.div>
+  )
+}
+
+function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: LocalFood) => void }) {
+  const [q, setQ] = useState('')
+  const results = searchLocalFoods(q, 40)
+  return (
+    <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div
+        className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-white/10 p-margin-mobile pb-xl max-h-[85%] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+        initial={{ y: 320 }} animate={{ y: 0 }} transition={spring}
+      >
+        <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
+        <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-sm">Add food</h2>
+        <div className="flex items-center gap-2 bg-ink rounded-full px-md py-2 mb-md">
+          <Icon name="search" className="text-on-surface-variant" size={18} />
+          <input
+            autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+            placeholder="nasi lemak, roti canai, teh tarik…"
+            className="flex-1 bg-transparent text-on-surface font-body-md focus:outline-none placeholder:text-on-surface-variant"
+          />
+        </div>
+        <div className="overflow-y-auto no-scrollbar space-y-sm">
+          {results.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No match. Try another name.</p>}
+          {results.map((f) => (
+            <Press key={f.name} as="div" onClick={() => onPick(f)} className="rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between cursor-pointer">
+              <div className="flex items-center gap-md">
+                <div className="w-10 h-10 rounded-full bg-lilac/15 flex items-center justify-center text-[20px]">{f.emoji}</div>
+                <div>
+                  <div className="font-metric-md text-[14px] text-on-surface leading-tight">{f.name}</div>
+                  <div className="font-data-mono text-[11px] text-on-surface-variant">{f.serving} · {f.category}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-data-mono text-[13px] text-on-surface">{f.kcal} kcal</div>
+                <div className="font-data-mono text-[10px] text-on-surface-variant">{f.protein}P {f.carbs}C {f.fat}F</div>
+              </div>
+            </Press>
+          ))}
+        </div>
+        <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Values: local reference (MyFCD / Kal). Tap to log.</p>
+      </motion.div>
     </motion.div>
   )
 }
