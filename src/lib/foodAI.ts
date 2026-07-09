@@ -6,6 +6,12 @@
 
 import { LOCAL_FOODS, matchLocalFood } from './localFoods'
 
+export interface DetectionItem {
+  name: string
+  grams?: number
+  kcal: number
+}
+
 export interface Detection {
   name: string
   emoji: string
@@ -15,6 +21,10 @@ export interface Detection {
   fat: number
   confidence: number
   source?: 'gemini' | 'openai' | 'claude' | 'local'
+  /** Per-component breakdown from the web-grounded analysis. */
+  items?: DetectionItem[]
+  /** What the model assumed about portions/ingredients. */
+  assumptions?: string
   note?: string
 }
 
@@ -53,7 +63,10 @@ export async function detectFromMock(seed: string, reason?: string): Promise<Det
 export function groundDetection(det: Detection): Detection {
   const match = matchLocalFood(det.name)
   if (!match) return det
-  if (det.source === 'local' || det.confidence < 0.7) {
+  // The Gemini path now searches the web for real nutrition data, so trust its
+  // (image-informed) totals. Only snap to the local table for the offline
+  // fallback or a genuinely unsure read; otherwise just show the local ref.
+  if (det.source === 'local' || det.confidence < 0.45) {
     return {
       ...det,
       kcal: match.kcal,
@@ -83,6 +96,13 @@ interface AnthropicResponse {
 }
 
 function normalizeDetection(value: Partial<Detection>, source: Detection['source']): Detection {
+  const items = Array.isArray(value.items)
+    ? value.items.slice(0, 12).map((it) => ({
+        name: String(it?.name ?? 'item'),
+        grams: it?.grams != null ? Math.max(0, Math.round(Number(it.grams))) : undefined,
+        kcal: Math.max(0, Math.round(Number(it?.kcal) || 0)),
+      }))
+    : undefined
   return {
     name: String(value.name ?? 'Detected meal'),
     emoji: String(value.emoji ?? '\uD83C\uDF7D\uFE0F'),
@@ -91,6 +111,8 @@ function normalizeDetection(value: Partial<Detection>, source: Detection['source
     carbs: Math.max(0, Math.round(Number(value.carbs) || 0)),
     fat: Math.max(0, Math.round(Number(value.fat) || 0)),
     confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0.7)),
+    items: items && items.length ? items : undefined,
+    assumptions: value.assumptions ? String(value.assumptions) : undefined,
     source,
   }
 }

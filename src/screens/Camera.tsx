@@ -107,12 +107,15 @@ export function Camera() {
 
       {/* Analyzing */}
       {phase === 'analyzing' && (
-        <div className="z-20 flex flex-col items-center pb-[40%] gap-md">
-          <div className="w-24 h-24 border-2 border-primary/30 rounded-full flex items-center justify-center relative">
-            <div className="absolute inset-0 border-t-2 border-primary rounded-full animate-spin" />
-            <Icon name="memory" size={36} className="text-primary" />
+        <div className="z-20 flex flex-col items-center pb-[36%] gap-md px-margin-mobile text-center">
+          <div className="w-24 h-24 border-2 border-lime/30 rounded-full flex items-center justify-center relative">
+            <div className="absolute inset-0 border-t-2 border-lime rounded-full animate-spin" />
+            <Icon name="travel_explore" size={36} className="text-lime" />
           </div>
-          <span className="font-label-caps text-label-caps text-primary uppercase tracking-widest">Analyzing…</span>
+          <span className="font-label-caps text-label-caps text-lime uppercase tracking-widest">Analyzing…</span>
+          <p className="font-body-md text-[13px] text-on-surface-variant max-w-[240px]">
+            Identifying each item and looking up nutrition data on the web. This can take up to a minute — accuracy over speed.
+          </p>
         </div>
       )}
 
@@ -144,6 +147,27 @@ export function Camera() {
                   <span className="font-metric-md text-metric-md text-on-surface-variant">kcal</span>
                 </div>
               </div>
+
+              {/* Web-grounded breakdown */}
+              {det.items && det.items.length > 0 && (
+                <div className="bg-surface rounded-xl border border-outline-variant p-sm">
+                  <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Breakdown</span>
+                  <div className="mt-sm space-y-1">
+                    {det.items.map((it, i) => (
+                      <div key={i} className="flex justify-between font-data-mono text-[12px]">
+                        <span className="text-on-surface truncate pr-2">{it.name}{it.grams ? ` · ${it.grams}g` : ''}</span>
+                        <span className="text-on-surface-variant shrink-0">{Math.round(it.kcal * servings)} kcal</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {det.assumptions && (
+                <p className="font-body-md text-[12px] text-on-surface-variant -mt-sm flex gap-1.5">
+                  <Icon name="info" size={14} className="text-tertiary shrink-0 mt-0.5" />
+                  {det.assumptions}
+                </p>
+              )}
 
               <div className="grid grid-cols-3 gap-sm">
                 <MacroChip label="Protein" v={Math.round(det.protein * servings)} color="text-tertiary" bar="bg-tertiary" />
