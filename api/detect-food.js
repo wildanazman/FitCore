@@ -1,5 +1,11 @@
 const MAX_IMAGE_CHARS = 7_000_000
-const DEFAULT_MODEL = 'gemini-2.5-flash'
+// gemini-2.0-flash: fast, vision-capable, and — unlike 2.5 "thinking" models —
+// spends no output budget on internal reasoning, so JSON responses never get
+// starved/truncated. Overridable via GEMINI_MODEL.
+const DEFAULT_MODEL = 'gemini-2.0-flash'
+const REQUEST_TIMEOUT_MS = 25_000
+const MAX_ATTEMPTS = 3
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504])
 
 const responseSchema = {
   type: 'object',
@@ -17,11 +23,13 @@ const responseSchema = {
 
 const prompt = [
   'You are a careful nutrition vision model for a personal calorie tracker.',
-  'Identify the visible meal and estimate calories/macros for the portion shown.',
+  'Identify the visible meal and estimate calories and macros (grams) for the exact portion shown.',
+  'Judge portion size from plate/bowl/utensil scale; use realistic restaurant/home servings.',
   'Prefer common South-East Asian and Malaysian foods when plausible.',
-  'If there are multiple items, name the meal as a concise combination and estimate the full plate.',
-  'Do not invent hidden ingredients. Use realistic restaurant/home serving sizes.',
-  'Return JSON only, matching the schema exactly.',
+  'If several items are on the plate, name a concise combined dish and estimate the whole plate.',
+  'kcal must be roughly consistent with protein*4 + carbs*4 + fat*9.',
+  'Set confidence 0..1 to reflect how clearly the food and portion are visible.',
+  'Do not invent hidden ingredients. Return JSON only, matching the schema exactly.',
 ].join(' ')
 
 function sendJson(res, status, body) {
@@ -33,25 +41,45 @@ function sendJson(res, status, body) {
 function dataUrlToInlineData(image) {
   const match = /^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/.exec(image)
   if (!match) return null
-
   const mimeType = match[1] === 'image/jpg' ? 'image/jpeg' : match[1]
   return { mimeType, data: match[2] }
 }
 
 function parseGeminiText(json) {
-  return json.candidates?.[0]?.content?.parts?.find((part) => typeof part.text === 'string')?.text ?? ''
+  const cand = json.candidates?.[0]
+  const text = cand?.content?.parts?.find((part) => typeof part.text === 'string')?.text ?? ''
+  return { text, finishReason: cand?.finishReason, promptFeedback: json.promptFeedback }
 }
 
 function normalizeDetection(value) {
   return {
     name: String(value.name || 'Detected meal').slice(0, 80),
-    emoji: String(value.emoji || '\uD83C\uDF7D\uFE0F').slice(0, 8),
+    emoji: String(value.emoji || '🍽️').slice(0, 8),
     kcal: Math.max(0, Math.round(Number(value.kcal) || 0)),
     protein: Math.max(0, Math.round(Number(value.protein) || 0)),
     carbs: Math.max(0, Math.round(Number(value.carbs) || 0)),
     fat: Math.max(0, Math.round(Number(value.fat) || 0)),
     confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0.65)),
     source: 'gemini',
+  }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function callGemini(endpoint, payload) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    const json = await response.json().catch(() => ({}))
+    return { ok: response.ok, status: response.status, json }
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -81,38 +109,67 @@ export default async function handler(req, res) {
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            { inlineData },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema,
-        temperature: 0.2,
-        maxOutputTokens: 500,
-      },
-    }),
-  })
-
-  const json = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const message = json.error?.message || `Gemini API ${response.status}`
-    return sendJson(res, response.status, { error: message })
+  const payload = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData }] }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema,
+      temperature: 0.2,
+      maxOutputTokens: 1200,
+      // Disable "thinking" so 2.5-family models can't starve the JSON output.
+      // Ignored by models that don't support it.
+      thinkingConfig: { thinkingBudget: 0 },
+    },
   }
 
-  try {
-    const text = parseGeminiText(json)
-    return sendJson(res, 200, normalizeDetection(JSON.parse(text)))
-  } catch {
-    return sendJson(res, 502, { error: 'Gemini returned an unreadable nutrition estimate' })
+  let lastError = 'Food AI failed'
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    let result
+    try {
+      result = await callGemini(endpoint, payload)
+    } catch (err) {
+      lastError = err?.name === 'AbortError' ? 'Gemini request timed out' : 'Could not reach Gemini'
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(400 * attempt)
+        continue
+      }
+      return sendJson(res, 504, { error: lastError })
+    }
+
+    if (!result.ok) {
+      lastError = result.json?.error?.message || `Gemini API ${result.status}`
+      if (RETRY_STATUS.has(result.status) && attempt < MAX_ATTEMPTS) {
+        await sleep(400 * attempt)
+        continue
+      }
+      return sendJson(res, result.status, { error: lastError })
+    }
+
+    const { text, finishReason, promptFeedback } = parseGeminiText(result.json)
+    if (promptFeedback?.blockReason) {
+      return sendJson(res, 422, { error: `Image blocked by safety filter (${promptFeedback.blockReason})` })
+    }
+    if (!text) {
+      // Empty output (e.g. MAX_TOKENS from thinking, or a hiccup) — worth a retry.
+      lastError = `Gemini returned no text${finishReason ? ` (${finishReason})` : ''}`
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(300 * attempt)
+        continue
+      }
+      return sendJson(res, 502, { error: lastError })
+    }
+
+    try {
+      return sendJson(res, 200, normalizeDetection(JSON.parse(text)))
+    } catch {
+      lastError = 'Gemini returned an unreadable nutrition estimate'
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(300 * attempt)
+        continue
+      }
+      return sendJson(res, 502, { error: lastError })
+    }
   }
+
+  return sendJson(res, 502, { error: lastError })
 }

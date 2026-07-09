@@ -39,11 +39,12 @@ function hashIndex(seed: string, mod: number): number {
   return Math.abs(h) % mod
 }
 
-export async function detectFromMock(seed: string): Promise<Detection> {
+export async function detectFromMock(seed: string, reason?: string): Promise<Detection> {
   await new Promise((r) => setTimeout(r, 700))
+  const why = reason ? ` (${reason})` : ''
   return {
     ...FOOD_DB[hashIndex(seed, FOOD_DB.length)],
-    note: 'Live AI was unavailable, so this is a rough offline estimate. Review before saving.',
+    note: `Live AI was unavailable${why}, so this is a rough offline estimate. Review before saving.`,
   }
 }
 
@@ -130,21 +131,22 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
 
 /** Top-level detect: tries server Gemini vision, optional Claude, then rough local fallback. */
 export async function detectFood(dataUrl: string, apiKey: string): Promise<Detection> {
+  let reason: string | undefined
   try {
     return await detectWithServer(dataUrl)
-  } catch {
-    // Continue to optional user-provided fallback below.
+  } catch (err) {
+    reason = err instanceof Error ? err.message : 'server error'
   }
 
   if (apiKey.trim()) {
     try {
       return await detectWithClaude(apiKey.trim(), dataUrl)
-    } catch {
-      // Continue to rough local fallback.
+    } catch (err) {
+      reason = err instanceof Error ? err.message : reason
     }
   }
 
-  return detectFromMock(dataUrl.slice(-64))
+  return detectFromMock(dataUrl.slice(-64), reason)
 }
 
 export function slotForNow(d = new Date()): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
