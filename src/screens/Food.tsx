@@ -11,6 +11,7 @@ import { dietDef, dietWarnings, nowMinutes, windowState } from '../lib/diet'
 import { slotForNow } from '../lib/foodAI'
 import { QUICK_FOODS } from '../lib/quickFoods'
 import { searchLocalFoods, type LocalFood } from '../lib/localFoods'
+import { lookupFood, resultToLocalFood, sourceLabel, type LookupResult } from '../lib/foodLookup'
 import type { DietWarning } from '../lib/diet'
 import type { FoodEntry } from '../types'
 
@@ -163,7 +164,25 @@ export function Food() {
 function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: LocalFood) => void }) {
   const [q, setQ] = useState('')
   const [custom, setCustom] = useState(false)
+  const [online, setOnline] = useState<LookupResult | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [onlineErr, setOnlineErr] = useState<string | null>(null)
   const results = searchLocalFoods(q, 40)
+
+  const searchOnline = async () => {
+    const name = q.trim()
+    if (!name || searching) return
+    setSearching(true)
+    setOnline(null)
+    setOnlineErr(null)
+    try {
+      setOnline(await lookupFood(name))
+    } catch (err) {
+      setOnlineErr(err instanceof Error ? err.message : 'Lookup failed')
+    } finally {
+      setSearching(false)
+    }
+  }
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -216,8 +235,43 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
                   </div>
                 </Press>
               ))}
+
+              {/* Online lookup */}
+              {q.trim().length > 1 && (
+                <div className="pt-sm">
+                  {!online && !searching && (
+                    <Press onClick={searchOnline} className="w-full rounded-[18px] border border-dashed border-lime/40 bg-lime/5 p-sm flex items-center justify-center gap-2 text-lime">
+                      <Icon name="travel_explore" size={18} /> Search online for “{q.trim()}”
+                    </Press>
+                  )}
+                  {searching && (
+                    <div className="rounded-[18px] bg-ink border border-white/5 p-md flex items-center gap-md">
+                      <span className="w-5 h-5 rounded-full border-2 border-lime/30 border-t-lime animate-spin shrink-0" />
+                      <p className="font-body-md text-[13px] text-on-surface-variant">Searching nutrition databases online — this can take a moment…</p>
+                    </div>
+                  )}
+                  {onlineErr && !searching && (
+                    <p className="font-data-mono text-[11px] text-pink-deep text-center py-sm">Couldn’t find it online ({onlineErr}). Try “Enter my own”.</p>
+                  )}
+                  {online && !searching && (
+                    <Press as="div" onClick={() => onPick(resultToLocalFood(online))} className="rounded-[18px] bg-ink border border-lime/30 p-sm flex items-center justify-between cursor-pointer">
+                      <div className="flex items-center gap-md min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-lime/15 flex items-center justify-center text-[20px]">{online.emoji || '🍽️'}</div>
+                        <div className="min-w-0">
+                          <div className="font-metric-md text-[14px] text-on-surface leading-tight truncate">{online.name}</div>
+                          <div className="font-data-mono text-[11px] text-lime">{online.serving} · {sourceLabel(online.source)}</div>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-data-mono text-[13px] text-on-surface">{online.kcal} kcal</div>
+                        <div className="font-data-mono text-[10px] text-on-surface-variant">{online.protein}P {online.carbs}C {online.fat}F</div>
+                      </div>
+                    </Press>
+                  )}
+                </div>
+              )}
             </div>
-            <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Values: local reference (MyFCD). Tap to log.</p>
+            <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Local list first · online search checks Open Food Facts + web.</p>
           </>
         )}
       </motion.div>
