@@ -162,6 +162,7 @@ export default async function handler(req, res) {
 
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name || name.length > 80) return sendJson(res, 400, { error: 'Expected a food name' })
+  const provider = body.provider === 'anthropic' ? 'anthropic' : 'auto'
 
   const errors = []
 
@@ -177,14 +178,14 @@ export default async function handler(req, res) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
 
-  if (anthropicKey) {
+  if (provider === 'anthropic' && anthropicKey) {
     try {
       return sendJson(res, 200, await lookupWithClaude(anthropicKey, name))
     } catch (err) {
       errors.push(`Claude: ${err?.message || 'failed'}`)
     }
   }
-  if (geminiKey) {
+  if (provider !== 'anthropic' && geminiKey) {
     try {
       return sendJson(res, 200, await lookupWithGemini(geminiKey, name))
     } catch (err) {

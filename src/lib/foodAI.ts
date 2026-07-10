@@ -30,6 +30,38 @@ export interface Detection {
 
 export type FoodAIProvider = 'auto' | 'gemini' | 'anthropic' | 'local'
 
+const USAGE_KEY = 'fitcore-food-ai-usage-v1'
+
+function usageDay() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+/** Local request count for transparency; provider quota is not exposed by the APIs. */
+export function recordFoodAIUsage(source: Detection['source']): number {
+  if (source === 'local') return 0
+  const day = usageDay()
+  try {
+    const current = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}')
+    const counts = current.day === day ? current.counts || {} : {}
+    counts[source || 'unknown'] = Number(counts[source || 'unknown'] || 0) + 1
+    localStorage.setItem(USAGE_KEY, JSON.stringify({ day, counts }))
+    return counts[source || 'unknown']
+  } catch {
+    return 0
+  }
+}
+
+export function foodAIUsage(source: Detection['source']): number {
+  if (source === 'local') return 0
+  try {
+    const current = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}')
+    return current.day === usageDay() ? Number(current.counts?.[source || 'unknown'] || 0) : 0
+  } catch {
+    return 0
+  }
+}
+
 /** Hash a string to a stable index (deterministic mock selection). */
 function hashIndex(seed: string, mod: number): number {
   let h = 2166136261
@@ -189,7 +221,7 @@ export async function detectFood(dataUrl: string, apiKey: string, provider: Food
     }
   }
 
-  if (apiKey.trim() && (provider === 'auto' || provider === 'anthropic')) {
+  if (apiKey.trim() && provider === 'anthropic') {
     try {
       return groundDetection(await detectWithClaude(apiKey.trim(), dataUrl))
     } catch (err) {

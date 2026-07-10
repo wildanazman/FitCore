@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
-import { detectFood, slotForNow, type Detection, type FoodAIProvider } from '../lib/foodAI'
+import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type FoodAIProvider } from '../lib/foodAI'
 import { lookupFood, sourceLabel } from '../lib/foodLookup'
 import { todayISO, uid } from '../lib/date'
 import type { FoodEntry } from '../types'
@@ -78,6 +78,7 @@ export function Camera() {
     stopCamera()
     try {
       const result = await detectFood(dataUrl, profile.anthropicApiKey, provider)
+      recordFoodAIUsage(result.source)
       setDet(result)
       setServings(1)
       setPhase('result')
@@ -287,7 +288,7 @@ export function Camera() {
                   {det.note && <span className="font-data-mono text-[11px] text-tertiary">{det.note}</span>}
                 </div>
                 <p className="font-data-mono text-[10px] text-on-surface-variant">
-                  {detectionUsageLabel(det.source)}
+                  {detectionUsageLabel(det.source, foodAIUsage(det.source))}
                 </p>
                 <div className="flex items-baseline gap-2 mt-sm">
                   <span className="font-display-hero text-display-hero text-primary">{Math.round(det.kcal * servings)}</span>
@@ -403,18 +404,18 @@ function detectionSourceLabel(source: Detection['source']) {
   }
 }
 
-function detectionUsageLabel(source: Detection['source']) {
+function detectionUsageLabel(source: Detection['source'], usedThisMonth: number) {
   switch (source) {
     case 'local':
       return 'Usage: Unlimited · offline local reference'
     case 'gemini':
-      return 'Usage: Gemini API quota · remaining balance unavailable here'
+      return `Free tier: Gemini · ${usedThisMonth} request(s) today · Google Search has a shared daily limit; exact remaining is in AI Studio`
     case 'claude':
-      return 'Usage: Anthropic API quota · remaining balance unavailable here'
+      return `Anthropic · ${usedThisMonth} request(s) today · free access is trial credit, not unlimited`
     case 'openfoodfacts':
-      return 'Usage: Open Food Facts · no personal quota shown'
+      return `Free database: Open Food Facts · ${usedThisMonth} lookup(s) today`
     default:
-      return 'Usage: Provider API quota · remaining balance unavailable here'
+      return `Usage: Provider API · ${usedThisMonth} request(s) today · remaining depends on provider quota`
   }
 }
 

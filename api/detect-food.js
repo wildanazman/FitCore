@@ -245,7 +245,7 @@ export default async function handler(req, res) {
 
   const errors = []
 
-  if (provider !== 'gemini' && anthropicKey) {
+  if (provider === 'anthropic' && anthropicKey) {
     try {
       return sendJson(res, 200, await detectWithClaude(anthropicKey, inlineData))
     } catch (err) {
