@@ -16,6 +16,8 @@ export const DEFAULT_PROFILE: UserProfile = {
   goal: 'lose',
   sports: ['running', 'strength', 'badminton'],
   raceDate: null,
+  raceType: 'half-marathon',
+  trainingDaysPerWeek: 4,
   halfMarathonGoal: 'sub230',
   targetFinishMin: null,
   bestRunDistanceKm: 5,
@@ -55,6 +57,10 @@ export function loadState(): AppState | null {
     parsed.profile = { ...DEFAULT_PROFILE, ...parsed.profile }
     parsed.profile.halfMarathonGoal = migratedGoal
     parsed.profile.targetFinishMin = null
+    // Rename the old 'half-marathon' plan tag to the generic 'running' tag.
+    parsed.sessions = parsed.sessions.map((s) =>
+      (s.plan as string) === 'half-marathon' ? { ...s, plan: 'running' } : s,
+    )
     if (!hadCapability) {
       const manual = parsed.sessions.filter((s) => s.plan === 'manual' || s.manual)
       const completedKeys = new Set(parsed.sessions.filter((s) => s.completed).map((s) => `${s.date}|${s.plan}|${s.title}`))

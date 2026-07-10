@@ -10,11 +10,11 @@ import { formatPace, kcalActivity, planCapability, planMeta, sessionsForWeek } f
 import { ACTIVITIES, ACTIVITY_CATEGORIES, activityById, metForRun, type ActivityCategory } from '../lib/activities'
 import type { PlanSession, SessionType } from '../types'
 
-type Filter = 'all' | 'half-marathon' | 'strength' | 'sport' | 'manual'
+type Filter = 'all' | 'running' | 'strength' | 'sport' | 'manual'
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'half-marathon', label: 'Half Marathon' },
+  { id: 'running', label: 'Running' },
   { id: 'strength', label: 'Strength' },
   { id: 'sport', label: 'Sport' },
   { id: 'manual', label: 'Logged' },

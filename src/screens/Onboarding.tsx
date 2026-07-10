@@ -128,10 +128,38 @@ export function Onboarding() {
         )}
 
         {step === 3 && (
-          <Stepper title="Race goal" sub="Add a half-marathon date and we build a 14-week plan that auto-tapers.">
+          <Stepper title="Running plan" sub="Pick your race and how often you can train. We build a periodized plan that auto-tapers.">
+            <Field label="Race distance">
+              <div className="grid grid-cols-2 gap-sm">
+                {([['half-marathon', 'Half Marathon', '21.1 km'], ['marathon', 'Full Marathon', '42.2 km']] as const).map(([id, label, dist]) => (
+                  <button
+                    key={id}
+                    onClick={() => set({ raceType: id })}
+                    className={`p-sm rounded-xl border text-left transition ${p.raceType === id ? 'bg-primary-container/30 border-primary text-on-surface' : 'bg-tile border-tile-border text-on-surface-variant'}`}
+                  >
+                    <span className="block font-metric-md text-[14px]">{label}</span>
+                    <span className="block font-data-mono text-[11px]">{dist}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Training days per week">
+              <div className="grid grid-cols-5 gap-1">
+                {[3, 4, 5, 6, 7].map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => set({ trainingDaysPerWeek: d })}
+                    className={`py-2 rounded-lg border font-metric-md text-[15px] transition ${p.trainingDaysPerWeek === d ? 'bg-primary text-on-primary border-primary' : 'bg-tile border-tile-border text-on-surface-variant'}`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </Field>
             <Field label="Race date (optional)">
               <input type="date" className={inputCls} value={p.raceDate ?? ''} onChange={(e) => set({ raceDate: e.target.value || null })} />
             </Field>
+            {p.raceType === 'half-marathon' && (
             <Field label="Half marathon goal">
               <div className="grid grid-cols-2 gap-sm">
                 {HALF_MARATHON_GOALS.map((goal) => {
@@ -151,6 +179,7 @@ export function Onboarding() {
                 })}
               </div>
             </Field>
+            )}
             <p className="font-data-mono text-data-mono text-on-surface-variant">Leave the date blank to start with a rolling base block instead.</p>
           </Stepper>
         )}

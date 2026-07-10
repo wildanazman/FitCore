@@ -97,23 +97,38 @@ export function Settings() {
         </Group>
 
         {/* Race */}
-        <Group label="Race & plan">
+        <Group label="Running plan">
+          <Row label="Race distance">
+            <select className={inp} value={profile.raceType} onChange={(e) => updateProfile({ raceType: e.target.value as UserProfile['raceType'] }, true)}>
+              <option value="half-marathon">Half Marathon (21.1 km)</option>
+              <option value="marathon">Full Marathon (42.2 km)</option>
+            </select>
+          </Row>
           <Row label="Race date">
             <input type="date" className={inp} value={profile.raceDate ?? ''} onChange={(e) => updateProfile({ raceDate: e.target.value || null }, true)} />
           </Row>
-          <Row label="HM goal">
-            <select className={inp} value={profile.halfMarathonGoal} onChange={(e) => updateProfile({ halfMarathonGoal: e.target.value as HalfMarathonGoal }, true)}>
-              {HALF_MARATHON_GOALS.map((goal) => {
-                const pace = halfMarathonGoalPace(goal)
-                return (
-                  <option key={goal} value={goal}>
-                    {halfMarathonGoalLabel(goal)}{pace ? ` - ${formatPace(pace)}` : ''}
-                  </option>
-                )
-              })}
+          <Row label="Training days / week">
+            <select className={inp} value={profile.trainingDaysPerWeek} onChange={(e) => updateProfile({ trainingDaysPerWeek: +e.target.value }, true)}>
+              {[3, 4, 5, 6, 7].map((d) => (
+                <option key={d} value={d}>{d} days</option>
+              ))}
             </select>
           </Row>
-          <p className="px-md font-data-mono text-[12px] text-on-surface-variant">Goal pace is shown per km. Changing race goal, date or activity regenerates your plan.</p>
+          {profile.raceType === 'half-marathon' && (
+            <Row label="Goal pace">
+              <select className={inp} value={profile.halfMarathonGoal} onChange={(e) => updateProfile({ halfMarathonGoal: e.target.value as HalfMarathonGoal }, true)}>
+                {HALF_MARATHON_GOALS.map((goal) => {
+                  const pace = halfMarathonGoalPace(goal)
+                  return (
+                    <option key={goal} value={goal}>
+                      {halfMarathonGoalLabel(goal)}{pace ? ` - ${formatPace(pace)}` : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            </Row>
+          )}
+          <p className="px-md font-data-mono text-[12px] text-on-surface-variant">Plan builds {profile.trainingDaysPerWeek} run days/week toward your race. Changing distance, date, training days or activity regenerates the plan.</p>
         </Group>
 
         {/* Wearables */}
