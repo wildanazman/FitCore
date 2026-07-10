@@ -170,6 +170,7 @@ export function Camera() {
   }
 
   const confidenceHigh = (det?.confidence ?? 0) >= 0.85
+  const breakdownItems = det?.items?.length ? det.items : det ? [{ name: det.name, kcal: det.kcal }] : []
 
   return (
     <div className="app-shell flex flex-col items-center justify-end relative overflow-hidden">
@@ -306,12 +307,12 @@ export function Camera() {
                 </div>
               </div>
 
-              {/* Web-grounded breakdown */}
-              {det.items && det.items.length > 0 && (
+              {/* Always show a review breakdown before the log is submitted. */}
+              {breakdownItems.length > 0 && (
                 <div className="bg-surface rounded-xl border border-outline-variant p-sm">
                   <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Breakdown</span>
                   <div className="mt-sm space-y-1">
-                    {det.items.map((it, i) => (
+                    {breakdownItems.map((it, i) => (
                       <div key={i} className="flex justify-between font-data-mono text-[12px]">
                         <span className="text-on-surface truncate pr-2">{it.name}{it.grams ? ` · ${it.grams}g` : ''}</span>
                         <span className="text-on-surface-variant shrink-0">{Math.round(it.kcal * servings)} kcal</span>
@@ -355,7 +356,7 @@ export function Camera() {
                   <Icon name="edit" /> Edit
                 </button>
                 <button onClick={confirm} className="flex-[2] py-4 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md hover:opacity-90 transition active:scale-95 shadow-[0_0_18px_rgba(201,242,78,0.35)] flex justify-center items-center gap-2">
-                  Confirm <Icon name="check" />
+                  Submit log <Icon name="check" />
                 </button>
               </div>
             </div>
@@ -543,7 +544,7 @@ function EditForm({
         <NumField label="Carbs g" value={det.carbs} onChange={num('carbs')} cls={cls} />
         <NumField label="Fat g" value={det.fat} onChange={num('fat')} cls={cls} />
       </div>
-      <button onClick={onDone} className="py-3 rounded-full bg-primary text-on-primary font-metric-md text-metric-md mt-sm">Done</button>
+      <button onClick={onDone} className="py-3 rounded-full bg-primary text-on-primary font-metric-md text-metric-md mt-sm">Review breakdown <Icon name="arrow_forward" size={18} /></button>
     </div>
   )
 }
