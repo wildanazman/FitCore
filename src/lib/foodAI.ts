@@ -5,6 +5,7 @@
 // Kal) so calories for local dishes come from vetted values.
 
 import { LOCAL_FOODS, matchLocalFood } from './localFoods'
+import { apiUrl } from './apiBase'
 
 export interface DetectionItem {
   name: string
@@ -159,7 +160,7 @@ function parseJsonObject(text: string): Partial<Detection> {
 }
 
 async function detectWithServer(dataUrl: string, provider: FoodAIProvider): Promise<Detection> {
-  const res = await fetch('/api/detect-food', {
+  const res = await fetch(apiUrl('/api/detect-food'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ image: dataUrl, provider }),

@@ -1,6 +1,7 @@
 // Client wrapper for the online text-based nutrition lookup (/api/lookup-food).
 
 import { matchLocalFood, type LocalFood } from './localFoods'
+import { apiUrl } from './apiBase'
 
 export interface LookupResult {
   name: string
@@ -34,7 +35,7 @@ export function sourceLabel(source: LookupResult['source']): string {
 export async function lookupFood(name: string): Promise<LookupResult> {
   const local = matchLocalFood(name)
   try {
-    const res = await fetch('/api/lookup-food', {
+    const res = await fetch(apiUrl('/api/lookup-food'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name }),
