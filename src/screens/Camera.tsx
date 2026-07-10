@@ -359,7 +359,7 @@ function ProviderPicker({ value, onChange }: { value: FoodAIProvider; onChange: 
     { value: 'auto', label: 'Auto', detail: 'Best available' },
     { value: 'gemini', label: 'Gemini', detail: 'Vision + web' },
     { value: 'anthropic', label: 'Anthropic', detail: 'Claude vision' },
-    { value: 'local', label: 'Local', detail: 'Offline estimate' },
+    { value: 'local', label: 'Local + web', detail: 'Search first, offline fallback' },
   ]
 
   return (

@@ -174,8 +174,6 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
 
 /** Top-level detect: tries server Gemini vision, optional Claude, then rough local fallback. */
 export async function detectFood(dataUrl: string, apiKey: string, provider: FoodAIProvider = 'auto'): Promise<Detection> {
-  if (provider === 'local') return detectFromMock(dataUrl.slice(-64), 'Local mode selected')
-
   let reason: string | undefined
   if (provider === 'anthropic') {
     try {
@@ -199,7 +197,9 @@ export async function detectFood(dataUrl: string, apiKey: string, provider: Food
     }
   }
 
-  return detectFromMock(dataUrl.slice(-64), reason)
+  return detectFromMock(dataUrl.slice(-64), provider === 'local'
+    ? `Online nutrition search unavailable${reason ? `: ${reason}` : ''}`
+    : reason)
 }
 
 export function slotForNow(d = new Date()): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
