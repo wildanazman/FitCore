@@ -150,15 +150,15 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 300,
+      model: 'claude-opus-4-8',
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-            { type: 'text', text: 'Identify this meal and estimate macros.' },
+            { type: 'text', text: 'Identify this meal and estimate calories and macros for the portion shown.' },
           ],
         },
       ],
