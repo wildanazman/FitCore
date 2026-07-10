@@ -162,6 +162,7 @@ export function Food() {
 
 function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: LocalFood) => void }) {
   const [q, setQ] = useState('')
+  const [custom, setCustom] = useState(false)
   const results = searchLocalFoods(q, 40)
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -172,36 +173,123 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
         initial={{ y: 320 }} animate={{ y: 0 }} transition={spring}
       >
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
-        <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-sm">Add food</h2>
-        <div className="flex items-center gap-2 bg-ink rounded-full px-md py-2 mb-md">
-          <Icon name="search" className="text-on-surface-variant" size={18} />
-          <input
-            autoFocus value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="nasi lemak, roti canai, teh tarik…"
-            className="flex-1 bg-transparent text-on-surface font-body-md focus:outline-none placeholder:text-on-surface-variant"
-          />
+        <div className="flex items-center justify-between mb-sm">
+          <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{custom ? 'Custom food' : 'Add food'}</h2>
+          <button onClick={() => setCustom((v) => !v)} className="font-data-mono text-[12px] text-lime flex items-center gap-1">
+            <Icon name={custom ? 'search' : 'edit'} size={16} /> {custom ? 'Search' : 'Enter my own'}
+          </button>
         </div>
-        <div className="overflow-y-auto no-scrollbar space-y-sm">
-          {results.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No match. Try another name.</p>}
-          {results.map((f) => (
-            <Press key={f.name} as="div" onClick={() => onPick(f)} className="rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between cursor-pointer">
-              <div className="flex items-center gap-md">
-                <div className="w-10 h-10 rounded-full bg-lilac/15 flex items-center justify-center text-[20px]">{f.emoji}</div>
-                <div>
-                  <div className="font-metric-md text-[14px] text-on-surface leading-tight">{f.name}</div>
-                  <div className="font-data-mono text-[11px] text-on-surface-variant">{f.serving} · {f.category}</div>
+
+        {custom ? (
+          <CustomFoodForm onSubmit={onPick} defaultName={q} />
+        ) : (
+          <>
+            <div className="flex items-center gap-2 bg-ink rounded-full px-md py-2 mb-md">
+              <Icon name="search" className="text-on-surface-variant" size={18} />
+              <input
+                autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                placeholder="mi sedaap, buttermilk chicken, teh tarik…"
+                className="flex-1 bg-transparent text-on-surface font-body-md focus:outline-none placeholder:text-on-surface-variant"
+              />
+            </div>
+            <div className="overflow-y-auto no-scrollbar space-y-sm">
+              {results.length === 0 && (
+                <div className="text-center py-md">
+                  <p className="font-body-md text-body-md text-on-surface-variant mb-md">No match for “{q}”.</p>
+                  <Press onClick={() => setCustom(true)} className="inline-flex items-center gap-2 bg-lime text-on-lime rounded-full px-lg py-2 font-metric-md text-[14px]">
+                    <Icon name="add" size={18} /> Add it myself
+                  </Press>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="font-data-mono text-[13px] text-on-surface">{f.kcal} kcal</div>
-                <div className="font-data-mono text-[10px] text-on-surface-variant">{f.protein}P {f.carbs}C {f.fat}F</div>
-              </div>
-            </Press>
-          ))}
-        </div>
-        <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Values: local reference (MyFCD / Kal). Tap to log.</p>
+              )}
+              {results.map((f) => (
+                <Press key={f.name} as="div" onClick={() => onPick(f)} className="rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between cursor-pointer">
+                  <div className="flex items-center gap-md">
+                    <div className="w-10 h-10 rounded-full bg-lilac/15 flex items-center justify-center text-[20px]">{f.emoji}</div>
+                    <div>
+                      <div className="font-metric-md text-[14px] text-on-surface leading-tight">{f.name}</div>
+                      <div className="font-data-mono text-[11px] text-on-surface-variant">{f.serving} · {f.category}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-data-mono text-[13px] text-on-surface">{f.kcal} kcal</div>
+                    <div className="font-data-mono text-[10px] text-on-surface-variant">{f.protein}P {f.carbs}C {f.fat}F</div>
+                  </div>
+                </Press>
+              ))}
+            </div>
+            <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Values: local reference (MyFCD). Tap to log.</p>
+          </>
+        )}
       </motion.div>
     </motion.div>
+  )
+}
+
+function CustomFoodForm({ onSubmit, defaultName }: { onSubmit: (f: LocalFood) => void; defaultName: string }) {
+  const [name, setName] = useState(defaultName)
+  const [kcal, setKcal] = useState('')
+  const [protein, setProtein] = useState('')
+  const [carbs, setCarbs] = useState('')
+  const [fat, setFat] = useState('')
+
+  const p = Number(protein) || 0
+  const c = Number(carbs) || 0
+  const f = Number(fat) || 0
+  // Auto-fill kcal from macros if the user leaves it blank.
+  const fromMacros = Math.round(p * 4 + c * 4 + f * 9)
+  const kcalNum = Number(kcal) || fromMacros
+  const valid = name.trim().length > 0 && kcalNum > 0
+
+  const save = () => {
+    if (!valid) return
+    onSubmit({
+      name: name.trim(),
+      emoji: '🍽️',
+      category: 'Basics',
+      serving: '1 serving',
+      kcal: kcalNum,
+      protein: p,
+      carbs: c,
+      fat: f,
+    })
+  }
+
+  return (
+    <div className="space-y-md overflow-y-auto no-scrollbar">
+      <label className="block">
+        <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Food name</span>
+        <input
+          autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Mi Sedaap Goreng"
+          className="mt-1 w-full bg-ink border border-white/10 rounded-xl px-md py-2 text-on-surface font-body-md focus:border-lime focus:outline-none"
+        />
+      </label>
+      <div className="grid grid-cols-2 gap-sm">
+        <NumInput label="Calories (kcal)" value={kcal} onChange={setKcal} placeholder={fromMacros ? String(fromMacros) : '0'} />
+        <NumInput label="Protein (g)" value={protein} onChange={setProtein} />
+        <NumInput label="Carbs (g)" value={carbs} onChange={setCarbs} />
+        <NumInput label="Fat (g)" value={fat} onChange={setFat} />
+      </div>
+      {fromMacros > 0 && !kcal && (
+        <p className="font-data-mono text-[11px] text-lime">Calories auto-filled from macros: {fromMacros} kcal (edit above to override).</p>
+      )}
+      <Press onClick={save} disabled={!valid} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2 disabled:opacity-40">
+        <Icon name="check" size={18} /> Log this food
+      </Press>
+      <p className="font-data-mono text-[10px] text-on-surface-variant text-center">Tip: read the value off the packet, or leave calories blank to compute from macros.</p>
+    </div>
+  )
+}
+
+function NumInput({ label, value, onChange, placeholder = '0' }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <label className="block bg-ink border border-white/10 rounded-xl px-md py-2">
+      <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">{label}</span>
+      <input
+        type="number" inputMode="decimal" min={0} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+        className="w-full bg-transparent text-on-surface font-metric-md text-[16px] focus:outline-none placeholder:text-on-surface-variant/50"
+      />
+    </label>
   )
 }
 

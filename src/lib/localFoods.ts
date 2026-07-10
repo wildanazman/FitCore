@@ -130,6 +130,70 @@ export const LOCAL_FOODS: LocalFood[] = [
   { name: 'Protein Shake (whey)', emoji: '🥤', category: 'Basics', serving: '1 scoop', kcal: 180, protein: 30, carbs: 8, fat: 3, aka: ['protein shake', 'whey'] },
   { name: 'Avocado (half)', emoji: '🥑', category: 'Basics', serving: 'half', kcal: 160, protein: 2, carbs: 3, fat: 15, aka: ['avocado'] },
   { name: 'Caesar Salad w/ Chicken', emoji: '🥗', category: 'Basics', serving: '1 bowl', kcal: 420, protein: 32, carbs: 12, fat: 26, aka: ['caesar salad', 'salad'] },
+
+  // Mamak & Western-mamak
+  { name: 'Buttermilk Chicken', emoji: '🍗', category: 'Meat', serving: '1 serving', kcal: 520, protein: 32, carbs: 26, fat: 32, aka: ['buttermilk chicken', 'ayam buttermilk'] },
+  { name: 'Nasi Goreng Pattaya', emoji: '🍳', category: 'Rice', serving: '1 plate', kcal: 700, protein: 22, carbs: 84, fat: 30, aka: ['pattaya', 'nasi goreng pattaya'] },
+  { name: 'Nasi Goreng USA', emoji: '🍚', category: 'Rice', serving: '1 plate', kcal: 880, protein: 38, carbs: 92, fat: 40, aka: ['nasi goreng usa'] },
+  { name: 'Roti Tisu', emoji: '🫓', category: 'Roti & Bread', serving: '1 piece', kcal: 380, protein: 6, carbs: 58, fat: 14, aka: ['roti tisu'] },
+  { name: 'Roti John', emoji: '🥖', category: 'Roti & Bread', serving: '1 serving', kcal: 560, protein: 24, carbs: 52, fat: 28, aka: ['roti john'] },
+  { name: 'Murtabak Ayam', emoji: '🫓', category: 'Roti & Bread', serving: '1 piece', kcal: 480, protein: 22, carbs: 44, fat: 24, aka: ['murtabak'] },
+  { name: 'Naan with Curry', emoji: '🫓', category: 'Roti & Bread', serving: '1 piece', kcal: 320, protein: 9, carbs: 48, fat: 10, aka: ['naan'] },
+  { name: 'Tandoori Chicken', emoji: '🍗', category: 'Meat', serving: '1 quarter', kcal: 300, protein: 34, carbs: 6, fat: 16, aka: ['tandoori'] },
+  { name: 'Banana Leaf Rice', emoji: '🍛', category: 'Rice', serving: '1 set', kcal: 720, protein: 22, carbs: 96, fat: 26, aka: ['banana leaf'] },
+  { name: 'Maggi Kari (cooked)', emoji: '🍜', category: 'Noodles', serving: '1 pack', kcal: 400, protein: 8, carbs: 54, fat: 16, aka: ['maggi kari', 'maggi curry'] },
+  { name: 'Nasi Ayam Penyet', emoji: '🍗', category: 'Rice', serving: '1 plate', kcal: 780, protein: 40, carbs: 78, fat: 34, aka: ['ayam penyet', 'penyet'] },
+
+  // Instant / packaged noodles
+  { name: 'Mi Sedaap Goreng', emoji: '🍜', category: 'Noodles', serving: '1 pack', kcal: 330, protein: 7, carbs: 47, fat: 13, aka: ['mi sedaap', 'mee sedap', 'mi sedap goreng'] },
+  { name: 'Mi Sedaap Soto', emoji: '🍲', category: 'Noodles', serving: '1 pack', kcal: 350, protein: 8, carbs: 50, fat: 13, aka: ['mi sedaap soto'] },
+  { name: 'Maggi Goreng Pack', emoji: '🍜', category: 'Noodles', serving: '1 pack', kcal: 350, protein: 8, carbs: 49, fat: 14, aka: ['maggi pack', 'indomie goreng', 'indomie'] },
+  { name: 'Cup Noodles', emoji: '🍜', category: 'Noodles', serving: '1 cup', kcal: 300, protein: 6, carbs: 42, fat: 12, aka: ['cup noodle', 'cintan'] },
+
+  // Chinese-Malaysian
+  { name: 'Char Siew Rice', emoji: '🍖', category: 'Rice', serving: '1 plate', kcal: 620, protein: 30, carbs: 78, fat: 20, aka: ['char siew', 'bbq pork rice'] },
+  { name: 'Claypot Chicken Rice', emoji: '🍲', category: 'Rice', serving: '1 pot', kcal: 660, protein: 30, carbs: 82, fat: 22, aka: ['claypot rice'] },
+  { name: 'Pan Mee', emoji: '🍜', category: 'Noodles', serving: '1 bowl', kcal: 480, protein: 20, carbs: 62, fat: 16, aka: ['pan mee', 'ban mian'] },
+  { name: 'Yong Tau Foo (dry)', emoji: '🍢', category: 'Soup', serving: '1 bowl', kcal: 380, protein: 24, carbs: 34, fat: 16, aka: ['yong tau foo', 'ytf'] },
+  { name: 'Dim Sum (mixed, 4)', emoji: '🥟', category: 'Snack', serving: '4 pieces', kcal: 320, protein: 16, carbs: 34, fat: 13, aka: ['dim sum', 'dimsum'] },
+  { name: 'Wan Tan Soup', emoji: '🥟', category: 'Soup', serving: '1 bowl', kcal: 220, protein: 14, carbs: 24, fat: 8, aka: ['wantan soup'] },
+  { name: 'Chee Cheong Fun', emoji: '🍥', category: 'Snack', serving: '1 plate', kcal: 300, protein: 8, carbs: 48, fat: 8, aka: ['chee cheong fun', 'ccf'] },
+
+  // Western / fast food
+  { name: 'Fried Chicken (KFC-style, 1pc)', emoji: '🍗', category: 'Meat', serving: '1 piece', kcal: 320, protein: 22, carbs: 10, fat: 21, aka: ['fried chicken', 'kfc'] },
+  { name: 'Ramly Burger Special', emoji: '🍔', category: 'Snack', serving: '1 burger', kcal: 550, protein: 24, carbs: 38, fat: 34, aka: ['ramly', 'ramly burger'] },
+  { name: 'Fish & Chips', emoji: '🍟', category: 'Seafood', serving: '1 plate', kcal: 780, protein: 34, carbs: 68, fat: 40, aka: ['fish and chips'] },
+  { name: 'Lamb Chop', emoji: '🍖', category: 'Meat', serving: '1 plate', kcal: 640, protein: 40, carbs: 32, fat: 38, aka: ['lamb chop'] },
+  { name: 'French Fries', emoji: '🍟', category: 'Snack', serving: '1 medium', kcal: 340, protein: 4, carbs: 44, fat: 17, aka: ['fries', 'kentang goreng'] },
+
+  // Malay home dishes
+  { name: 'Ayam Masak Kicap', emoji: '🍗', category: 'Meat', serving: '1 serving', kcal: 330, protein: 28, carbs: 12, fat: 19, aka: ['masak kicap', 'ayam kicap'] },
+  { name: 'Daging Masak Hitam', emoji: '🥘', category: 'Meat', serving: '1 serving', kcal: 400, protein: 28, carbs: 10, fat: 28, aka: ['masak hitam', 'daging hitam'] },
+  { name: 'Ikan Asam Pedas', emoji: '🐟', category: 'Seafood', serving: '1 serving', kcal: 260, protein: 30, carbs: 8, fat: 12, aka: ['asam pedas', 'ikan asam pedas'] },
+  { name: 'Sotong Masak Kicap', emoji: '🦑', category: 'Seafood', serving: '1 serving', kcal: 240, protein: 22, carbs: 10, fat: 12, aka: ['sotong kicap'] },
+  { name: 'Sup Kambing', emoji: '🍲', category: 'Soup', serving: '1 bowl', kcal: 340, protein: 28, carbs: 10, fat: 21, aka: ['sup kambing', 'mutton soup'] },
+  { name: 'Nasi Campur (1 meat, 2 veg)', emoji: '🍛', category: 'Rice', serving: '1 plate', kcal: 650, protein: 26, carbs: 82, fat: 24, aka: ['nasi campur', 'mixed rice', 'economy rice'] },
+  { name: 'Telur Bungkus (Egg Wrap)', emoji: '🍳', category: 'Egg', serving: '1 serving', kcal: 260, protein: 12, carbs: 20, fat: 15, aka: ['telur bungkus'] },
+
+  // Indian-Malaysian
+  { name: 'Thosai Masala', emoji: '🫓', category: 'Roti & Bread', serving: '1 piece', kcal: 300, protein: 7, carbs: 48, fat: 9, aka: ['masala thosai', 'masala dosa'] },
+  { name: 'Vadai', emoji: '🍩', category: 'Snack', serving: '2 pieces', kcal: 220, protein: 8, carbs: 24, fat: 11, aka: ['vadai', 'vada'] },
+  { name: 'Idli (2)', emoji: '🍥', category: 'Snack', serving: '2 pieces', kcal: 140, protein: 5, carbs: 28, fat: 1, aka: ['idli'] },
+  { name: 'Putu Mayam', emoji: '🍜', category: 'Snack', serving: '1 serving', kcal: 210, protein: 4, carbs: 40, fat: 4, aka: ['putu mayam', 'string hopper'] },
+
+  // Kuih / desserts
+  { name: 'Apam Balik', emoji: '🥞', category: 'Dessert', serving: '1 piece', kcal: 280, protein: 6, carbs: 40, fat: 11, aka: ['apam balik'] },
+  { name: 'Seri Muka', emoji: '🍮', category: 'Dessert', serving: '1 piece', kcal: 180, protein: 3, carbs: 28, fat: 6, aka: ['seri muka', 'kuih seri muka'] },
+  { name: 'Kuih Talam', emoji: '🍮', category: 'Dessert', serving: '1 piece', kcal: 150, protein: 2, carbs: 24, fat: 6, aka: ['kuih talam'] },
+  { name: 'Rojak Buah', emoji: '🥗', category: 'Snack', serving: '1 serving', kcal: 260, protein: 6, carbs: 40, fat: 9, aka: ['rojak', 'rojak buah'] },
+  { name: 'Pasembur', emoji: '🥗', category: 'Snack', serving: '1 plate', kcal: 420, protein: 12, carbs: 44, fat: 22, aka: ['pasembur', 'mamak rojak'] },
+
+  // Drinks
+  { name: 'Teh O Ais', emoji: '🧊', category: 'Drink', serving: '1 glass', kcal: 90, protein: 0, carbs: 22, fat: 0, aka: ['teh o ais', 'teh o'] },
+  { name: 'Teh C Ais', emoji: '🥤', category: 'Drink', serving: '1 glass', kcal: 150, protein: 3, carbs: 26, fat: 4, aka: ['teh c ais', 'teh c'] },
+  { name: 'Kopi Ais', emoji: '🧋', category: 'Drink', serving: '1 glass', kcal: 160, protein: 3, carbs: 28, fat: 4, aka: ['kopi ais', 'iced coffee'] },
+  { name: 'Limau Ais', emoji: '🍋', category: 'Drink', serving: '1 glass', kcal: 90, protein: 0, carbs: 22, fat: 0, aka: ['limau ais', 'lime juice'] },
+  { name: '100 Plus', emoji: '🥤', category: 'Drink', serving: '1 can', kcal: 90, protein: 0, carbs: 22, fat: 0, aka: ['100 plus', 'isotonic'] },
 ]
 
 function norm(s: string): string {
