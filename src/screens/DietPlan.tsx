@@ -98,53 +98,6 @@ export function DietPlan() {
           </div>
         </section>
 
-        {/* Recommendation */}
-        <section>
-          <SectionLabel>Recommended for you</SectionLabel>
-          <div className="bg-lime/10 border-l-2 border-lime rounded-r-[20px] p-md mt-md">
-            <div className="flex items-center gap-sm mb-sm">
-              <Icon name={recDef.icon} fill className="text-lime" />
-              <span className="font-metric-md text-metric-md text-on-surface">{recDef.label}</span>
-              {onRecommended && (
-                <span className="ml-auto font-label-caps text-label-caps uppercase text-secondary flex items-center gap-1">
-                  <Icon name="check_circle" size={14} fill /> Active
-                </span>
-              )}
-            </div>
-            <p className="font-body-md text-body-md text-on-surface-variant">{rec.reason}</p>
-            {!onRecommended && (
-              <button
-                onClick={() => updateProfile({ dietMode: rec.mode })}
-                className="mt-md bg-lime text-on-lime font-metric-md text-metric-md py-2 px-lg rounded-full active:scale-95 transition flex items-center gap-2"
-              >
-                Switch to {recDef.label} <Icon name="arrow_forward" size={18} />
-              </button>
-            )}
-          </div>
-        </section>
-
-        {/* Switch mode */}
-        <section>
-          <SectionLabel>Switch protocol</SectionLabel>
-          <div className="flex gap-sm overflow-x-auto no-scrollbar mt-md pb-1">
-            {DIET_LIST.map((d) => {
-              const on = d.id === profile.dietMode
-              return (
-                <button
-                  key={d.id}
-                  onClick={() => updateProfile({ dietMode: d.id })}
-                  className={`shrink-0 flex items-center gap-2 px-md py-sm rounded-full border transition ${
-                    on ? 'bg-lime text-on-lime border-transparent' : 'bg-transparent text-on-surface-variant border-outline-variant'
-                  }`}
-                >
-                  <Icon name={d.icon} size={18} fill={on} />
-                  {d.short}
-                </button>
-              )
-            })}
-          </div>
-        </section>
-
         {/* Detailed guide for active mode */}
         <section>
           <div className="flex items-center gap-sm mb-sm">
@@ -184,6 +137,52 @@ export function DietPlan() {
                 {plan.scaledTotal.kcal} kcal · {plan.scaledTotal.protein}P {plan.scaledTotal.carbs}C {plan.scaledTotal.fat}F
               </span>
             </div>
+          </div>
+        </section>
+
+        {/* Decision support comes after the full plan, so the user can choose with context. */}
+        <section>
+          <SectionLabel>Recommended for you</SectionLabel>
+          <div className="bg-lime/10 border-l-2 border-lime rounded-r-[20px] p-md mt-md">
+            <div className="flex items-center gap-sm mb-sm">
+              <Icon name={recDef.icon} fill className="text-lime" />
+              <span className="font-metric-md text-metric-md text-on-surface">{recDef.label}</span>
+              {onRecommended && (
+                <span className="ml-auto font-label-caps text-label-caps uppercase text-secondary flex items-center gap-1">
+                  <Icon name="check_circle" size={14} fill /> Active
+                </span>
+              )}
+            </div>
+            <p className="font-body-md text-body-md text-on-surface-variant">{rec.reason}</p>
+            {!onRecommended && (
+              <button
+                onClick={() => updateProfile({ dietMode: rec.mode })}
+                className="mt-md bg-lime text-on-lime font-metric-md text-metric-md py-2 px-lg rounded-full active:scale-95 transition flex items-center gap-2"
+              >
+                Switch to {recDef.label} <Icon name="arrow_forward" size={18} />
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <SectionLabel>Switch protocol</SectionLabel>
+          <div className="flex gap-sm overflow-x-auto no-scrollbar mt-md pb-1">
+            {DIET_LIST.map((d) => {
+              const on = d.id === profile.dietMode
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => updateProfile({ dietMode: d.id })}
+                  className={`shrink-0 flex items-center gap-2 px-md py-sm rounded-full border transition ${
+                    on ? 'bg-lime text-on-lime border-transparent' : 'bg-transparent text-on-surface-variant border-outline-variant'
+                  }`}
+                >
+                  <Icon name={d.icon} size={18} fill={on} />
+                  {d.short}
+                </button>
+              )
+            })}
           </div>
         </section>
 
