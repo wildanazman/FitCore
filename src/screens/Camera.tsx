@@ -196,7 +196,7 @@ export function Camera() {
         <>
           <video
             ref={videoRef}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${cameraReady ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 h-full w-full object-contain bg-black transition-opacity duration-300 ${cameraReady ? 'opacity-100' : 'opacity-0'}`}
             playsInline
             muted
             autoPlay
@@ -286,6 +286,9 @@ export function Camera() {
                   </span>
                   {det.note && <span className="font-data-mono text-[11px] text-tertiary">{det.note}</span>}
                 </div>
+                <p className="font-data-mono text-[10px] text-on-surface-variant">
+                  {detectionUsageLabel(det.source)}
+                </p>
                 <div className="flex items-baseline gap-2 mt-sm">
                   <span className="font-display-hero text-display-hero text-primary">{Math.round(det.kcal * servings)}</span>
                   <span className="font-metric-md text-metric-md text-on-surface-variant">kcal</span>
@@ -397,6 +400,21 @@ function detectionSourceLabel(source: Detection['source']) {
     case 'local':
     default:
       return 'rough offline estimate'
+  }
+}
+
+function detectionUsageLabel(source: Detection['source']) {
+  switch (source) {
+    case 'local':
+      return 'Usage: Unlimited · offline local reference'
+    case 'gemini':
+      return 'Usage: Gemini API quota · remaining balance unavailable here'
+    case 'claude':
+      return 'Usage: Anthropic API quota · remaining balance unavailable here'
+    case 'openfoodfacts':
+      return 'Usage: Open Food Facts · no personal quota shown'
+    default:
+      return 'Usage: Provider API quota · remaining balance unavailable here'
   }
 }
 
