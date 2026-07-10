@@ -69,6 +69,10 @@ function windowLengthH(mode: DietMode): number {
   return 24
 }
 
+export function windowLengthHours(mode: DietMode): number {
+  return windowLengthH(mode)
+}
+
 export interface WindowState {
   startHour: number
   endHour: number
@@ -97,14 +101,16 @@ function fmtDuration(hours: number): string {
  */
 export function windowState(startHour: number, mode: DietMode, nowMinutes: number): WindowState {
   const len = windowLengthH(mode)
-  const now = nowMinutes / 60
-  const start = startHour
-  const end = (startHour + len) % 24 || 24 // keep 24 rather than 0 for same-day windows
+  const now = ((nowMinutes / 60) % 24 + 24) % 24
+  const start = ((startHour % 24) + 24) % 24
+  const endAbsolute = start + len
+  const end = endAbsolute % 24 || 24
 
   // Windows here never wrap midnight (start 0-16, len 1-8 → end ≤ 24).
-  const eating = now >= start && now < start + len
+  const nowAbsolute = now < start ? now + 24 : now
+  const eating = nowAbsolute >= start && nowAbsolute < endAbsolute
   if (eating) {
-    const remaining = start + len - now
+    const remaining = endAbsolute - nowAbsolute
     return {
       startHour: start,
       endHour: end,
@@ -116,7 +122,7 @@ export function windowState(startHour: number, mode: DietMode, nowMinutes: numbe
     }
   }
   // Fasting: time until the window opens (today if before start, else tomorrow).
-  const untilOpen = now < start ? start - now : 24 - now + start
+  const untilOpen = nowAbsolute < start ? start - nowAbsolute : 24 - nowAbsolute + start
   const fastLen = 24 - len
   const fasted = fastLen - untilOpen
   return {

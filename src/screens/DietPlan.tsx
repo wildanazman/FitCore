@@ -1,9 +1,10 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { Icon } from '../components/Icon'
 import { SectionLabel } from '../components/ui'
-import { dietDef, DIET_LIST } from '../lib/diet'
+import { dietDef, DIET_LIST, windowLengthHours, windowState } from '../lib/diet'
 import { personalPlan } from '../lib/dietGuide'
 import { toDisplayWeight, weightUnit } from '../lib/nutrition'
 
@@ -16,6 +17,15 @@ export function DietPlan() {
   const rec = plan.recommendation
   const recDef = dietDef(rec.mode)
   const onRecommended = rec.mode === profile.dietMode
+  const [now, setNow] = useState(() => new Date())
+  const windowNow = def.kind === 'window' ? windowState(profile.eatingWindowStartHour, profile.dietMode, now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60) : null
+  const countdown = windowNow ? formatCountdown(windowNow, now) : null
+
+  useEffect(() => {
+    if (def.kind !== 'window') return
+    const timer = globalThis.setInterval(() => setNow(new Date()), 1000)
+    return () => globalThis.clearInterval(timer)
+  }, [def.kind])
 
   return (
     <div>
@@ -27,6 +37,45 @@ export function DietPlan() {
           </button>
           <h1 className="font-headline-lg text-headline-lg text-on-surface">Your diet plan</h1>
         </div>
+
+        <section className="relative overflow-hidden rounded-2xl bg-surface-container-high border border-outline-variant p-lg card-elev">
+          <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/10 blur-2xl" />
+          <div className="relative flex items-start justify-between gap-md">
+            <div>
+              <div className="flex items-center gap-2 text-primary">
+                <Icon name={def.icon} fill size={18} />
+                <span className="font-label-caps text-label-caps uppercase">Active protocol</span>
+              </div>
+              <h2 className="font-display-hero text-display-hero text-on-surface mt-2">{def.label}</h2>
+              <p className="font-body-md text-body-md text-on-surface-variant mt-1">{def.tagline}</p>
+            </div>
+            {windowNow && countdown && (
+              <div className="text-right shrink-0">
+                <span className={`font-label-caps text-label-caps uppercase ${windowNow.eating ? 'text-secondary' : 'text-primary'}`}>
+                  {windowNow.eating ? 'Eating now' : 'Fasting'}
+                </span>
+                <div className="font-data-mono text-[28px] leading-none text-on-surface mt-2 tabular-nums">{countdown}</div>
+                <p className="font-data-mono text-[11px] text-on-surface-variant mt-1">{windowNow.detail}</p>
+              </div>
+            )}
+          </div>
+          {windowNow && (
+            <div className="relative mt-lg">
+              <div className="flex justify-between font-data-mono text-[11px] text-on-surface-variant mb-2">
+                <span>{formatHour(windowNow.startHour)}</span>
+                <span>{formatHour(windowNow.endHour)}</span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-container-highest overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-700 ${windowNow.eating ? 'bg-secondary' : 'bg-primary'}`} style={{ width: `${Math.max(4, windowNow.pct * 100)}%` }} />
+              </div>
+              <p className="font-body-md text-[13px] text-on-surface-variant mt-2">
+                {windowNow.eating ? `Keep your ${windowLengthHours(profile.dietMode)}-hour window focused and hit your target.` : `Your next eating window opens at ${formatHour(windowNow.startHour)}.`}
+              </p>
+            </div>
+          )}
+        </section>
+
+        <ProtocolSettings profile={profile} updateProfile={updateProfile} />
 
         {/* Stats from weight/height/activity */}
         <section>
@@ -76,7 +125,7 @@ export function DietPlan() {
 
         {/* Switch mode */}
         <section>
-          <SectionLabel>Active protocol</SectionLabel>
+          <SectionLabel>Switch protocol</SectionLabel>
           <div className="flex gap-sm overflow-x-auto no-scrollbar mt-md pb-1">
             {DIET_LIST.map((d) => {
               const on = d.id === profile.dietMode
@@ -150,6 +199,78 @@ export function DietPlan() {
       </div>
     </div>
   )
+}
+
+function ProtocolSettings({ profile, updateProfile }: { profile: ReturnType<typeof useApp>['profile']; updateProfile: ReturnType<typeof useApp>['updateProfile'] }) {
+  const isWindow = profile.dietMode === 'omad' || profile.dietMode === '16:8'
+  const isLowCarb = profile.dietMode === 'keto' || profile.dietMode === 'egg'
+  if (!isWindow && !isLowCarb) return null
+
+  return (
+    <section className="bg-tile border border-tile-border rounded-xl p-md">
+      <div className="flex items-center justify-between gap-md">
+        <div>
+          <p className="font-label-caps text-label-caps uppercase text-on-surface-variant">Personalise your plan</p>
+          <p className="font-metric-md text-metric-md text-on-surface mt-1">Make the protocol fit your day</p>
+        </div>
+        <Icon name="tune" className="text-primary" />
+      </div>
+      <div className="grid grid-cols-2 gap-md mt-md">
+        {isWindow && (
+          <label className="block">
+            <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Eating starts</span>
+            <select
+              className="mt-2 w-full rounded-lg border border-outline-variant bg-surface-container-high px-sm py-2 text-on-surface outline-none focus:border-primary"
+              value={profile.eatingWindowStartHour}
+              onChange={(e) => updateProfile({ eatingWindowStartHour: Number(e.target.value) })}
+            >
+              {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{formatHour(hour)}</option>)}
+            </select>
+          </label>
+        )}
+        {isLowCarb && (
+          <label className="block">
+            <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Daily net carb cap</span>
+            <div className="relative mt-2">
+              <input
+                type="number"
+                min={5}
+                max={200}
+                className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-sm py-2 pr-10 text-on-surface outline-none focus:border-primary"
+                value={profile.netCarbCapG}
+                onChange={(e) => updateProfile({ netCarbCapG: Math.max(5, Math.min(200, Number(e.target.value) || 5)) })}
+              />
+              <span className="absolute right-3 top-2 text-on-surface-variant">g</span>
+            </div>
+          </label>
+        )}
+      </div>
+      <p className="font-body-md text-[12px] text-on-surface-variant mt-md">
+        {profile.dietMode === 'omad' ? 'Default is a 1-hour window. Choose the meal time that works best for you.' : profile.dietMode === '16:8' ? 'Default is an 8-hour eating window. Move it around your training and sleep.' : profile.dietMode === 'keto' ? 'Lower the cap for stricter keto, or raise it to make training fuel more flexible.' : 'Egg mode uses this cap as a guardrail for the rest of your meals.'}
+      </p>
+    </section>
+  )
+}
+
+function formatHour(hour: number): string {
+  const h = ((hour % 24) + 24) % 24
+  return `${h % 12 || 12}:${String(0).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`
+}
+
+function formatCountdown(state: { eating: boolean; startHour: number; endHour: number }, now: Date): string {
+  const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+  const startSeconds = state.startHour * 3600
+  let endSeconds = state.endHour * 3600
+  if (endSeconds <= startSeconds) endSeconds += 24 * 3600
+  let current = nowSeconds
+  if (current < startSeconds) current += 24 * 3600
+  let remaining = state.eating ? endSeconds - current : startSeconds - current
+  if (!state.eating && remaining <= 0) remaining += 24 * 3600
+  remaining = Math.max(0, remaining)
+  const hours = Math.floor(remaining / 3600)
+  const minutes = Math.floor((remaining % 3600) / 60)
+  const seconds = remaining % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 function Stat({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: 'good' | 'warn' | 'tertiary' | 'error' }) {
