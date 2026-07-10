@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
@@ -11,22 +11,69 @@ type Phase = 'capture' | 'analyzing' | 'result' | 'edit'
 export function Camera() {
   const { profile, addFood } = useApp()
   const nav = useNavigate()
-  const fileRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
   const [phase, setPhase] = useState<Phase>('capture')
   const [photo, setPhoto] = useState<string | null>(null)
   const [det, setDet] = useState<Detection | null>(null)
   const [servings, setServings] = useState(1)
   const [error, setError] = useState<string | null>(null)
+  const [cameraReady, setCameraReady] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const dataUrl = await fileToCompressedDataUrl(file)
-    e.target.value = ''
+  useEffect(() => {
+    if (phase !== 'capture' || photo) {
+      stopCamera()
+      return
+    }
+
+    let cancelled = false
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError('Live camera is not available on this browser. Add a photo instead.')
+        return
+      }
+      setCameraError(null)
+      setCameraReady(false)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1920 } },
+          audio: false,
+        })
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          await videoRef.current.play().catch(() => undefined)
+        }
+        setCameraReady(true)
+      } catch {
+        setCameraError('Camera permission blocked or unavailable. Add a photo from gallery.')
+      }
+    }
+
+    startCamera()
+    return () => {
+      cancelled = true
+      stopCamera()
+    }
+  }, [phase, photo])
+
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+    streamRef.current = null
+    setCameraReady(false)
+  }
+
+  async function analyzePhoto(dataUrl: string) {
     setPhoto(dataUrl)
     setPhase('analyzing')
     setError(null)
+    stopCamera()
     try {
       const result = await detectFood(dataUrl, profile.anthropicApiKey)
       setDet(result)
@@ -36,6 +83,32 @@ export function Camera() {
       setError('Detection failed. Try again or log manually.')
       setPhase('result')
     }
+  }
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const dataUrl = await fileToCompressedDataUrl(file)
+    e.target.value = ''
+    await analyzePhoto(dataUrl)
+  }
+
+  async function captureLivePhoto() {
+    const video = videoRef.current
+    if (!video || video.readyState < 2) {
+      setCameraError('Camera is still warming up. Try again in a second.')
+      return
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 1280
+    canvas.height = video.videoHeight || 720
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      setCameraError('Could not capture this frame. Add a photo instead.')
+      return
+    }
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    await analyzePhoto(canvas.toDataURL('image/jpeg', 0.86))
   }
 
   function confirm() {
@@ -80,48 +153,70 @@ export function Camera() {
           <Icon name="close" />
         </button>
         {photo && phase !== 'analyzing' && (
-          <button onClick={() => { setPhoto(null); setDet(null); setPhase('capture'); fileRef.current?.click() }} className="w-12 h-12 flex items-center justify-center rounded-full bg-surface/50 backdrop-blur-md border border-outline-variant text-on-surface">
+          <button onClick={() => { setPhoto(null); setDet(null); setPhase('capture') }} className="w-12 h-12 flex items-center justify-center rounded-full bg-surface/50 backdrop-blur-md border border-outline-variant text-on-surface">
             <Icon name="refresh" />
           </button>
         )}
       </div>
 
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
-      {/* No capture attribute — opens the photo library / file picker instead of the camera */}
+      {/* No capture attribute: opens the photo library / file picker instead of the camera */}
       <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
 
       {/* Capture phase */}
       {phase === 'capture' && (
-        <div className="z-20 flex flex-col items-center text-center px-margin-mobile pb-xl gap-lg">
-          <div className="w-28 h-28 border-2 border-primary/40 rounded-full flex items-center justify-center">
-            <Icon name="restaurant" size={48} className="text-primary" />
+        <>
+          <video
+            ref={videoRef}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${cameraReady ? 'opacity-100' : 'opacity-0'}`}
+            playsInline
+            muted
+            autoPlay
+          />
+          <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
+          {!cameraReady && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-sm px-margin-mobile text-center">
+              <div className="w-20 h-20 border-2 border-lime/30 rounded-full flex items-center justify-center relative">
+                {!cameraError && <div className="absolute inset-0 border-t-2 border-lime rounded-full animate-spin" />}
+                <Icon name={cameraError ? 'no_photography' : 'photo_camera'} size={34} className="text-lime" />
+              </div>
+              <p className="font-body-md text-[13px] text-on-surface-variant max-w-[260px]">
+                {cameraError ?? 'Opening live camera...'}
+              </p>
+            </div>
+          )}
+          <div className="z-20 flex w-full flex-col items-center text-center px-margin-mobile pb-xl gap-lg">
+            <div className="rounded-full border border-lime/40 bg-black/35 px-md py-xs backdrop-blur-md">
+              <span className="font-label-caps text-label-caps uppercase tracking-widest text-lime">
+                {cameraReady ? 'Live camera' : 'Camera'}
+              </span>
+            </div>
+            <div>
+              <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Snap your meal</h1>
+              <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
+                Point at your food, snap, or add a photo from gallery.
+              </p>
+            </div>
+            <div className="flex items-center gap-lg">
+              <button
+                onClick={() => galleryRef.current?.click()}
+                className="w-14 h-14 rounded-full bg-ink-card border border-white/15 text-on-surface flex items-center justify-center active:scale-95 transition"
+                aria-label="Upload from gallery"
+              >
+                <Icon name="photo_library" size={24} />
+              </button>
+              <button
+                onClick={captureLivePhoto}
+                className="w-20 h-20 rounded-full bg-lime text-on-lime flex items-center justify-center shadow-[0_0_24px_rgba(201,242,78,0.45)] active:scale-95 transition disabled:opacity-60"
+                aria-label="Take photo"
+                disabled={!cameraReady}
+              >
+                <Icon name="photo_camera" fill size={36} />
+              </button>
+              <div className="w-14 h-14" aria-hidden="true" />
+            </div>
+            <p className="font-data-mono text-[11px] text-on-surface-variant">Live camera + add photo</p>
           </div>
-          <div>
-            <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Snap your meal</h1>
-            <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
-              {profile.anthropicApiKey ? 'Live AI will estimate macros.' : 'Gemini vision estimates calories & macros in seconds.'}
-            </p>
-          </div>
-          <div className="flex items-center gap-lg">
-            <button
-              onClick={() => galleryRef.current?.click()}
-              className="w-14 h-14 rounded-full bg-ink-card border border-white/15 text-on-surface flex items-center justify-center active:scale-95 transition"
-              aria-label="Upload from gallery"
-            >
-              <Icon name="photo_library" size={24} />
-            </button>
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-20 h-20 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-[0_0_24px_rgba(197,192,255,0.4)] active:scale-95 transition"
-              aria-label="Take photo"
-            >
-              <Icon name="photo_camera" fill size={36} />
-            </button>
-            {/* spacer to keep the shutter centered */}
-            <div className="w-14 h-14" aria-hidden="true" />
-          </div>
-          <p className="font-data-mono text-[11px] text-on-surface-variant">Snap with camera or upload from gallery</p>
-        </div>
+        </>
       )}
 
       {/* Analyzing */}
