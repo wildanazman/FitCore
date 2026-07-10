@@ -4,7 +4,7 @@ export type Sex = 'male' | 'female'
 export type Goal = 'lose' | 'maintain' | 'gain'
 export type Sport = 'running' | 'strength' | 'badminton' | 'pickleball'
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete'
-export type HalfMarathonGoal = 'finish' | 'sub230' | 'sub215' | 'sub200' | 'sub145'
+export type HalfMarathonGoal = 'finish' | 'sub245' | 'sub240' | 'sub235' | 'sub230' | 'sub215' | 'sub200' | 'sub145'
 /** Goal race distance for the running plan. */
 export type RaceType = 'half-marathon' | 'marathon'
 
@@ -47,6 +47,12 @@ export interface UserProfile {
   bestRunDistanceKm: number
   /** Current best sustainable pace for that run, in seconds per km. */
   bestRunPaceSecPerKm: number
+  /** Current best 5K pace in seconds per km. */
+  bestFiveKmPaceSecPerKm: number
+  /** Current best 10K pace in seconds per km. */
+  bestTenKmPaceSecPerKm: number
+  /** Preferred run weekdays, Monday=0 ... Sunday=6. */
+  runPreferredDays: number[]
   activity: ActivityLevel
   /** Daily calorie target. If null, computed from TDEE + goal. */
   calorieTargetOverride: number | null

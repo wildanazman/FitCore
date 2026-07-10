@@ -13,6 +13,9 @@ const SEC_PER_MIN = 60
 
 const HM_GOAL_MINUTES: Record<HalfMarathonGoal, number | null> = {
   finish: null,
+  sub245: 165,
+  sub240: 160,
+  sub235: 155,
   sub230: 150,
   sub215: 135,
   sub200: 120,
@@ -71,6 +74,9 @@ export function formatPace(secPerKm: number): string {
 
 export function halfMarathonGoalLabel(goal: HalfMarathonGoal): string {
   if (goal === 'finish') return 'Finish strong'
+  if (goal === 'sub245') return 'Sub 2:45'
+  if (goal === 'sub240') return 'Sub 2:40'
+  if (goal === 'sub235') return 'Sub 2:35'
   if (goal === 'sub230') return 'Sub 2:30'
   if (goal === 'sub215') return 'Sub 2:15'
   if (goal === 'sub200') return 'Sub 2:00'
@@ -86,25 +92,91 @@ export function halfMarathonGoalPace(goal: HalfMarathonGoal): number | null {
   return min ? Math.round((min * SEC_PER_MIN) / HALF_KM) : null
 }
 
-export const HALF_MARATHON_GOALS: HalfMarathonGoal[] = ['finish', 'sub230', 'sub215', 'sub200', 'sub145']
+export const HALF_MARATHON_GOALS: HalfMarathonGoal[] = ['finish', 'sub245', 'sub240', 'sub235', 'sub230', 'sub215', 'sub200', 'sub145']
+
+const GOAL_ORDER: HalfMarathonGoal[] = ['sub145', 'sub200', 'sub215', 'sub230', 'sub235', 'sub240', 'sub245']
+
+export function formatFinishTime(minutes: number): string {
+  const h = Math.floor(minutes / 60)
+  const m = Math.round(minutes % 60)
+  return `${h}:${String(m).padStart(2, '0')}`
+}
+
+function riegelFinishSeconds(distanceKm: number, paceSecPerKm: number, targetKm: number): number {
+  const raceSeconds = distanceKm * paceSecPerKm
+  return raceSeconds * Math.pow(targetKm / distanceKm, 1.06)
+}
+
+export function assessRunning(p: UserProfile) {
+  const raceKm = raceDistanceKm(p.raceType)
+  const fivePace = Math.max(240, p.bestFiveKmPaceSecPerKm || p.bestRunPaceSecPerKm || 360)
+  const tenPace = Math.max(260, p.bestTenKmPaceSecPerKm || p.bestRunPaceSecPerKm + 45 || 420)
+  const longestKm = Math.max(1, p.bestRunDistanceKm || 5)
+  const fivePrediction = riegelFinishSeconds(5, fivePace, raceKm)
+  const tenPrediction = riegelFinishSeconds(10, tenPace, raceKm)
+  const hasTen = Boolean(p.bestTenKmPaceSecPerKm)
+  const baselineSec = hasTen ? tenPrediction * 0.8 + fivePrediction * 0.2 : fivePrediction
+  const days = trainingDays(p)
+  const weeksAvailable = p.raceDate
+    ? Math.max(1, Math.ceil(daysUntil(p.planStartDate ?? suggestPlanStart(), p.raceDate) / 7))
+    : planWeeks(p)
+  const dayPenalty = days <= 3 ? 0.025 : days === 4 ? 0.01 : 0
+  const runwayPenalty = weeksAvailable < 8 ? 0.04 : weeksAvailable < 12 ? 0.01 : 0
+  const distancePenalty = p.raceType === 'marathon'
+    ? longestKm < 18 ? 0.06 : longestKm < 25 ? 0.03 : 0
+    : longestKm < 8 ? 0.03 : longestKm < 12 ? 0.012 : 0
+  const realisticSec = baselineSec * (1 + dayPenalty + runwayPenalty + distancePenalty)
+  const stretchSec = baselineSec * (days <= 3 ? 0.985 : 0.97)
+  const selectedGoalMin = p.raceType === 'half-marathon' ? halfMarathonGoalMinutes(p.halfMarathonGoal) : null
+  const selectedGoalSec = selectedGoalMin ? selectedGoalMin * SEC_PER_MIN : null
+  const difficulty = !selectedGoalSec
+    ? 'finish'
+    : selectedGoalSec < stretchSec
+      ? 'unrealistic'
+      : selectedGoalSec < realisticSec
+        ? 'stretch'
+        : 'realistic'
+  const recommendedGoal = p.raceType === 'half-marathon'
+    ? GOAL_ORDER.find((goal) => {
+        const min = HM_GOAL_MINUTES[goal]
+        return min !== null && min * SEC_PER_MIN >= realisticSec
+      }) ?? 'finish'
+    : 'finish'
+  const planFinishSec = difficulty === 'unrealistic' || !selectedGoalSec
+    ? realisticSec
+    : selectedGoalSec
+  const planPace = Math.round(planFinishSec / raceKm)
+
+  return {
+    raceKm,
+    fivePace,
+    tenPace,
+    longestKm,
+    weeksAvailable,
+    baselineFinishMin: Math.round(baselineSec / SEC_PER_MIN),
+    realisticFinishMin: Math.round(realisticSec / SEC_PER_MIN),
+    stretchFinishMin: Math.round(stretchSec / SEC_PER_MIN),
+    realisticPace: Math.round(realisticSec / raceKm),
+    stretchPace: Math.round(stretchSec / raceKm),
+    planPace,
+    difficulty,
+    recommendedGoal,
+    selectedGoalMin,
+    selectedGoalLabel: p.raceType === 'marathon' ? 'Finish the marathon' : halfMarathonGoalLabel(p.halfMarathonGoal),
+  }
+}
 
 export function planCapability(p: UserProfile) {
   const raceKm = raceDistanceKm(p.raceType)
   const bestKm = Math.max(1, p.bestRunDistanceKm || 5)
-  const bestPace = Math.max(240, p.bestRunPaceSecPerKm || 360)
+  const assessment = assessRunning(p)
+  const bestPace = Math.max(240, p.bestFiveKmPaceSecPerKm || p.bestRunPaceSecPerKm || 360)
   const easyPace = bestPace + 75
   const tempoPace = Math.max(240, bestPace + 20)
   const intervalPace = Math.max(210, bestPace - 10)
 
-  // Longer races -> slower sustainable race pace. Full marathon is ~35s/km
-  // slower than a half off the same base.
-  const distancePenalty = p.raceType === 'marathon' ? 55 : 35
-  const projectedRacePace = Math.round(bestPace + distancePenalty + Math.max(0, 10 - bestKm) * 5)
-
-  // Half-marathon goal times only apply to a half; a marathon uses the
-  // projected pace (the goal buckets are half-distance finish times).
   const selectedGoalPace = p.raceType === 'marathon' ? null : halfMarathonGoalPace(p.halfMarathonGoal)
-  const targetPace = selectedGoalPace ?? projectedRacePace
+  const targetPace = assessment.planPace
 
   return {
     raceKm,
@@ -114,8 +186,10 @@ export function planCapability(p: UserProfile) {
     tempoPace,
     intervalPace,
     targetPace,
+    assessment,
     selectedGoalMin: p.raceType === 'marathon' ? null : halfMarathonGoalMinutes(p.halfMarathonGoal),
     selectedGoalLabel: p.raceType === 'marathon' ? 'Finish the marathon' : halfMarathonGoalLabel(p.halfMarathonGoal),
+    selectedGoalPace,
     projectedFinishMin: Math.round((targetPace * raceKm) / SEC_PER_MIN),
   }
 }
@@ -148,7 +222,17 @@ function longRunForWeek(p: UserProfile, weekIndex: number, weeks: number): numbe
  * runner wants. Long run (Sat) and one quality day (Tue) are always first;
  * easy runs fill in from a priority order.
  */
-function runWeekdays(n: number): { long: number; quality: number; easy: number[] } {
+function runWeekdays(n: number, preferred: number[] = []): { long: number; quality: number; easy: number[] } {
+  const clean = [...new Set(preferred)]
+    .map((d) => Math.max(0, Math.min(6, Math.round(d))))
+    .slice(0, 7)
+  if (clean.length >= Math.min(n, 3)) {
+    const selected = clean.slice(0, n)
+    const long = selected.includes(5) ? 5 : selected[selected.length - 1]
+    const quality = selected.find((d) => d !== long) ?? long
+    const easy = selected.filter((d) => d !== long && d !== quality)
+    return { long, quality, easy }
+  }
   const long = 5 // Saturday
   const quality = 1 // Tuesday
   const easyPriority = [3, 6, 0, 4, 2] // Thu, Sun, Mon, Fri, Wed
@@ -187,7 +271,7 @@ export function generatePlan(p: UserProfile, weightKg: number): PlanSession[] {
 
   const weeks = planWeeks(p)
   const n = trainingDays(p)
-  const { long, quality, easy } = runWeekdays(n)
+  const { long, quality, easy } = runWeekdays(n, p.runPreferredDays)
   const runDaySet = new Set(doesRun ? [long, quality, ...easy] : [])
   // Strength on non-run days (prefer Wed/Fri/Mon), max 2.
   const strengthDays = hasStrength ? [2, 4, 0].filter((d) => !runDaySet.has(d)).slice(0, 2) : []

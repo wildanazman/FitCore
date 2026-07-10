@@ -23,6 +23,9 @@ export const DEFAULT_PROFILE: UserProfile = {
   targetFinishMin: null,
   bestRunDistanceKm: 5,
   bestRunPaceSecPerKm: 360,
+  bestFiveKmPaceSecPerKm: 360,
+  bestTenKmPaceSecPerKm: 420,
+  runPreferredDays: [1, 3, 5],
   activity: 'high',
   calorieTargetOverride: null,
   proteinPerKg: 1.8,
@@ -56,6 +59,11 @@ export function loadState(): AppState | null {
         ? goalFromMinutes(legacyProfile.targetFinishMin)
         : DEFAULT_PROFILE.halfMarathonGoal
     parsed.profile = { ...DEFAULT_PROFILE, ...parsed.profile }
+    parsed.profile.bestFiveKmPaceSecPerKm = parsed.profile.bestFiveKmPaceSecPerKm || parsed.profile.bestRunPaceSecPerKm || DEFAULT_PROFILE.bestFiveKmPaceSecPerKm
+    parsed.profile.bestTenKmPaceSecPerKm = parsed.profile.bestTenKmPaceSecPerKm || Math.round((parsed.profile.bestRunPaceSecPerKm || DEFAULT_PROFILE.bestRunPaceSecPerKm) + 45)
+    parsed.profile.runPreferredDays = Array.isArray(parsed.profile.runPreferredDays) && parsed.profile.runPreferredDays.length
+      ? parsed.profile.runPreferredDays
+      : DEFAULT_PROFILE.runPreferredDays
     parsed.profile.halfMarathonGoal = migratedGoal
     parsed.profile.targetFinishMin = null
     // Rename the old 'half-marathon' plan tag to the generic 'running' tag.
@@ -81,6 +89,9 @@ function goalFromMinutes(min: number): UserProfile['halfMarathonGoal'] {
   if (min <= 120) return 'sub200'
   if (min <= 135) return 'sub215'
   if (min <= 150) return 'sub230'
+  if (min <= 155) return 'sub235'
+  if (min <= 160) return 'sub240'
+  if (min <= 165) return 'sub245'
   return 'finish'
 }
 

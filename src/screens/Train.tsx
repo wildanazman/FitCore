@@ -1,220 +1,130 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { Icon } from '../components/Icon'
 import { Press, Reveal, listContainer, spring } from '../components/motion'
-import { Rings } from '../components/Decor'
-import { todayISO, uid, weekday } from '../lib/date'
+import { addDays, shortDate, startOfWeek, todayISO, uid, weekday } from '../lib/date'
 import {
+  HALF_MARATHON_GOALS,
+  formatFinishTime,
   formatPace,
+  halfMarathonGoalLabel,
+  halfMarathonGoalPace,
   kcalActivity,
   planCapability,
   planMeta,
   sessionsForWeek,
-  suggestPlanStart,
-  HALF_MARATHON_GOALS,
-  halfMarathonGoalLabel,
-  halfMarathonGoalPace,
 } from '../lib/plan'
-import { ACTIVITIES, ACTIVITY_CATEGORIES, activityById, metForRun } from '../lib/activities'
-import type { PlanSession, SessionType, UserProfile, HalfMarathonGoal, RaceType } from '../types'
+import { ACTIVITIES, ACTIVITY_CATEGORIES, activityById, metForRun, type ActivityCategory } from '../lib/activities'
+import type { PlanSession, RaceType, UserProfile } from '../types'
 
-type Filter = 'all' | 'running' | 'strength' | 'sport' | 'manual'
+type StartMode = 'this-week' | 'next-week' | 'custom'
 
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'running', label: 'Running' },
-  { id: 'strength', label: 'Strength' },
-  { id: 'sport', label: 'Sport' },
-  { id: 'manual', label: 'Logged' },
+const DAY_OPTIONS = [
+  { id: 0, label: 'Mon' },
+  { id: 1, label: 'Tue' },
+  { id: 2, label: 'Wed' },
+  { id: 3, label: 'Thu' },
+  { id: 4, label: 'Fri' },
+  { id: 5, label: 'Sat' },
+  { id: 6, label: 'Sun' },
 ]
 
-const PASTELS: Record<SessionType, { bg: string; fg: string }> = {
-  run: { bg: 'bg-gradient-to-br from-lilac to-lilac-deep glow-soft', fg: 'text-on-lilac' },
-  strength: { bg: 'bg-gradient-to-br from-pink to-pink-deep glow-soft', fg: 'text-on-pink' },
-  sport: { bg: 'bg-gradient-to-br from-lime to-lime-dim glow-soft', fg: 'text-on-lime' },
-  rest: { bg: 'bg-ink-card border border-white/5', fg: 'text-on-surface' },
-}
+const DEFAULT_RUN_DAYS = [1, 3, 5]
 
 export function Train() {
   const { state, profile, weightKg, updateProfile, addSession, removeSession, toggleSession } = useApp()
   const today = todayISO()
-  const [filter, setFilter] = useState<Filter>('all')
   const [showLog, setShowLog] = useState(false)
-  const [showStartDialog, setShowStartDialog] = useState(false)
-  const [pendingPatch, setPendingPatch] = useState<Partial<UserProfile> | null>(null)
 
   const meta = planMeta(profile, state.sessions, today)
   const cap = planCapability(profile)
   const week = sessionsForWeek(state.sessions, today)
-  const filtered = filter === 'all' ? week : week.filter((s) => s.plan === filter)
+  const runningSessions = week.filter((s) => s.plan === 'running')
+  const manualSessions = state.sessions
+    .filter((s) => s.plan === 'manual' || s.manual)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 6)
 
-  const planned = week.length
-  const done = week.filter((s) => s.completed).length
-  const compliance = planned ? Math.round((done / planned) * 100) : 0
-  const volume = week.filter((s) => s.type === 'run').reduce((a, s) => a + (s.distanceKm ?? 0), 0)
+  const plannedRuns = runningSessions.length
+  const doneRuns = runningSessions.filter((s) => s.completed).length
+  const compliance = plannedRuns ? Math.round((doneRuns / plannedRuns) * 100) : 0
+  const volume = runningSessions.reduce((a, s) => a + (s.distanceKm ?? 0), 0)
   const burned = week.filter((s) => s.completed).reduce((a, s) => a + s.kcal, 0)
-
-  const exerciseSessions = week.filter((s) => s.plan === 'running')
-  const sportSessions = week.filter((s) => s.plan === 'sport')
-  const strengthSessions = week.filter((s) => s.plan === 'strength')
-
-  const handleUpdatePlan = (patch: Partial<UserProfile>) => {
-    if (!profile.planStartDate) {
-      setPendingPatch(patch)
-      setShowStartDialog(true)
-    } else {
-      updateProfile(patch, true)
-    }
-  }
-
-  const handleStartNow = () => {
-    if (pendingPatch) {
-      updateProfile({ ...pendingPatch, planStartDate: suggestPlanStart() }, true)
-    }
-    setShowStartDialog(false)
-    setPendingPatch(null)
-  }
-
-  const handleStartLater = (date: string) => {
-    if (pendingPatch) {
-      updateProfile({ ...pendingPatch, planStartDate: date }, true)
-    }
-    setShowStartDialog(false)
-    setPendingPatch(null)
-  }
 
   return (
     <motion.div variants={listContainer} className="px-margin-mobile pt-sm space-y-lg">
       <TopBar />
 
-      {/* Running Plan Settings + Capability */}
       <RunningPlanCard
         profile={profile}
-        cap={cap}
-        onUpdate={handleUpdatePlan}
-        meta={meta}
+        onUpdate={(patch) => updateProfile(patch, true)}
       />
 
-      {/* Starting this week dialog */}
-      {showStartDialog && (
-        <StartWeekDialog
-          onStartNow={handleStartNow}
-          onStartLater={handleStartLater}
-          onCancel={() => { setShowStartDialog(false); setPendingPatch(null) }}
-        />
-      )}
-
-      {/* Plan progress (only if race set) */}
-      {meta ? (
-        <Reveal>
-          <div className="rounded-[28px] bg-gradient-to-br from-lime to-lime-dim text-on-lime p-lg relative overflow-hidden glow-lime">
-            <Rings size={200} className="absolute -right-12 -top-12 text-on-lime opacity-[0.12]" />
-            <div className="relative flex justify-between items-start">
-              <div>
-                <p className="font-label-caps text-label-caps uppercase opacity-60 tracking-widest">Plan progress</p>
-                <h2 className="font-display-hero text-headline-lg mt-1">Week {meta.week} / {meta.totalWeeks}</h2>
-              </div>
-              <span className="bg-on-lime text-lime rounded-full px-md py-1.5 font-data-mono text-[12px]">{meta.daysLeft}d left</span>
+      <Reveal>
+        <section className="rounded-2xl bg-lime text-on-lime p-md relative overflow-hidden ring-1 ring-lime/30">
+          <div className="absolute right-[-40px] top-[-54px] h-36 w-36 rounded-full border border-on-lime/15" />
+          <div className="relative flex items-start justify-between gap-md">
+            <div>
+              <p className="font-data-mono text-[12px] opacity-70">Current plan target</p>
+              <h2 className="font-display-hero text-headline-lg mt-1">
+                {formatFinishTime(cap.projectedFinishMin)}
+              </h2>
+              <p className="font-metric-md text-[15px]">{formatPace(cap.targetPace)} target pace</p>
             </div>
-            <div className="relative w-full h-2.5 bg-on-lime/15 rounded-full mt-md">
-              <motion.div
-                className="relative h-full bg-on-lime rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.max(3, meta.pct)}%` }}
-                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <span className="absolute -right-1 -top-[3px] w-4 h-4 rounded-full bg-on-lime border-2 border-lime" />
-              </motion.div>
+            <div className="rounded-xl bg-on-lime px-sm py-xs text-right text-lime">
+              <p className="font-data-mono text-[12px]">Week</p>
+              <p className="font-metric-md text-[18px]">{meta ? `${meta.week}/${meta.totalWeeks}` : 'Base'}</p>
             </div>
-            <p className="relative font-body-md text-[13px] opacity-80 mt-md">{taperMessage(meta.taperIn)}</p>
           </div>
-        </Reveal>
-      ) : (
-        <Reveal>
-          <div className="rounded-[24px] bg-ink-card border border-white/5 p-md flex items-center gap-md">
-            <Icon name="event" className="text-lime" />
-            <p className="font-body-md text-body-md text-on-surface-variant">Set your race above to generate a 14-week plan.</p>
-          </div>
-        </Reveal>
-      )}
+          <p className="relative font-body-md text-[13px] opacity-80 mt-md">
+            {cap.assessment.difficulty === 'unrealistic'
+              ? `${cap.assessment.selectedGoalLabel} is too aggressive from current data, so the plan trains around ${formatFinishTime(cap.assessment.realisticFinishMin)} first.`
+              : cap.assessment.difficulty === 'stretch'
+                ? `${cap.assessment.selectedGoalLabel} is a stretch target. Keep the quality day and long run consistent.`
+                : `${cap.assessment.selectedGoalLabel} matches your current training profile.`}
+          </p>
+        </section>
+      </Reveal>
 
-      {/* Stats */}
-      {meta && (
-        <Reveal>
-          <div className="grid grid-cols-3 gap-sm">
-            <StatTile icon="task_alt" label="Compliance" value={`${compliance}%`} sub={`${done}/${planned} sessions`} tone="border border-lime/25 bg-lime/10 text-lime glow-soft" />
-            <StatTile icon="conversion_path" label="Volume" value={`${volume.toFixed(0)} km`} sub="running this week" tone="border border-white/10 bg-ink-card text-on-surface glow-soft" />
-            <StatTile icon="local_fire_department" label="Burned" value={`${burned}`} sub="kcal logged" tone="bg-gradient-to-br from-lime to-lime-dim text-on-lime glow-lime" />
-          </div>
-        </Reveal>
-      )}
-
-      {/* Filter pills + Sessions */}
       <Reveal>
-        <div className="flex gap-sm overflow-x-auto no-scrollbar">
-          {FILTERS.map((f) => (
-            <button key={f.id} onClick={() => setFilter(f.id)} className="relative shrink-0 px-md py-sm rounded-full">
-              {filter === f.id && <motion.span layoutId="train-filter" transition={spring} className="absolute inset-0 rounded-full bg-lime" />}
-              <span className={`relative z-10 font-body-md text-[13px] whitespace-nowrap ${filter === f.id ? 'text-on-lime' : 'text-on-surface-variant'}`}>{f.label}</span>
-            </button>
-          ))}
+        <div className="grid grid-cols-3 gap-sm">
+          <StatTile icon="task_alt" label="Run compliance" value={`${compliance}%`} sub={`${doneRuns}/${plannedRuns} runs`} />
+          <StatTile icon="conversion_path" label="Run volume" value={`${volume.toFixed(0)} km`} sub="this week" />
+          <StatTile icon="local_fire_department" label="Burned" value={`${burned}`} sub="kcal logged" strong />
         </div>
       </Reveal>
 
-      {/* Exercise section - running only */}
       <Reveal>
-        <SectionHeader title="Exercise" subtitle="Running sessions & drills" icon="directions_run" />
+        <SectionHeader title="Running Plan" subtitle="Only run-specific sessions and drills" icon="directions_run" />
         <div className="space-y-sm">
-          {exerciseSessions.length === 0
-            ? <EmptyState icon="directions_run" text="No running sessions this week." />
-            : exerciseSessions.map((s, i) => (
+          {runningSessions.length === 0
+            ? <EmptyState icon="directions_run" text="Set your race details above to generate Week 1." />
+            : runningSessions.map((s, i) => (
                 <SessionCard key={s.id} session={s} index={i} today={today} onToggle={() => toggleSession(s.id)} />
               ))}
         </div>
       </Reveal>
 
-      {/* Sport section */}
       <Reveal>
-        <SectionHeader title="Sport" subtitle="Badminton, pickleball & other sports" icon="sports_tennis" />
-        <div className="space-y-sm">
-          {sportSessions.length === 0
-            ? <EmptyState icon="sports_tennis" text="No sport sessions this week." />
-            : sportSessions.map((s, i) => (
-                <SessionCard key={s.id} session={s} index={i} today={today} onToggle={() => toggleSession(s.id)} />
-              ))}
-        </div>
-      </Reveal>
-
-      {/* Strength section */}
-      <Reveal>
-        <SectionHeader title="Strength" subtitle="Upper & lower body work" icon="fitness_center" />
-        <div className="space-y-sm">
-          {strengthSessions.length === 0
-            ? <EmptyState icon="fitness_center" text="No strength sessions this week." />
-            : strengthSessions.map((s, i) => (
-                <SessionCard key={s.id} session={s} index={i} today={today} onToggle={() => toggleSession(s.id)} />
-              ))}
-        </div>
-      </Reveal>
-
-      {/* Log activity */}
-      <Reveal>
-        <div className="rounded-[28px] bg-ink-card border border-white/5 p-md">
+        <section className="rounded-2xl bg-ink-card ring-1 ring-tile-border p-md">
           <div className="flex items-center justify-between gap-md">
             <div>
-              <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Log activity</h3>
-              <p className="font-data-mono text-[12px] text-on-surface-variant">Choose an activity. Calories use MET values plus your weight, time and run pace.</p>
+              <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Other Activities</h3>
+              <p className="font-body-md text-[13px] text-on-surface-variant">
+                Log gym, sport or extra cardio separately from the running plan.
+              </p>
             </div>
             <button
               onClick={() => setShowLog((v) => !v)}
               aria-label={showLog ? 'Close activity form' : 'Add activity'}
-              className="w-12 h-12 rounded-full bg-lime text-on-lime flex items-center justify-center shrink-0"
+              className="min-h-12 w-12 rounded-full bg-lime text-on-lime flex items-center justify-center shrink-0 transition-transform duration-150 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
             >
               <Icon name={showLog ? 'close' : 'add'} />
             </button>
           </div>
+
           {showLog && (
             <ManualActivityForm
               weightKg={weightKg}
@@ -224,171 +134,142 @@ export function Train() {
               }}
             />
           )}
-        </div>
+
+          {manualSessions.length > 0 && (
+            <div className="mt-md space-y-sm">
+              {manualSessions.map((s, i) => (
+                <SessionCard
+                  key={s.id}
+                  session={s}
+                  index={i}
+                  today={today}
+                  onToggle={() => toggleSession(s.id)}
+                  onDelete={() => removeSession(s.id)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       </Reveal>
     </motion.div>
   )
 }
 
-function SectionHeader({ title, subtitle, icon }: { title: string; subtitle: string; icon: string }) {
-  return (
-    <div className="flex items-center gap-md pt-lg">
-      <div className="w-10 h-10 rounded-full bg-ink-card border border-white/10 flex items-center justify-center">
-        <Icon name={icon} className="text-lime" size={20} />
-      </div>
-      <div>
-        <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{title}</h3>
-        <p className="font-data-mono text-[11px] text-on-surface-variant">{subtitle}</p>
-      </div>
-    </div>
-  )
-}
-
-function EmptyState({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div className="rounded-[24px] bg-ink-card border border-white/5 p-md flex items-center gap-md">
-      <Icon name={icon} className="text-on-surface-variant" />
-      <p className="font-body-md text-body-md text-on-surface-variant">{text}</p>
-    </div>
-  )
-}
-
-function StartWeekDialog({
-  onStartNow,
-  onStartLater,
-  onCancel,
-}: {
-  onStartNow: () => void
-  onStartLater: (date: string) => void
-  onCancel: () => void
-}) {
-  const [customDate, setCustomDate] = useState('')
-  const [showPicker, setShowPicker] = useState(false)
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-margin-mobile" onClick={onCancel}>
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-ink-card border border-white/10 rounded-[28px] p-lg w-full max-w-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-12 h-12 rounded-full bg-lime/20 flex items-center justify-center mx-auto mb-md">
-          <Icon name="calendar_month" className="text-lime" size={28} />
-        </div>
-        <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface text-center">Are you starting your training this week?</h3>
-        <p className="font-body-md text-body-md text-on-surface-variant text-center mt-sm">Your plan timeline will be set to Week 1.</p>
-        <div className="flex flex-col gap-sm mt-lg">
-          <button
-            onClick={onStartNow}
-            className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md"
-          >
-            Yes, start this week
-          </button>
-          <button
-            onClick={() => setShowPicker(true)}
-            className="w-full py-3 rounded-full border border-white/10 text-on-surface font-metric-md"
-          >
-            Start on a different date
-          </button>
-          {showPicker && (
-            <div className="flex items-center gap-sm mt-sm">
-              <input
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-                className="flex-1 bg-[#101112] border border-white/10 rounded-xl px-sm py-2 text-on-surface font-data-mono text-[13px] focus:border-lime focus:outline-none"
-              />
-              <button
-                disabled={!customDate}
-                onClick={() => onStartLater(customDate)}
-                className="py-2 px-4 rounded-full bg-lime text-on-lime font-metric-md text-sm disabled:opacity-40"
-              >
-                Set
-              </button>
-            </div>
-          )}
-          <button onClick={onCancel} className="w-full py-2 text-on-surface-variant font-data-mono text-[13px]">Cancel</button>
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
 function RunningPlanCard({
   profile,
-  cap,
   onUpdate,
-  meta,
 }: {
   profile: UserProfile
-  cap: ReturnType<typeof planCapability>
   onUpdate: (patch: Partial<UserProfile>) => void
-  meta: ReturnType<typeof planMeta> | null
 }) {
+  const thisWeek = startOfWeek(todayISO())
+  const nextWeek = addDays(thisWeek, 7)
+  const initialStart = profile.planStartDate ?? thisWeek
+  const initialMode: StartMode = initialStart === thisWeek ? 'this-week' : initialStart === nextWeek ? 'next-week' : 'custom'
+
   const [raceType, setRaceType] = useState(profile.raceType)
   const [raceDate, setRaceDate] = useState(profile.raceDate ?? '')
   const [trainingDays, setTrainingDays] = useState(profile.trainingDaysPerWeek)
   const [halfGoal, setHalfGoal] = useState(profile.halfMarathonGoal)
-  const [bestKm, setBestKm] = useState(String(cap.bestKm))
-  const [bestPace, setBestPace] = useState(formatPace(cap.bestPace).replace('/km', ''))
-  const [editMode, setEditMode] = useState(false)
+  const [fivePace, setFivePace] = useState(formatPace(profile.bestFiveKmPaceSecPerKm).replace('/km', ''))
+  const [tenPace, setTenPace] = useState(formatPace(profile.bestTenKmPaceSecPerKm).replace('/km', ''))
+  const [longestKm, setLongestKm] = useState(String(profile.bestRunDistanceKm))
+  const [startMode, setStartMode] = useState<StartMode>(initialMode)
+  const [customStart, setCustomStart] = useState(initialStart)
+  const [preferredDays, setPreferredDays] = useState<number[]>(normalPreferred(profile.runPreferredDays, profile.trainingDaysPerWeek))
 
-  const parsedPace = parsePace(bestPace)
+  const parsedFive = parsePace(fivePace)
+  const parsedTen = parsePace(tenPace)
+  const planStartDate = startMode === 'this-week' ? thisWeek : startMode === 'next-week' ? nextWeek : customStart
+  const cleanDays = normalPreferred(preferredDays, trainingDays)
+  const draftProfile = useMemo<UserProfile>(() => ({
+    ...profile,
+    raceType,
+    raceDate: raceDate || null,
+    trainingDaysPerWeek: trainingDays,
+    halfMarathonGoal: halfGoal,
+    bestFiveKmPaceSecPerKm: parsedFive || profile.bestFiveKmPaceSecPerKm,
+    bestTenKmPaceSecPerKm: parsedTen || profile.bestTenKmPaceSecPerKm,
+    bestRunPaceSecPerKm: parsedFive || profile.bestRunPaceSecPerKm,
+    bestRunDistanceKm: Math.max(1, Number(longestKm) || profile.bestRunDistanceKm),
+    planStartDate,
+    runPreferredDays: cleanDays,
+  }), [cleanDays, customStart, fivePace, halfGoal, longestKm, parsedFive, parsedTen, planStartDate, profile, raceDate, raceType, tenPace, trainingDays])
+
+  const cap = planCapability(draftProfile)
+  const assessment = cap.assessment
   const dirty =
     raceType !== profile.raceType ||
     raceDate !== (profile.raceDate ?? '') ||
     trainingDays !== profile.trainingDaysPerWeek ||
     halfGoal !== profile.halfMarathonGoal ||
-    Number(bestKm) !== cap.bestKm ||
-    parsedPace !== cap.bestPace
+    parsedFive !== profile.bestFiveKmPaceSecPerKm ||
+    parsedTen !== profile.bestTenKmPaceSecPerKm ||
+    Number(longestKm) !== profile.bestRunDistanceKm ||
+    planStartDate !== (profile.planStartDate ?? thisWeek) ||
+    cleanDays.join(',') !== normalPreferred(profile.runPreferredDays, profile.trainingDaysPerWeek).join(',')
+
+  const canSave = Boolean(parsedFive && parsedTen && Number(longestKm) && planStartDate)
 
   const handleSave = () => {
-    const patch: Partial<UserProfile> = {
+    onUpdate({
       raceType,
       raceDate: raceDate || null,
       trainingDaysPerWeek: trainingDays,
       halfMarathonGoal: halfGoal,
-      bestRunDistanceKm: Math.max(1, Number(bestKm)),
-      bestRunPaceSecPerKm: parsedPace,
-    }
-    onUpdate(patch)
+      bestFiveKmPaceSecPerKm: parsedFive,
+      bestTenKmPaceSecPerKm: parsedTen,
+      bestRunPaceSecPerKm: parsedFive,
+      bestRunDistanceKm: Math.max(1, Number(longestKm)),
+      planStartDate,
+      runPreferredDays: cleanDays,
+      sports: profile.sports.includes('running') ? profile.sports : [...profile.sports, 'running'],
+    })
   }
 
   return (
-    <div className="rounded-[28px] bg-ink-card border border-white/5 overflow-hidden">
-      <button
-        onClick={() => setEditMode(!editMode)}
-        className="w-full flex items-center justify-between p-md text-left"
-      >
-        <div className="flex items-center gap-md">
-          <div className="w-10 h-10 rounded-full bg-lime/15 flex items-center justify-center">
-            <Icon name="speed" className="text-lime" size={22} />
-          </div>
-          <div>
-            <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Running plan</h3>
-            <p className="font-data-mono text-[12px] text-on-surface-variant">
-              {meta ? `${profile.trainingDaysPerWeek} days · Week ${meta.week}` : `${profile.trainingDaysPerWeek} days`}
-              {profile.raceDate ? ` · ${profile.raceType === 'half-marathon' ? 'HM' : 'Full'} ${cap.raceKm} km` : ''}
-              {cap.selectedGoalLabel ? ` · ${cap.selectedGoalLabel}` : ''}
-            </p>
+    <Reveal>
+      <section className="rounded-2xl bg-ink-card ring-1 ring-tile-border overflow-hidden">
+        <div className="p-md border-b border-white/5">
+          <div className="flex items-start justify-between gap-md">
+            <div>
+              <div className="flex items-center gap-sm">
+                <div className="h-10 w-10 rounded-xl bg-lime/15 text-lime flex items-center justify-center">
+                  <Icon name="speed" size={22} />
+                </div>
+                <div>
+                  <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Running</h2>
+                  <p className="font-body-md text-[13px] text-on-surface-variant">
+                    Update race data here. Week 1 starts from your chosen start date.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <span className={`rounded-full px-sm py-xs font-data-mono text-[12px] ${assessment.difficulty === 'unrealistic' ? 'bg-error/15 text-error' : assessment.difficulty === 'stretch' ? 'bg-tertiary/15 text-tertiary' : 'bg-lime/15 text-lime'}`}>
+              {assessment.difficulty === 'unrealistic' ? 'Too aggressive' : assessment.difficulty === 'stretch' ? 'Stretch' : 'Achievable'}
+            </span>
           </div>
         </div>
-        <Icon name={editMode ? 'expand_less' : 'edit'} className="text-on-surface-variant" size={20} />
-      </button>
 
-      {editMode && (
-        <div className="px-md pb-md space-y-md animate-fade-in border-t border-white/5 pt-md">
-          {/* Race distance & date */}
+        <div className="p-md space-y-md">
+          <div className="grid grid-cols-3 gap-sm">
+            <Metric label="Realistic" value={formatFinishTime(assessment.realisticFinishMin)} sub={formatPace(assessment.realisticPace)} />
+            <Metric label="Stretch" value={formatFinishTime(assessment.stretchFinishMin)} sub={formatPace(assessment.stretchPace)} />
+            <Metric label="Plan pace" value={formatPace(cap.targetPace).replace('/km', '')} sub={formatFinishTime(cap.projectedFinishMin)} strong />
+          </div>
+
+          <div className="rounded-xl bg-[#101112] ring-1 ring-white/10 p-md">
+            <p className="font-body-md text-[13px] text-on-surface">
+              Based on your 5K, 10K, longest run, {trainingDays} available days and race runway,
+              FitCore recommends <span className="text-lime font-semibold">{halfMarathonGoalLabel(assessment.recommendedGoal)}</span> as the logical goal.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-sm">
-            <Field label="Distance">
-              <select
-                value={raceType}
-                onChange={(e) => setRaceType(e.target.value as RaceType)}
-                className={fieldCls}
-              >
-                <option value="half-marathon">Half Marathon (21.1 km)</option>
-                <option value="marathon">Full Marathon (42.2 km)</option>
+            <Field label="Race">
+              <select value={raceType} onChange={(e) => setRaceType(e.target.value as RaceType)} className={fieldCls}>
+                <option value="half-marathon">Half Marathon</option>
+                <option value="marathon">Marathon</option>
               </select>
             </Field>
             <Field label="Race date">
@@ -396,15 +277,53 @@ function RunningPlanCard({
             </Field>
           </div>
 
-          {/* Training days */}
+          {raceType === 'half-marathon' && (
+            <Field label="Target concept">
+              <div className="grid grid-cols-2 gap-sm">
+                {HALF_MARATHON_GOALS.map((goal) => {
+                  const pace = halfMarathonGoalPace(goal)
+                  return (
+                    <button
+                      key={goal}
+                      onClick={() => setHalfGoal(goal)}
+                      className={`min-h-12 rounded-xl p-sm text-left ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
+                        halfGoal === goal ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
+                      }`}
+                    >
+                      <span className="block font-metric-md text-[14px]">{halfMarathonGoalLabel(goal)}</span>
+                      <span className={`block font-data-mono text-[12px] ${halfGoal === goal ? 'opacity-75' : 'text-on-surface-variant'}`}>
+                        {pace ? formatPace(pace) : 'No time pressure'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </Field>
+          )}
+
+          <div className="grid grid-cols-3 gap-sm">
+            <Field label="Best 5K pace">
+              <input value={fivePace} onChange={(e) => setFivePace(e.target.value)} placeholder="6:20" className={fieldCls} />
+            </Field>
+            <Field label="Best 10K pace">
+              <input value={tenPace} onChange={(e) => setTenPace(e.target.value)} placeholder="7:00" className={fieldCls} />
+            </Field>
+            <Field label="Longest run">
+              <input type="number" min={1} step="0.1" value={longestKm} onChange={(e) => setLongestKm(e.target.value)} className={fieldCls} />
+            </Field>
+          </div>
+
           <Field label="Training days / week">
-            <div className="grid grid-cols-5 gap-1">
+            <div className="grid grid-cols-5 gap-sm">
               {[3, 4, 5, 6, 7].map((d) => (
                 <button
                   key={d}
-                  onClick={() => setTrainingDays(d)}
-                  className={`py-2 rounded-lg border font-metric-md text-[14px] transition ${
-                    trainingDays === d ? 'bg-lime text-on-lime border-lime' : 'bg-[#101112] border-white/10 text-on-surface-variant'
+                  onClick={() => {
+                    setTrainingDays(d)
+                    setPreferredDays((current) => normalPreferred(current, d))
+                  }}
+                  className={`min-h-11 rounded-xl font-metric-md text-[15px] ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
+                    trainingDays === d ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
                   }`}
                 >
                   {d}
@@ -413,60 +332,84 @@ function RunningPlanCard({
             </div>
           </Field>
 
-          {/* Half marathon goal */}
-          {raceType === 'half-marathon' && (
-            <Field label="Goal">
-              <div className="grid grid-cols-2 gap-sm">
-                {HALF_MARATHON_GOALS.map((goal) => {
-                  const pace = halfMarathonGoalPace(goal)
-                  return (
-                    <button
-                      key={goal}
-                      onClick={() => setHalfGoal(goal)}
-                      className={`p-sm rounded-xl border text-left transition ${
-                        halfGoal === goal ? 'bg-lime/15 border-lime text-on-surface' : 'bg-[#101112] border-white/10 text-on-surface-variant'
-                      }`}
-                    >
-                      <span className="block font-metric-md text-[13px]">{halfMarathonGoalLabel(goal)}</span>
-                      <span className="block font-data-mono text-[11px]">{pace ? formatPace(pace) : 'Build finish confidence'}</span>
-                    </button>
-                  )
-                })}
-              </div>
+          <Field label="Preferred run days">
+            <div className="grid grid-cols-7 gap-xs">
+              {DAY_OPTIONS.map((day) => {
+                const active = cleanDays.includes(day.id)
+                return (
+                  <button
+                    key={day.id}
+                    onClick={() => setPreferredDays((current) => toggleDay(current, day.id, trainingDays))}
+                    className={`min-h-11 rounded-lg font-data-mono text-[12px] ring-1 transition-colors duration-150 ${
+                      active ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
+                    }`}
+                  >
+                    {day.label}
+                  </button>
+                )
+              })}
+            </div>
+          </Field>
+
+          <Field label="Start training">
+            <div className="grid grid-cols-3 gap-sm">
+              {[
+                { id: 'this-week' as StartMode, label: 'This week', sub: shortDate(thisWeek) },
+                { id: 'next-week' as StartMode, label: 'Next week', sub: shortDate(nextWeek) },
+                { id: 'custom' as StartMode, label: 'Custom', sub: customStart ? shortDate(customStart) : 'Pick date' },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setStartMode(option.id)}
+                  className={`min-h-[58px] rounded-xl p-sm text-left ring-1 transition-colors duration-150 ${
+                    startMode === option.id ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
+                  }`}
+                >
+                  <span className="block font-metric-md text-[13px]">{option.label}</span>
+                  <span className={`block font-data-mono text-[12px] ${startMode === option.id ? 'opacity-75' : 'text-on-surface-variant'}`}>{option.sub}</span>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {startMode === 'custom' && (
+            <Field label="Custom start date">
+              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={fieldCls} />
             </Field>
           )}
 
-          {/* Capability */}
-          <p className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">Current capability</p>
-          <div className="grid grid-cols-2 gap-sm">
-            <Field label="Best run (km)">
-              <input type="number" min={1} step="0.1" value={bestKm} onChange={(e) => setBestKm(e.target.value)} className={fieldCls} />
-            </Field>
-            <Field label="Pace (min/km)">
-              <input value={bestPace} onChange={(e) => setBestPace(e.target.value)} placeholder="6:00" className={fieldCls} />
-            </Field>
-          </div>
-
-          {/* Target pace preview */}
-          <div className="rounded-2xl bg-[#101112] border border-lime/20 p-md">
-            <div className="flex items-center justify-between">
-              <span className="font-data-mono text-[12px] text-on-surface-variant">Target race pace</span>
-              <span className="font-display-hero text-headline-lg-mobile text-lime">{formatPace(cap.targetPace)}</span>
-            </div>
-            <p className="font-data-mono text-[11px] text-on-surface-variant mt-1">
-              {cap.selectedGoalLabel}{cap.selectedGoalMin ? ` (${cap.selectedGoalMin} min)` : ''} · {formatPace(cap.targetPace)} pace · est. {cap.projectedFinishMin} min finish
-            </p>
-          </div>
-
           <button
-            disabled={!dirty || !Number(bestKm) || !parsedPace}
+            disabled={!dirty || !canSave}
             onClick={handleSave}
-            className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md disabled:opacity-40"
+            className="w-full min-h-12 rounded-full bg-lime text-on-lime font-metric-md disabled:opacity-40 transition-transform duration-150 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
           >
-            Update training plan
+            Update plan
           </button>
         </div>
-      )}
+      </section>
+    </Reveal>
+  )
+}
+
+function SectionHeader({ title, subtitle, icon }: { title: string; subtitle: string; icon: string }) {
+  return (
+    <div className="flex items-center gap-md pt-sm">
+      <div className="w-10 h-10 rounded-xl bg-ink-card ring-1 ring-tile-border flex items-center justify-center">
+        <Icon name={icon} className="text-lime" size={20} />
+      </div>
+      <div>
+        <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{title}</h3>
+        <p className="font-body-md text-[13px] text-on-surface-variant">{subtitle}</p>
+      </div>
+    </div>
+  )
+}
+
+function EmptyState({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div className="rounded-2xl bg-ink-card ring-1 ring-tile-border p-md flex items-center gap-md">
+      <Icon name={icon} className="text-on-surface-variant" />
+      <p className="font-body-md text-body-md text-on-surface-variant">{text}</p>
     </div>
   )
 }
@@ -474,21 +417,31 @@ function RunningPlanCard({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="font-label-caps text-[10px] text-on-surface-variant uppercase tracking-wider">{label}</span>
+      <span className="font-label-caps text-[12px] text-on-surface-variant uppercase">{label}</span>
       {children}
     </label>
   )
 }
 
-function StatTile({ icon, label, value, sub, tone }: { icon: string; label: string; value: string; sub: string; tone: string }) {
+function Metric({ label, value, sub, strong }: { label: string; value: string; sub: string; strong?: boolean }) {
   return (
-    <div className={`relative overflow-hidden rounded-[22px] p-md ${tone}`}>
+    <div className={`rounded-xl p-sm ring-1 ${strong ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'}`}>
+      <p className={`font-data-mono text-[12px] ${strong ? 'opacity-75' : 'text-on-surface-variant'}`}>{label}</p>
+      <p className="font-metric-md text-[20px] leading-tight mt-1">{value}</p>
+      <p className={`font-data-mono text-[12px] ${strong ? 'opacity-75' : 'text-lime'}`}>{sub}</p>
+    </div>
+  )
+}
+
+function StatTile({ icon, label, value, sub, strong }: { icon: string; label: string; value: string; sub: string; strong?: boolean }) {
+  return (
+    <div className={`relative overflow-hidden rounded-2xl p-md ring-1 ${strong ? 'bg-lime text-on-lime ring-lime' : 'bg-ink-card text-on-surface ring-tile-border'}`}>
       <div className="flex items-center justify-between">
-        <span className="font-label-caps text-[10px] uppercase opacity-70">{label}</span>
-        <Icon name={icon} size={15} className="opacity-60" />
+        <span className={`font-data-mono text-[12px] ${strong ? 'opacity-75' : 'text-on-surface-variant'}`}>{label}</span>
+        <Icon name={icon} size={15} className={strong ? 'opacity-70' : 'text-lime'} />
       </div>
-      <div className="font-display-hero text-headline-lg-mobile leading-none mt-xs">{value}</div>
-      <span className="font-data-mono text-[11px] opacity-70">{sub}</span>
+      <div className="font-metric-md text-[22px] leading-none mt-xs">{value}</div>
+      <span className={`font-data-mono text-[12px] ${strong ? 'opacity-75' : 'text-on-surface-variant'}`}>{sub}</span>
     </div>
   )
 }
@@ -527,7 +480,7 @@ function ManualActivityForm({ weightKg, onAdd }: { weightKg: number; onAdd: (ses
   }
 
   return (
-    <div className="mt-md space-y-md animate-fade-in">
+    <div className="mt-md space-y-md">
       <div className="flex gap-sm overflow-x-auto no-scrollbar pb-1">
         {ACTIVITY_CATEGORIES.map((c) => (
           <button
@@ -540,8 +493,8 @@ function ManualActivityForm({ weightKg, onAdd }: { weightKg: number; onAdd: (ses
                 setDistance(first.type === 'run' ? '3' : '')
               }
             }}
-            className={`shrink-0 px-md py-2 rounded-full font-data-mono text-[12px] border ${
-              category === c.id ? 'bg-lime text-on-lime border-lime' : 'bg-ink text-on-surface-variant border-white/10'
+            className={`shrink-0 min-h-11 px-md rounded-full font-data-mono text-[12px] ring-1 transition-colors duration-150 ${
+              category === c.id ? 'bg-lime text-on-lime ring-lime' : 'bg-ink text-on-surface-variant ring-white/10'
             }`}
           >
             {c.label}
@@ -557,87 +510,76 @@ function ManualActivityForm({ weightKg, onAdd }: { weightKg: number; onAdd: (ses
               setActivityId(a.id)
               setDistance(a.type === 'run' ? distance || '3' : '')
             }}
-            className={`min-h-[74px] rounded-2xl border p-sm text-left transition ${
-              activityId === a.id ? 'bg-lime text-on-lime border-lime' : 'bg-ink border-white/10 text-on-surface'
+            className={`min-h-[74px] rounded-xl ring-1 p-sm text-left transition-colors duration-150 ${
+              activityId === a.id ? 'bg-lime text-on-lime ring-lime' : 'bg-ink ring-white/10 text-on-surface'
             }`}
           >
             <div className="flex items-center gap-2">
               <Icon name={a.icon} size={18} />
               <span className="font-metric-md text-[14px] leading-tight">{a.label}</span>
             </div>
-            <span className={`font-data-mono text-[11px] ${activityId === a.id ? 'opacity-70' : 'text-on-surface-variant'}`}>{a.met} MET</span>
+            <span className={`font-data-mono text-[12px] ${activityId === a.id ? 'opacity-70' : 'text-on-surface-variant'}`}>{a.met} MET</span>
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-3 gap-sm">
-        <label className="flex flex-col gap-1">
-          <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Date</span>
+        <Field label="Date">
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={fieldCls} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Minutes</span>
+        </Field>
+        <Field label="Minutes">
           <input type="number" min={1} value={duration} onChange={(e) => setDuration(e.target.value)} className={fieldCls} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Km</span>
+        </Field>
+        <Field label="Km">
           <input type="number" min={0} step="0.1" disabled={activity.type !== 'run'} value={distance} onChange={(e) => setDistance(e.target.value)} className={`${fieldCls} disabled:opacity-40`} />
-        </label>
+        </Field>
       </div>
-      <div className="rounded-2xl bg-[#101112] border border-lime/20 p-md">
+      <div className="rounded-xl bg-[#101112] ring-1 ring-lime/20 p-md">
         <div className="flex items-center justify-between">
           <span className="font-data-mono text-[12px] text-on-surface-variant">Estimated burn</span>
-          <span className="font-display-hero text-headline-lg-mobile text-lime">{kcal} kcal</span>
+          <span className="font-metric-md text-[22px] text-lime">{kcal} kcal</span>
         </div>
-        <p className="font-data-mono text-[11px] text-on-surface-variant mt-1">
-          {activity.label} - {met.toFixed(1)} MET{pace ? ` - ${pace}` : ''}. Estimate based on Compendium MET method.
+        <p className="font-data-mono text-[12px] text-on-surface-variant mt-1">
+          {activity.label} - {met.toFixed(1)} MET{pace ? ` - ${pace}` : ''}. Estimate based on MET method.
         </p>
       </div>
-      <button onClick={save} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md">Save activity</button>
+      <button onClick={save} className="w-full min-h-12 rounded-full bg-lime text-on-lime font-metric-md transition-transform duration-150 active:scale-[0.98]">Save activity</button>
     </div>
   )
 }
 
 function SessionCard({ session: s, index, today, onToggle, onDelete }: { session: PlanSession; index: number; today: string; onToggle: () => void; onDelete?: () => void }) {
   const done = s.completed
-  const pastel = PASTELS[s.type]
   const isToday = s.date === today
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04, ...spring }}>
-      <div className={`rounded-[24px] p-md flex items-center justify-between cursor-pointer ${done ? 'bg-ink-card border border-white/5' : `${pastel.bg} ${pastel.fg}`} ${isToday && !done ? 'ring-2 ring-lime ring-offset-2 ring-offset-ink' : ''}`}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03, ...spring }}>
+      <div className={`rounded-2xl p-md flex items-center justify-between gap-sm ${done ? 'bg-ink-card ring-1 ring-tile-border' : 'bg-[#101112] ring-1 ring-white/10'} ${isToday && !done ? 'outline outline-2 outline-lime outline-offset-2' : ''}`}>
         <Press as="div" onClick={onToggle} className="flex items-center gap-md flex-1 min-w-0">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-secondary/20 text-secondary' : 'bg-black/10'}`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${done ? 'bg-secondary/15 text-secondary' : 'bg-lime/15 text-lime'}`}>
             <Icon name={done ? 'check' : s.icon} fill />
           </div>
           <div className="min-w-0">
-            <p className={`font-metric-md text-metric-md truncate ${done ? 'text-on-surface line-through' : ''}`}>{s.title}</p>
-            <p className={`font-data-mono text-[12px] ${done ? 'text-on-surface-variant' : 'opacity-70'}`}>{weekday(s.date)} - {s.detail}</p>
-            <p className={`font-data-mono text-[11px] ${done ? 'text-lime' : 'opacity-80'}`}>{s.kcal} kcal burned{s.manual ? ' - logged' : ''}</p>
+            <p className={`font-metric-md text-metric-md truncate ${done ? 'text-on-surface line-through' : 'text-on-surface'}`}>{s.title}</p>
+            <p className="font-data-mono text-[12px] text-on-surface-variant">{weekday(s.date)} - {s.detail}</p>
+            <p className="font-data-mono text-[12px] text-lime">{s.kcal} kcal{s.manual ? ' - logged' : ''}</p>
           </div>
         </Press>
-        <div className={`w-12 h-12 rounded-full flex flex-col items-center justify-center shrink-0 ${done ? '' : 'bg-black/85 text-lime'}`}>
-          {done ? <Icon name="check_circle" fill className="text-secondary" /> : s.durationMin > 0 ? (
+        <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 ${done ? 'text-secondary' : 'bg-lime text-on-lime'}`}>
+          {done ? <Icon name="check_circle" fill /> : s.durationMin > 0 ? (
             <>
-              <span className="font-display-hero text-[15px] leading-none">{s.durationMin}</span>
-              <span className="font-label-caps text-[8px] uppercase">min</span>
+              <span className="font-metric-md text-[15px] leading-none">{s.durationMin}</span>
+              <span className="font-data-mono text-[10px] uppercase">min</span>
             </>
           ) : <Icon name="bedtime" />}
         </div>
         {onDelete && (
-          <button onClick={onDelete} className="ml-sm w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center">
+          <button onClick={onDelete} className="w-10 h-10 rounded-xl bg-error/10 text-error flex items-center justify-center">
             <Icon name="delete" size={18} />
           </button>
         )}
       </div>
     </motion.div>
   )
-}
-
-function taperMessage(taperIn: number): string {
-  if (taperIn <= 0 && taperIn > -21) return 'Taper underway - cut volume, hold intensity, recover hard.'
-  if (taperIn <= 3 && taperIn > 0) return `Taper in ${taperIn} days. Recovery over volume now.`
-  if (taperIn > 0) return `Build phase. Taper in ${taperIn} days - stack consistent weeks.`
-  return 'Race done - log recovery and plan the next block.'
 }
 
 function parsePace(value: string): number {
@@ -650,4 +592,18 @@ function parsePace(value: string): number {
   return Math.round((Number(clean) || 0) * 60)
 }
 
-const fieldCls = 'w-full bg-[#101112] border border-white/10 rounded-xl px-sm py-2 text-on-surface font-data-mono text-[13px] focus:border-lime focus:outline-none'
+function normalPreferred(days: number[] | undefined, count: number): number[] {
+  const fallback = [...DEFAULT_RUN_DAYS, 0, 4, 2, 6]
+  const clean = [...new Set([...(days ?? []), ...fallback])]
+    .map((day) => Math.max(0, Math.min(6, Math.round(day))))
+  return clean.slice(0, Math.max(3, Math.min(7, count)))
+}
+
+function toggleDay(current: number[], day: number, count: number): number[] {
+  const hasDay = current.includes(day)
+  if (hasDay && current.length > 3) return current.filter((d) => d !== day)
+  if (hasDay) return current
+  return normalPreferred([...current, day], count)
+}
+
+const fieldCls = 'w-full min-h-11 bg-[#101112] ring-1 ring-white/10 rounded-xl px-sm py-2 text-on-surface font-data-mono text-[13px] focus:ring-2 focus:ring-lime focus:outline-none'

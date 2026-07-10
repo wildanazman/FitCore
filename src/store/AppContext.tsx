@@ -30,7 +30,7 @@ function reducer(state: AppState, action: Action): AppState {
       return seedForProfile({ ...action.profile, onboarded: true, planStartDate: action.profile.planStartDate ?? null })
 
     case 'updateProfile': {
-      const profile = { ...state.profile, ...action.patch, planStartDate: state.profile.planStartDate ?? action.patch.planStartDate ?? null }
+      const profile = { ...state.profile, ...action.patch }
       if (action.regenerate) {
         return { ...state, profile, sessions: regenerateKeepingProgress(state, profile) }
       }
