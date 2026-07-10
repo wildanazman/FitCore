@@ -20,7 +20,7 @@ export interface Detection {
   carbs: number
   fat: number
   confidence: number
-  source?: 'gemini' | 'openai' | 'claude' | 'local'
+  source?: 'gemini' | 'openai' | 'claude' | 'openfoodfacts' | 'local'
   /** Per-component breakdown from the web-grounded analysis. */
   items?: DetectionItem[]
   /** What the model assumed about portions/ingredients. */
@@ -132,7 +132,7 @@ async function detectWithServer(dataUrl: string): Promise<Detection> {
   })
   const json = await res.json().catch(() => null)
   if (!res.ok) throw new Error(json?.error || `Food AI ${res.status}`)
-  return normalizeDetection(json ?? {}, 'gemini')
+  return normalizeDetection(json ?? {}, json?.source ?? 'gemini')
 }
 
 /** Live Claude vision call. dataUrl must be a base64 data URL (image/jpeg|png). */

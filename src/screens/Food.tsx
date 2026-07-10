@@ -150,10 +150,10 @@ export function Food() {
       {searchOpen && <SearchSheet onClose={() => setSearchOpen(false)} onPick={addLocal} />}
 
       {editing && (
-        <EditSheet
+        <FoodEditSheet
           entry={editing}
           onClose={() => setEditing(null)}
-          onSave={(servings) => { updateFood(editing.id, { servings }); setEditing(null) }}
+          onSave={(patch) => { updateFood(editing.id, patch); setEditing(null) }}
           onDelete={() => { removeFood(editing.id); setEditing(null) }}
         />
       )}
@@ -371,8 +371,48 @@ function MacroCard({ label, v, t, bg, fg }: { label: string; v: number; t: numbe
   )
 }
 
-function EditSheet({ entry, onClose, onSave, onDelete }: { entry: FoodEntry; onClose: () => void; onSave: (s: number) => void; onDelete: () => void }) {
+function FoodEditSheet({
+  entry,
+  onClose,
+  onSave,
+  onDelete,
+}: {
+  entry: FoodEntry
+  onClose: () => void
+  onSave: (patch: Partial<FoodEntry>) => void
+  onDelete: () => void
+}) {
+  const [draft, setDraft] = useState(entry)
   const [servings, setServings] = useState(entry.servings)
+  const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [lookupMessage, setLookupMessage] = useState<string | null>(null)
+
+  async function updateFromOnline() {
+    const name = draft.name.trim()
+    if (!name || lookupState === 'loading') return
+    setLookupState('loading')
+    setLookupMessage(null)
+    try {
+      const result = await lookupFood(name)
+      setDraft((current) => ({
+        ...current,
+        name: result.name,
+        emoji: result.emoji || current.emoji,
+        kcal: result.kcal,
+        protein: result.protein,
+        carbs: result.carbs,
+        fat: result.fat,
+        confidence: result.confidence,
+      }))
+      setServings(1)
+      setLookupState('idle')
+      setLookupMessage(`Updated from ${sourceLabel(result.source)} (${result.serving}).`)
+    } catch (err) {
+      setLookupState('error')
+      setLookupMessage(err instanceof Error ? err.message : 'Online lookup failed')
+    }
+  }
+
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -385,12 +425,40 @@ function EditSheet({ entry, onClose, onSave, onDelete }: { entry: FoodEntry; onC
       >
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
         <div className="flex items-center gap-md mb-lg">
-          <div className="w-12 h-12 rounded-full bg-lilac/20 flex items-center justify-center text-[24px]">{entry.emoji}</div>
+          <div className="w-12 h-12 rounded-full bg-lilac/20 flex items-center justify-center text-[24px]">{draft.emoji}</div>
           <div>
-            <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{entry.name}</h2>
-            <p className="font-data-mono text-[12px] text-on-surface-variant">{Math.round(entry.kcal * servings)} kcal · {Math.round(entry.protein * servings)}g protein</p>
+            <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{draft.name}</h2>
+            <p className="font-data-mono text-[12px] text-on-surface-variant">{Math.round(draft.kcal * servings)} kcal - {Math.round(draft.protein * servings)}g protein</p>
           </div>
         </div>
+        <label className="flex flex-col gap-1 mb-md">
+          <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Food name</span>
+          <input
+            className="w-full bg-ink border border-outline-variant rounded-[18px] px-md py-3 text-on-surface font-data-mono focus:border-lime focus:outline-none"
+            value={draft.name}
+            onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value, confidence: 1 }))}
+          />
+        </label>
+        <button
+          onClick={updateFromOnline}
+          disabled={lookupState === 'loading' || !draft.name.trim()}
+          className="w-full mb-md py-3 rounded-[18px] bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2 disabled:opacity-60 active:scale-95 transition"
+        >
+          {lookupState === 'loading' ? (
+            <>
+              <Icon name="progress_activity" size={18} className="animate-spin" /> Updating...
+            </>
+          ) : (
+            <>
+              Update calories online <Icon name="travel_explore" size={18} />
+            </>
+          )}
+        </button>
+        {lookupMessage && (
+          <p className={`font-data-mono text-[11px] mb-md ${lookupState === 'error' ? 'text-error' : 'text-lime'}`}>
+            {lookupMessage}
+          </p>
+        )}
         <div className="flex items-center justify-between bg-ink p-sm rounded-[18px] mb-lg">
           <span className="font-metric-md text-metric-md text-on-surface ml-sm">Servings</span>
           <div className="flex items-center gap-md">
@@ -401,7 +469,7 @@ function EditSheet({ entry, onClose, onSave, onDelete }: { entry: FoodEntry; onC
         </div>
         <div className="flex gap-md">
           <Press onClick={onDelete} className="flex-1 py-3 rounded-full border border-error/40 text-error font-metric-md flex items-center justify-center gap-2"><Icon name="delete" size={18} /> Delete</Press>
-          <Press onClick={() => onSave(servings)} className="flex-[2] py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2">Save <Icon name="check" size={18} /></Press>
+          <Press onClick={() => onSave({ name: draft.name.trim() || entry.name, emoji: draft.emoji, kcal: draft.kcal, protein: draft.protein, carbs: draft.carbs, fat: draft.fat, confidence: draft.confidence, servings })} className="flex-[2] py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2">Save <Icon name="check" size={18} /></Press>
         </div>
       </motion.div>
     </motion.div>

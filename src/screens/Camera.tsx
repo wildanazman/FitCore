@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
 import { detectFood, slotForNow, type Detection } from '../lib/foodAI'
+import { lookupFood, sourceLabel } from '../lib/foodLookup'
 import { todayISO, uid } from '../lib/date'
 import type { FoodEntry } from '../types'
 
@@ -132,6 +133,33 @@ export function Camera() {
     nav('/food')
   }
 
+  async function updateDetectionFromName(name: string) {
+    const result = await lookupFood(name)
+    setDet((current) => ({
+      ...(current ?? det ?? {
+        name: result.name,
+        emoji: result.emoji || '🍽️',
+        kcal: result.kcal,
+        protein: result.protein,
+        carbs: result.carbs,
+        fat: result.fat,
+        confidence: result.confidence,
+      }),
+      name: result.name,
+      emoji: result.emoji || current?.emoji || det?.emoji || '🍽️',
+      kcal: result.kcal,
+      protein: result.protein,
+      carbs: result.carbs,
+      fat: result.fat,
+      confidence: result.confidence,
+      source: result.source,
+      items: [{ name: `${result.name} · ${result.serving}`, kcal: result.kcal }],
+      assumptions: result.note,
+      note: `Updated from ${sourceLabel(result.source)} (${result.serving}).`,
+    }))
+    setServings(1)
+  }
+
   const confidenceHigh = (det?.confidence ?? 0) >= 0.85
 
   return (
@@ -252,7 +280,7 @@ export function Camera() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-data-mono text-[11px] text-on-surface-variant uppercase">
-                    Source: {det.source === 'gemini' ? 'Gemini vision' : det.source === 'openai' ? 'OpenAI vision' : det.source === 'claude' ? 'Claude vision' : 'rough offline estimate'}
+                    Source: {detectionSourceLabel(det.source)}
                   </span>
                   {det.note && <span className="font-data-mono text-[11px] text-tertiary">{det.note}</span>}
                 </div>
@@ -316,12 +344,28 @@ export function Camera() {
               </div>
             </div>
           ) : (
-            <EditForm det={det} onChange={setDet} onDone={() => setPhase('result')} />
+            <EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} />
           )}
         </div>
       )}
     </div>
   )
+}
+
+function detectionSourceLabel(source: Detection['source']) {
+  switch (source) {
+    case 'gemini':
+      return 'Gemini vision'
+    case 'openai':
+      return 'OpenAI vision'
+    case 'claude':
+      return 'Claude vision'
+    case 'openfoodfacts':
+      return 'Open Food Facts'
+    case 'local':
+    default:
+      return 'rough offline estimate'
+  }
 }
 
 function MacroChip({ label, v, color, bar }: { label: string; v: number; color: string; bar: string }) {
@@ -339,9 +383,37 @@ function MacroChip({ label, v, color, bar }: { label: string; v: number; color: 
   )
 }
 
-function EditForm({ det, onChange, onDone }: { det: Detection; onChange: (d: Detection) => void; onDone: () => void }) {
+function EditForm({
+  det,
+  onChange,
+  onLookup,
+  onDone,
+}: {
+  det: Detection
+  onChange: (d: Detection) => void
+  onLookup: (name: string) => Promise<void>
+  onDone: () => void
+}) {
+  const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [lookupMessage, setLookupMessage] = useState<string | null>(null)
   const cls = 'w-full bg-surface border border-outline-variant rounded-lg px-md py-2 text-on-surface font-data-mono focus:border-primary focus:outline-none'
   const num = (k: 'kcal' | 'protein' | 'carbs' | 'fat') => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...det, [k]: +e.target.value })
+
+  async function updateFromOnline() {
+    const name = det.name.trim()
+    if (!name || lookupState === 'loading') return
+    setLookupState('loading')
+    setLookupMessage(null)
+    try {
+      await onLookup(name)
+      setLookupState('idle')
+      setLookupMessage('Calories updated from online data.')
+    } catch (err) {
+      setLookupState('error')
+      setLookupMessage(err instanceof Error ? err.message : 'Online lookup failed')
+    }
+  }
+
   return (
     <div className="flex flex-col gap-md">
       <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Edit meal</h2>
@@ -349,6 +421,26 @@ function EditForm({ det, onChange, onDone }: { det: Detection; onChange: (d: Det
         <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Name</span>
         <input className={cls} value={det.name} onChange={(e) => onChange({ ...det, name: e.target.value, confidence: 1 })} />
       </label>
+      <button
+        onClick={updateFromOnline}
+        disabled={lookupState === 'loading' || !det.name.trim()}
+        className="py-3 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md hover:opacity-90 transition active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
+      >
+        {lookupState === 'loading' ? (
+          <>
+            <Icon name="progress_activity" size={18} className="animate-spin" /> Updating...
+          </>
+        ) : (
+          <>
+            Update calories online <Icon name="travel_explore" size={18} />
+          </>
+        )}
+      </button>
+      {lookupMessage && (
+        <p className={`font-data-mono text-[11px] ${lookupState === 'error' ? 'text-error' : 'text-lime'}`}>
+          {lookupMessage}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-md">
         <NumField label="Calories" value={det.kcal} onChange={num('kcal')} cls={cls} />
         <NumField label="Protein g" value={det.protein} onChange={num('protein')} cls={cls} />
