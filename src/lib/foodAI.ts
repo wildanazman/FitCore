@@ -27,6 +27,8 @@ export interface Detection {
   /** What the model assumed about portions/ingredients. */
   assumptions?: string
   note?: string
+  /** Provider mode selected by the user before the request was made. */
+  requestedProvider?: FoodAIProvider
 }
 
 export type FoodAIProvider = 'auto' | 'gemini' | 'anthropic' | 'local'

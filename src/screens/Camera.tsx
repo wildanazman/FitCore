@@ -79,7 +79,7 @@ export function Camera() {
     try {
       const result = await detectFood(dataUrl, profile.anthropicApiKey, provider)
       recordFoodAIUsage(result.source)
-      setDet(result)
+      setDet({ ...result, requestedProvider: provider })
       setServings(1)
       setPhase('result')
     } catch {
@@ -289,8 +289,11 @@ export function Camera() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-data-mono text-[11px] text-lime uppercase">
+                    Mode: {foodProviderLabel(det.requestedProvider ?? provider)}
+                  </span>
                   <span className="font-data-mono text-[11px] text-on-surface-variant uppercase">
-                    Source: {detectionSourceLabel(det.source)}
+                    Actual source: {detectionSourceLabel(det.source)}
                   </span>
                   {det.note && <span className="font-data-mono text-[11px] text-tertiary">{det.note}</span>}
                 </div>
@@ -428,6 +431,19 @@ function detectionSourceLabel(source: Detection['source']) {
     case 'local':
     default:
       return 'rough offline estimate'
+  }
+}
+
+function foodProviderLabel(provider: FoodAIProvider) {
+  switch (provider) {
+    case 'auto':
+      return 'Auto'
+    case 'gemini':
+      return 'Gemini'
+    case 'anthropic':
+      return 'Anthropic'
+    case 'local':
+      return 'Local + web'
   }
 }
 
