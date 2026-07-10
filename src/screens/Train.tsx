@@ -186,7 +186,8 @@ function RunningPlanCard({
   const parsedFive = parsePace(fivePace)
   const parsedTen = parsePace(tenPace)
   const planStartDate = startMode === 'this-week' ? thisWeek : startMode === 'next-week' ? nextWeek : customStart
-  const cleanDays = normalPreferred(preferredDays, trainingDays)
+  const cleanDays = clampPreferredDays(preferredDays, trainingDays)
+  const hasEnoughRunDays = cleanDays.length === trainingDays
   const draftProfile = useMemo<UserProfile>(() => ({
     ...profile,
     raceType,
@@ -198,8 +199,8 @@ function RunningPlanCard({
     bestRunPaceSecPerKm: parsedFive || profile.bestRunPaceSecPerKm,
     bestRunDistanceKm: Math.max(1, Number(longestKm) || profile.bestRunDistanceKm),
     planStartDate,
-    runPreferredDays: cleanDays,
-  }), [cleanDays, customStart, fivePace, halfGoal, longestKm, parsedFive, parsedTen, planStartDate, profile, raceDate, raceType, tenPace, trainingDays])
+    runPreferredDays: hasEnoughRunDays ? cleanDays : normalPreferred(cleanDays, trainingDays),
+  }), [cleanDays, customStart, fivePace, halfGoal, hasEnoughRunDays, longestKm, parsedFive, parsedTen, planStartDate, profile, raceDate, raceType, tenPace, trainingDays])
 
   const cap = planCapability(draftProfile)
   const assessment = cap.assessment
@@ -212,9 +213,9 @@ function RunningPlanCard({
     parsedTen !== profile.bestTenKmPaceSecPerKm ||
     Number(longestKm) !== profile.bestRunDistanceKm ||
     planStartDate !== (profile.planStartDate ?? thisWeek) ||
-    cleanDays.join(',') !== normalPreferred(profile.runPreferredDays, profile.trainingDaysPerWeek).join(',')
+    normalPreferred(cleanDays, trainingDays).join(',') !== normalPreferred(profile.runPreferredDays, profile.trainingDaysPerWeek).join(',')
 
-  const canSave = Boolean(parsedFive && parsedTen && Number(longestKm) && planStartDate)
+  const canSave = Boolean(parsedFive && parsedTen && Number(longestKm) && planStartDate && hasEnoughRunDays)
 
   const handleSave = () => {
     onUpdate({
@@ -227,7 +228,7 @@ function RunningPlanCard({
       bestRunPaceSecPerKm: parsedFive,
       bestRunDistanceKm: Math.max(1, Number(longestKm)),
       planStartDate,
-      runPreferredDays: cleanDays,
+      runPreferredDays: normalPreferred(cleanDays, trainingDays),
       sports: profile.sports.includes('running') ? profile.sports : [...profile.sports, 'running'],
     })
     setExpanded(false)
@@ -343,7 +344,7 @@ function RunningPlanCard({
                       key={d}
                       onClick={() => {
                         setTrainingDays(d)
-                        setPreferredDays((current) => normalPreferred(current, d))
+                        setPreferredDays((current) => clampPreferredDays(current, d))
                       }}
                       className={`min-h-11 rounded-xl font-metric-md text-[15px] ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
                         trainingDays === d ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
@@ -356,6 +357,9 @@ function RunningPlanCard({
               </Field>
 
               <Field label="Preferred run days">
+                <p className="font-body-md text-[13px] text-on-surface-variant">
+                  Pick exactly {trainingDays} days. Selected {cleanDays.length}/{trainingDays}.
+                </p>
                 <div className="grid grid-cols-7 gap-xs">
                   {DAY_OPTIONS.map((day) => {
                     const active = cleanDays.includes(day.id)
@@ -624,11 +628,20 @@ function normalPreferred(days: number[] | undefined, count: number): number[] {
   return clean.slice(0, Math.max(3, Math.min(7, count)))
 }
 
+function clampPreferredDays(days: number[] | undefined, count: number): number[] {
+  const limit = Math.max(3, Math.min(7, count))
+  return [...new Set(days ?? [])]
+    .map((day) => Math.max(0, Math.min(6, Math.round(day))))
+    .slice(0, limit)
+}
+
 function toggleDay(current: number[], day: number, count: number): number[] {
+  const limit = Math.max(3, Math.min(7, count))
+  const clean = clampPreferredDays(current, limit)
   const hasDay = current.includes(day)
-  if (hasDay && current.length > 3) return current.filter((d) => d !== day)
-  if (hasDay) return current
-  return normalPreferred([...current, day], count)
+  if (hasDay) return clean.filter((d) => d !== day)
+  if (clean.length >= limit) return [...clean.slice(1), day]
+  return [...clean, day]
 }
 
 const fieldCls = 'w-full min-h-11 bg-[#101112] ring-1 ring-white/10 rounded-xl px-sm py-2 text-on-surface font-data-mono text-[13px] focus:ring-2 focus:ring-lime focus:outline-none'
