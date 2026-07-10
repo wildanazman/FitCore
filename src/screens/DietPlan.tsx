@@ -20,6 +20,10 @@ export function DietPlan() {
   const [now, setNow] = useState(() => new Date())
   const windowNow = def.kind === 'window' ? windowState(profile.eatingWindowStartHour, profile.dietMode, now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60) : null
   const countdown = windowNow ? formatCountdown(windowNow, now) : null
+  const heroMetric = countdown ?? (profile.dietMode === 'keto' ? `${profile.netCarbCapG}g` : profile.dietMode === 'egg' ? `${plan.macros.protein}g` : `${plan.target}`)
+  const heroMetricLabel = windowNow
+    ? windowNow.eating ? 'Until fasting starts' : 'Until your window opens'
+    : profile.dietMode === 'keto' ? 'Daily net carb cap' : profile.dietMode === 'egg' ? 'Daily protein target' : 'Daily calorie target'
 
   useEffect(() => {
     if (def.kind !== 'window') return
@@ -30,45 +34,52 @@ export function DietPlan() {
   return (
     <div>
       <TopBar />
-      <div className="px-margin-mobile pt-sm space-y-xl pb-md">
+      <div className="px-margin-mobile pt-sm space-y-xl pb-lg">
         <div className="flex items-center gap-sm">
-          <button onClick={() => nav(-1)} className="text-on-surface-variant hover:text-on-surface p-1 -ml-1">
+          <button
+            onClick={() => nav(-1)}
+            aria-label="Go back"
+            className="-ml-2 flex min-h-11 min-w-11 items-center justify-center rounded-full text-on-surface-variant transition-[color,background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-container-high hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.97] motion-reduce:transition-none"
+          >
             <Icon name="arrow_back" />
           </button>
           <h1 className="font-headline-lg text-headline-lg text-on-surface">Your diet plan</h1>
         </div>
 
-        <section className="relative overflow-hidden rounded-2xl bg-surface-container-high border border-outline-variant p-lg card-elev">
-          <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/10 blur-2xl" />
-          <div className="relative flex items-start justify-between gap-md">
-            <div>
-              <div className="flex items-center gap-2 text-primary">
-                <Icon name={def.icon} fill size={18} />
-                <span className="font-label-caps text-label-caps uppercase">Active protocol</span>
+        <section className="diet-hero relative overflow-hidden rounded-2xl p-lg">
+          <div className="relative flex items-center justify-between gap-md">
+            <div className="flex min-w-0 items-center gap-sm">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime text-on-lime shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+                <Icon name={def.icon} fill size={20} />
               </div>
-              <h2 className="font-display-hero text-display-hero text-on-surface mt-2">{def.label}</h2>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-1">{def.tagline}</p>
+              <div className="min-w-0">
+                <p className="font-body-md text-[14px] font-semibold text-lime">Active protocol</p>
+                <h2 className="truncate font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{def.label}</h2>
+              </div>
             </div>
-            {windowNow && countdown && (
-              <div className="text-right shrink-0">
-                <span className={`font-label-caps text-label-caps uppercase ${windowNow.eating ? 'text-secondary' : 'text-primary'}`}>
-                  {windowNow.eating ? 'Eating now' : 'Fasting'}
-                </span>
-                <div className="font-data-mono text-[28px] leading-none text-on-surface mt-2 tabular-nums">{countdown}</div>
-                <p className="font-data-mono text-[11px] text-on-surface-variant mt-1">{windowNow.detail}</p>
-              </div>
+            {windowNow && (
+              <span className={`shrink-0 rounded-full px-3 py-1.5 font-data-mono text-[12px] ${windowNow.eating ? 'bg-secondary/15 text-secondary' : 'bg-lime/15 text-lime'}`}>
+                {windowNow.eating ? 'Eating now' : 'Fasting'}
+              </span>
             )}
+          </div>
+          <div className="relative mt-lg border-t border-white/10 pt-lg">
+            <p className="font-body-md text-[14px] text-on-surface-variant">{heroMetricLabel}</p>
+            <div className="mt-1 flex flex-wrap items-end justify-between gap-x-md gap-y-sm">
+              <div className="font-data-mono text-[36px] font-semibold leading-none tracking-[-0.03em] text-on-surface tabular-nums">{heroMetric}</div>
+              <p className="max-w-[190px] text-right font-body-md text-[14px] leading-5 text-on-surface-variant">{def.tagline}</p>
+            </div>
           </div>
           {windowNow && (
             <div className="relative mt-lg">
-              <div className="flex justify-between font-data-mono text-[11px] text-on-surface-variant mb-2">
+              <div className="mb-2 flex justify-between font-data-mono text-[12px] text-on-surface-variant">
                 <span>{formatHour(windowNow.startHour)}</span>
                 <span>{formatHour(windowNow.endHour)}</span>
               </div>
-              <div className="h-2 rounded-full bg-surface-container-highest overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-700 ${windowNow.eating ? 'bg-secondary' : 'bg-primary'}`} style={{ width: `${Math.max(4, windowNow.pct * 100)}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-black/30" role="progressbar" aria-label={`${windowNow.phase} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(windowNow.pct * 100)}>
+                <div className={`h-full rounded-full transition-[width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none ${windowNow.eating ? 'bg-secondary' : 'bg-lime'}`} style={{ width: `${Math.max(4, windowNow.pct * 100)}%` }} />
               </div>
-              <p className="font-body-md text-[13px] text-on-surface-variant mt-2">
+              <p className="mt-2 font-body-md text-[14px] leading-5 text-on-surface-variant">
                 {windowNow.eating ? `Keep your ${windowLengthHours(profile.dietMode)}-hour window focused and hit your target.` : `Your next eating window opens at ${formatHour(windowNow.startHour)}.`}
               </p>
             </div>
@@ -80,7 +91,7 @@ export function DietPlan() {
         {/* Stats from weight/height/activity */}
         <section>
           <SectionLabel>Your numbers</SectionLabel>
-          <div className="grid grid-cols-2 gap-md mt-md">
+          <div className="mt-md grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-tile-border ring-1 ring-tile-border">
             <Stat label="BMI" value={String(plan.bmi.value)} sub={plan.bmi.category} tone={plan.bmi.tone} />
             <Stat
               label="Healthy range"
@@ -90,7 +101,7 @@ export function DietPlan() {
             <Stat label="Maintenance" value={`${plan.tdee}`} sub="kcal / day" />
             <Stat label="Your target" value={`${plan.target}`} sub="kcal / day" tone="good" />
           </div>
-          <div className="grid grid-cols-4 gap-sm mt-md">
+          <div className="mt-sm grid grid-cols-4 gap-px overflow-hidden rounded-xl bg-tile-border ring-1 ring-tile-border">
             <MiniMacro label="Protein" v={plan.macros.protein} color="text-secondary" />
             <MiniMacro label="Carbs" v={plan.macros.carbs} color="text-tertiary" />
             <MiniMacro label="Fat" v={plan.macros.fat} color="text-error" />
@@ -107,7 +118,7 @@ export function DietPlan() {
           <p className="font-body-md text-body-md text-on-surface-variant mb-lg">{plan.guide.headline}</p>
 
           <GuideBlock icon="menu_book" title="How it works" items={plan.guide.howItWorks} />
-          <div className="grid grid-cols-1 gap-md mt-md">
+          <div className="mt-md grid grid-cols-1 gap-sm">
             <ListCard icon="check_circle" tone="secondary" title="Eat" items={plan.guide.eat} />
             <ListCard icon="block" tone="error" title="Avoid" items={plan.guide.avoid} />
           </div>
@@ -118,20 +129,20 @@ export function DietPlan() {
         {/* Sample day scaled to target */}
         <section>
           <SectionLabel>Sample day · ~{plan.target} kcal</SectionLabel>
-          <div className="space-y-sm mt-md">
+          <div className="mt-md overflow-hidden rounded-2xl bg-tile ring-1 ring-tile-border">
             {plan.scaledDay.map((meal) => (
-              <div key={meal.name} className="bg-tile border border-tile-border rounded-xl p-md">
+              <div key={meal.name} className="border-b border-tile-border p-md last:border-b-0">
                 <div className="flex justify-between items-baseline">
                   <span className="font-metric-md text-metric-md text-on-surface">{meal.name}</span>
                   <span className="font-data-mono text-data-mono text-on-surface">{meal.kcal} kcal</span>
                 </div>
                 <p className="font-body-md text-[14px] text-on-surface-variant mt-1">{meal.items}</p>
-                <p className="font-data-mono text-[12px] text-on-surface-variant mt-1">
+                <p className="mt-1 font-data-mono text-[12px] text-on-surface-variant">
                   <span className="text-secondary">{meal.protein}g P</span> · <span className="text-tertiary">{meal.carbs}g C</span> · <span className="text-error">{meal.fat}g F</span>
                 </p>
               </div>
             ))}
-            <div className="flex justify-between px-md py-2 font-data-mono text-data-mono">
+            <div className="flex flex-wrap justify-between gap-2 bg-surface-container-high px-md py-3 font-data-mono text-[12px]">
               <span className="text-on-surface-variant">Day total</span>
               <span className="text-on-surface">
                 {plan.scaledTotal.kcal} kcal · {plan.scaledTotal.protein}P {plan.scaledTotal.carbs}C {plan.scaledTotal.fat}F
@@ -143,7 +154,7 @@ export function DietPlan() {
         {/* Decision support comes after the full plan, so the user can choose with context. */}
         <section>
           <SectionLabel>Recommended for you</SectionLabel>
-          <div className="bg-lime/10 border-l-2 border-lime rounded-r-[20px] p-md mt-md">
+          <div className="mt-md rounded-2xl bg-lime/10 p-md ring-1 ring-lime/25">
             <div className="flex items-center gap-sm mb-sm">
               <Icon name={recDef.icon} fill className="text-lime" />
               <span className="font-metric-md text-metric-md text-on-surface">{recDef.label}</span>
@@ -157,7 +168,7 @@ export function DietPlan() {
             {!onRecommended && (
               <button
                 onClick={() => updateProfile({ dietMode: rec.mode })}
-                className="mt-md bg-lime text-on-lime font-metric-md text-metric-md py-2 px-lg rounded-full active:scale-95 transition flex items-center gap-2"
+                className="mt-md flex min-h-11 items-center gap-2 rounded-full bg-lime px-lg py-2 font-metric-md text-metric-md text-on-lime transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.97] motion-reduce:transition-none"
               >
                 Switch to {recDef.label} <Icon name="arrow_forward" size={18} />
               </button>
@@ -174,8 +185,9 @@ export function DietPlan() {
                 <button
                   key={d.id}
                   onClick={() => updateProfile({ dietMode: d.id })}
-                  className={`shrink-0 flex items-center gap-2 px-md py-sm rounded-full border transition ${
-                    on ? 'bg-lime text-on-lime border-transparent' : 'bg-transparent text-on-surface-variant border-outline-variant'
+                  aria-current={on ? 'true' : undefined}
+                  className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full px-md py-sm transition-[color,background-color,box-shadow,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.97] motion-reduce:transition-none ${
+                    on ? 'bg-lime text-on-lime shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]' : 'bg-surface-container text-on-surface-variant ring-1 ring-outline-variant hover:bg-surface-container-high hover:text-on-surface'
                   }`}
                 >
                   <Icon name={d.icon} size={18} fill={on} />
@@ -188,11 +200,14 @@ export function DietPlan() {
 
         <button
           onClick={() => nav('/food')}
-          className="w-full bg-lime text-on-lime font-metric-md text-metric-md py-3 rounded-full active:scale-[0.98] transition flex items-center justify-center gap-2"
+          className="group flex min-h-12 w-full items-center justify-center gap-3 rounded-full bg-lime px-5 py-3 font-metric-md text-metric-md text-on-lime transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.97] motion-reduce:transition-none"
         >
-          <Icon name="restaurant" /> Start logging today
+          <span>Start logging today</span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-on-lime/10">
+            <Icon name="arrow_forward" size={18} />
+          </span>
         </button>
-        <p className="text-center font-data-mono text-[11px] text-on-surface-variant">
+        <p className="text-center font-body-md text-[12px] leading-5 text-on-surface-variant">
           Guidance is general, not medical advice. Check with a clinician before big diet changes.
         </p>
       </div>
@@ -206,20 +221,21 @@ function ProtocolSettings({ profile, updateProfile }: { profile: ReturnType<type
   if (!isWindow && !isLowCarb) return null
 
   return (
-    <section className="bg-tile border border-tile-border rounded-xl p-md">
+    <section className="rounded-2xl bg-tile p-md ring-1 ring-tile-border">
       <div className="flex items-center justify-between gap-md">
         <div>
-          <p className="font-label-caps text-label-caps uppercase text-on-surface-variant">Personalise your plan</p>
-          <p className="font-metric-md text-metric-md text-on-surface mt-1">Make the protocol fit your day</p>
+          <p className="font-body-md text-[14px] font-semibold text-lime">Protocol settings</p>
+          <p className="mt-0.5 font-metric-md text-metric-md text-on-surface">Make it fit your day</p>
         </div>
         <Icon name="tune" className="text-primary" />
       </div>
-      <div className="grid grid-cols-2 gap-md mt-md">
+      <div className="mt-md">
         {isWindow && (
-          <label className="block">
-            <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Eating starts</span>
+          <label className="block" htmlFor="eating-window-start">
+            <span className="font-body-md text-[14px] text-on-surface-variant">Eating window starts</span>
             <select
-              className="mt-2 w-full rounded-lg border border-outline-variant bg-surface-container-high px-sm py-2 text-on-surface outline-none focus:border-primary"
+              id="eating-window-start"
+              className="mt-2 min-h-12 w-full rounded-xl bg-surface-container-high px-md py-2 text-on-surface ring-1 ring-outline-variant outline-none transition-[box-shadow,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus:bg-surface-container-highest focus:ring-2 focus:ring-lime motion-reduce:transition-none"
               value={profile.eatingWindowStartHour}
               onChange={(e) => updateProfile({ eatingWindowStartHour: Number(e.target.value) })}
             >
@@ -228,23 +244,24 @@ function ProtocolSettings({ profile, updateProfile }: { profile: ReturnType<type
           </label>
         )}
         {isLowCarb && (
-          <label className="block">
-            <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">Daily net carb cap</span>
+          <label className="block" htmlFor="net-carb-cap">
+            <span className="font-body-md text-[14px] text-on-surface-variant">Daily net carb cap</span>
             <div className="relative mt-2">
               <input
+                id="net-carb-cap"
                 type="number"
                 min={5}
                 max={200}
-                className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-sm py-2 pr-10 text-on-surface outline-none focus:border-primary"
+                className="min-h-12 w-full rounded-xl bg-surface-container-high px-md py-2 pr-10 text-on-surface ring-1 ring-outline-variant outline-none transition-[box-shadow,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus:bg-surface-container-highest focus:ring-2 focus:ring-lime motion-reduce:transition-none"
                 value={profile.netCarbCapG}
                 onChange={(e) => updateProfile({ netCarbCapG: Math.max(5, Math.min(200, Number(e.target.value) || 5)) })}
               />
-              <span className="absolute right-3 top-2 text-on-surface-variant">g</span>
+              <span className="pointer-events-none absolute right-4 top-3 text-on-surface-variant">g</span>
             </div>
           </label>
         )}
       </div>
-      <p className="font-body-md text-[12px] text-on-surface-variant mt-md">
+      <p className="mt-md max-w-[62ch] font-body-md text-[14px] leading-5 text-on-surface-variant">
         {profile.dietMode === 'omad' ? 'Default is a 1-hour window. Choose the meal time that works best for you.' : profile.dietMode === '16:8' ? 'Default is an 8-hour eating window. Move it around your training and sleep.' : profile.dietMode === 'keto' ? 'Lower the cap for stricter keto, or raise it to make training fuel more flexible.' : 'Egg mode uses this cap as a guardrail for the rest of your meals.'}
       </p>
     </section>
@@ -275,19 +292,19 @@ function formatCountdown(state: { eating: boolean; startHour: number; endHour: n
 function Stat({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: 'good' | 'warn' | 'tertiary' | 'error' }) {
   const color = tone === 'good' ? 'text-secondary' : tone === 'warn' ? 'text-tertiary' : tone === 'error' ? 'text-error' : tone === 'tertiary' ? 'text-tertiary' : 'text-on-surface'
   return (
-    <div className="bg-tile border border-tile-border rounded-xl p-md">
-      <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">{label}</span>
-      <div className={`font-display-hero text-headline-lg mt-1 leading-none ${color}`}>{value}</div>
-      <span className="font-data-mono text-[11px] text-on-surface-variant">{sub}</span>
+    <div className="bg-tile p-md">
+      <span className="font-body-md text-[13px] text-on-surface-variant">{label}</span>
+      <div className={`mt-2 font-data-mono text-[24px] font-semibold leading-none tabular-nums ${color}`}>{value}</div>
+      <span className="mt-1 block font-body-md text-[12px] text-on-surface-variant">{sub}</span>
     </div>
   )
 }
 
 function MiniMacro({ label, v, color, unit = 'g' }: { label: string; v: number; color: string; unit?: string }) {
   return (
-    <div className="bg-tile border border-tile-border rounded-lg p-sm text-center">
+    <div className="bg-tile px-1 py-sm text-center">
       <div className={`font-data-mono text-metric-md ${color}`}>{v}{unit}</div>
-      <div className="font-label-caps text-[10px] uppercase text-on-surface-variant mt-0.5">{label}</div>
+      <div className="mt-0.5 font-body-md text-[12px] text-on-surface-variant">{label}</div>
     </div>
   )
 }
@@ -298,7 +315,7 @@ function GuideBlock({ icon, title, items, tone }: { icon: string; title: string;
     <div className="mt-md">
       <div className="flex items-center gap-2 mb-sm">
         <Icon name={icon} size={18} className={c} />
-        <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">{title}</span>
+        <span className="font-body-md text-[14px] font-semibold text-on-surface-variant">{title}</span>
       </div>
       <ul className="space-y-1">
         {items.map((it, i) => (
@@ -313,17 +330,17 @@ function GuideBlock({ icon, title, items, tone }: { icon: string; title: string;
 }
 
 function ListCard({ icon, tone, title, items }: { icon: string; tone: 'secondary' | 'error'; title: string; items: string[] }) {
-  const border = tone === 'secondary' ? 'border-secondary' : 'border-error'
   const text = tone === 'secondary' ? 'text-secondary' : 'text-error'
+  const surface = tone === 'secondary' ? 'bg-secondary/5 ring-secondary/20' : 'bg-error/5 ring-error/20'
   return (
-    <div className={`bg-tile border-l-2 ${border} border-y border-r border-y-tile-border border-r-tile-border rounded-r-xl p-md`}>
+    <div className={`rounded-xl p-md ring-1 ${surface}`}>
       <div className={`flex items-center gap-2 mb-sm ${text}`}>
         <Icon name={icon} size={18} fill />
-        <span className="font-label-caps text-label-caps uppercase">{title}</span>
+        <span className="font-body-md text-[14px] font-semibold">{title}</span>
       </div>
       <div className="flex flex-wrap gap-2">
         {items.map((it, i) => (
-          <span key={i} className="bg-surface-container-high rounded-full px-sm py-1 font-body-md text-[13px] text-on-surface">{it}</span>
+          <span key={i} className="rounded-full bg-surface-container-high px-sm py-1.5 font-body-md text-[13px] text-on-surface">{it}</span>
         ))}
       </div>
     </div>
