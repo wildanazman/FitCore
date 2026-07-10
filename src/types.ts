@@ -33,6 +33,8 @@ export interface UserProfile {
   sports: Sport[]
   /** ISO yyyy-mm-dd of the goal race, or null if none. */
   raceDate: string | null
+  /** ISO yyyy-mm-dd of the first Monday of the training plan, or null if not started. */
+  planStartDate: string | null
   /** Goal race distance: half or full marathon. */
   raceType: RaceType
   /** How many days per week the runner wants to train (3-7). */

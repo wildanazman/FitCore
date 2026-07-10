@@ -195,7 +195,7 @@ export function generatePlan(p: UserProfile, weightKg: number): PlanSession[] {
   const sportDay = sport ? [6, 0, 3].find((d) => !runDaySet.has(d) && !strengthDays.includes(d)) : undefined
 
   const lastMonday = startOfWeek(p.raceDate ?? todayISO())
-  const planStart = addDays(lastMonday, -(weeks - 1) * 7)
+  const planStart = p.planStartDate ?? addDays(lastMonday, -(weeks - 1) * 7)
 
   for (let w = 0; w < weeks; w++) {
     const weekNum = w + 1
@@ -298,13 +298,23 @@ export function planMeta(p: UserProfile, sessions: PlanSession[], todayIso: stri
   if (!p.raceDate) return null
   const runs = sessions.filter((s) => s.plan === 'running')
   if (!runs.length) return null
-  const start = runs[0].date
+  const start = p.planStartDate ?? runs[0].date
   const totalWeeks = Math.max(1, Math.round(daysUntil(start, p.raceDate) / 7) + 1)
   const daysLeft = Math.max(0, daysUntil(todayIso, p.raceDate))
   const weeksLeft = Math.ceil(daysLeft / 7)
   const week = Math.max(1, Math.min(totalWeeks, totalWeeks - weeksLeft + 1))
   const taperIn = daysUntil(todayIso, p.raceDate) - 21
   return { week, totalWeeks, daysLeft, taperIn, pct: Math.round((week / totalWeeks) * 100), raceLabel: raceLabel(p.raceType) }
+}
+
+/** Get the Monday of the current week as a suggested plan start. */
+export function suggestPlanStart(): string {
+  return startOfWeek(todayISO())
+}
+
+/** Calculate the correct race date so the plan fits within `weeks` from planStartDate. */
+export function raceDateForPlanStart(planStart: string, totalWeeks: number): string {
+  return addDays(planStart, totalWeeks * 7 - 1)
 }
 
 function daysUntil(fromISO: string, toISO: string): number {

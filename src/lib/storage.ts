@@ -1,7 +1,7 @@
 // localStorage persistence + default profile + first-run demo seed.
 
 import type { AppState, FoodEntry, UserProfile, WeightEntry } from '../types'
-import { addDays, todayISO, uid } from './date'
+import { addDays, startOfWeek, todayISO, uid } from './date'
 import { generatePlan } from './plan'
 
 const KEY = 'fitcore.state.v1'
@@ -16,6 +16,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   goal: 'lose',
   sports: ['running', 'strength', 'badminton'],
   raceDate: null,
+  planStartDate: null,
   raceType: 'half-marathon',
   trainingDaysPerWeek: 4,
   halfMarathonGoal: 'sub230',
@@ -106,8 +107,10 @@ export function clearState(): void {
  */
 export function seedForProfile(profile: UserProfile): AppState {
   const today = todayISO()
+  const seeded = { ...profile, planStartDate: profile.planStartDate ?? startOfWeek(today) }
+  const p = seeded
   const weights: WeightEntry[] = []
-  const start = profile.startWeightKg + 4.2
+  const start = p.startWeightKg + 4.2
   for (let i = 56; i >= 0; i -= 1) {
     if (i % 2 === 1 && i !== 0) continue // ~every other day
     const t = (56 - i) / 56
@@ -123,7 +126,7 @@ export function seedForProfile(profile: UserProfile): AppState {
     weights.push(entry)
   }
 
-  const sessions = generatePlan(profile, profile.startWeightKg)
+  const sessions = generatePlan(p, p.startWeightKg)
   for (const s of sessions) {
     if (s.date < today) s.completed = true
   }
@@ -144,5 +147,5 @@ export function seedForProfile(profile: UserProfile): AppState {
     },
   ]
 
-  return { profile, foods, weights, photos: [], sessions, v: STATE_VERSION }
+  return { profile: p, foods, weights, photos: [], sessions, v: STATE_VERSION }
 }

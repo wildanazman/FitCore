@@ -27,10 +27,10 @@ function currentWeight(state: AppState): number {
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'onboard':
-      return seedForProfile({ ...action.profile, onboarded: true })
+      return seedForProfile({ ...action.profile, onboarded: true, planStartDate: action.profile.planStartDate ?? null })
 
     case 'updateProfile': {
-      const profile = { ...state.profile, ...action.patch }
+      const profile = { ...state.profile, ...action.patch, planStartDate: state.profile.planStartDate ?? action.patch.planStartDate ?? null }
       if (action.regenerate) {
         return { ...state, profile, sessions: regenerateKeepingProgress(state, profile) }
       }
