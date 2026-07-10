@@ -229,9 +229,11 @@ export async function detectFood(dataUrl: string, apiKey: string, provider: Food
     }
   }
 
-  return detectFromMock(dataUrl.slice(-64), provider === 'local'
-    ? `Online nutrition search unavailable${reason ? `: ${reason}` : ''}`
-    : reason)
+  if (provider === 'local') {
+    return detectFromMock(dataUrl.slice(-64), `Online nutrition search unavailable${reason ? `: ${reason}` : ''}`)
+  }
+
+  throw new Error(reason || 'Food AI endpoint is unavailable. Check the deployment API route.')
 }
 
 export function slotForNow(d = new Date()): 'breakfast' | 'lunch' | 'dinner' | 'snack' {

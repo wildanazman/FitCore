@@ -88,6 +88,13 @@ export function Camera() {
     }
   }
 
+  function retryCapture() {
+    setPhoto(null)
+    setDet(null)
+    setError(null)
+    setPhase('capture')
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -352,6 +359,24 @@ export function Camera() {
           ) : (
             <EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} />
           )}
+        </div>
+      )}
+
+      {phase === 'result' && error && !det && (
+        <div className="w-full bg-[#26262A] rounded-t-[24px] shadow-[0px_8px_24px_rgba(0,0,0,0.5)] z-20 flex flex-col gap-md pt-lg pb-xl px-margin-mobile">
+          <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-sm" />
+          <div className="flex items-start gap-sm">
+            <Icon name="error" size={22} className="text-error shrink-0" />
+            <div>
+              <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">AI unavailable</h2>
+              <p className="font-body-md text-[13px] text-on-surface-variant mt-xs">No reliable calorie result was returned, so this photo was not guessed or saved.</p>
+              <p className="font-data-mono text-[11px] text-error mt-sm break-words">{error}</p>
+            </div>
+          </div>
+          <div className="flex gap-md mt-sm">
+            <button onClick={retryCapture} className="flex-1 py-3 rounded-xl border border-outline-variant text-on-surface font-metric-md text-metric-md">Try again</button>
+            <button onClick={() => nav('/food')} className="flex-1 py-3 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md">Log manually</button>
+          </div>
         </div>
       )}
     </div>
