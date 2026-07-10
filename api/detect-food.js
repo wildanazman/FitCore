@@ -222,6 +222,12 @@ export default async function handler(req, res) {
   if (!anthropicKey && !geminiKey) {
     return sendJson(res, 503, { error: 'No AI key configured (set ANTHROPIC_API_KEY or GEMINI_API_KEY)' })
   }
+  if (provider === 'anthropic' && !anthropicKey) {
+    return sendJson(res, 400, { error: 'Anthropic mode needs ANTHROPIC_API_KEY or an Anthropic API key in Settings.' })
+  }
+  if (provider === 'gemini' && !geminiKey) {
+    return sendJson(res, 400, { error: 'Gemini mode needs GEMINI_API_KEY.' })
+  }
 
   let body
   try {
@@ -230,7 +236,7 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: 'Invalid JSON body' })
   }
 
-  const { image } = body
+  const { image, provider = 'auto' } = body
   if (typeof image !== 'string') return sendJson(res, 400, { error: 'Expected an image data URL' })
   if (image.length > MAX_IMAGE_CHARS) return sendJson(res, 413, { error: 'Image is too large' })
 
@@ -239,7 +245,7 @@ export default async function handler(req, res) {
 
   const errors = []
 
-  if (anthropicKey) {
+  if (provider !== 'gemini' && anthropicKey) {
     try {
       return sendJson(res, 200, await detectWithClaude(anthropicKey, inlineData))
     } catch (err) {
@@ -247,7 +253,7 @@ export default async function handler(req, res) {
     }
   }
 
-  if (geminiKey) {
+  if (provider !== 'anthropic' && geminiKey) {
     try {
       return sendJson(res, 200, await detectWithGemini(geminiKey, inlineData))
     } catch (err) {

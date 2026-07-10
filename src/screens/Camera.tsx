@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
-import { detectFood, slotForNow, type Detection } from '../lib/foodAI'
+import { detectFood, slotForNow, type Detection, type FoodAIProvider } from '../lib/foodAI'
 import { lookupFood, sourceLabel } from '../lib/foodLookup'
 import { todayISO, uid } from '../lib/date'
 import type { FoodEntry } from '../types'
@@ -22,6 +22,7 @@ export function Camera() {
   const [error, setError] = useState<string | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [provider, setProvider] = useState<FoodAIProvider>('auto')
 
   useEffect(() => {
     if (phase !== 'capture' || photo) {
@@ -76,7 +77,7 @@ export function Camera() {
     setError(null)
     stopCamera()
     try {
-      const result = await detectFood(dataUrl, profile.anthropicApiKey)
+      const result = await detectFood(dataUrl, profile.anthropicApiKey, provider)
       setDet(result)
       setServings(1)
       setPhase('result')
@@ -224,6 +225,7 @@ export function Camera() {
                 Point at your food, snap, or add a photo from gallery.
               </p>
             </div>
+            <ProviderPicker value={provider} onChange={setProvider} />
             <div className="flex items-center gap-lg">
               <button
                 onClick={() => galleryRef.current?.click()}
@@ -348,6 +350,36 @@ export function Camera() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function ProviderPicker({ value, onChange }: { value: FoodAIProvider; onChange: (value: FoodAIProvider) => void }) {
+  const options: Array<{ value: FoodAIProvider; label: string; detail: string }> = [
+    { value: 'auto', label: 'Auto', detail: 'Best available' },
+    { value: 'gemini', label: 'Gemini', detail: 'Vision + web' },
+    { value: 'anthropic', label: 'Anthropic', detail: 'Claude vision' },
+    { value: 'local', label: 'Local', detail: 'Offline estimate' },
+  ]
+
+  return (
+    <div className="w-full max-w-sm text-left">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-label-caps text-[10px] uppercase tracking-widest text-on-surface-variant">Analysis engine</span>
+        <span className="font-data-mono text-[10px] text-lime">{options.find((option) => option.value === value)?.detail}</span>
+      </div>
+      <div className="grid grid-cols-4 gap-1 rounded-xl border border-white/15 bg-black/35 p-1 backdrop-blur-md">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`rounded-lg px-1 py-2 text-center transition ${value === option.value ? 'bg-lime text-on-lime' : 'text-on-surface-variant hover:bg-white/10'}`}
+          >
+            <span className="block font-metric-md text-[11px]">{option.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

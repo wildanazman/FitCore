@@ -28,6 +28,8 @@ export interface Detection {
   note?: string
 }
 
+export type FoodAIProvider = 'auto' | 'gemini' | 'anthropic' | 'local'
+
 /** Hash a string to a stable index (deterministic mock selection). */
 function hashIndex(seed: string, mod: number): number {
   let h = 2166136261
@@ -124,11 +126,11 @@ function parseJsonObject(text: string): Partial<Detection> {
   return JSON.parse(text.slice(start, end + 1)) as Partial<Detection>
 }
 
-async function detectWithServer(dataUrl: string): Promise<Detection> {
+async function detectWithServer(dataUrl: string, provider: FoodAIProvider): Promise<Detection> {
   const res = await fetch('/api/detect-food', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ image: dataUrl }),
+    body: JSON.stringify({ image: dataUrl, provider }),
   })
   const json = await res.json().catch(() => null)
   if (!res.ok) throw new Error(json?.error || `Food AI ${res.status}`)
@@ -171,15 +173,25 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
 }
 
 /** Top-level detect: tries server Gemini vision, optional Claude, then rough local fallback. */
-export async function detectFood(dataUrl: string, apiKey: string): Promise<Detection> {
+export async function detectFood(dataUrl: string, apiKey: string, provider: FoodAIProvider = 'auto'): Promise<Detection> {
+  if (provider === 'local') return detectFromMock(dataUrl.slice(-64), 'Local mode selected')
+
   let reason: string | undefined
-  try {
-    return groundDetection(await detectWithServer(dataUrl))
-  } catch (err) {
-    reason = err instanceof Error ? err.message : 'server error'
+  if (provider === 'anthropic') {
+    try {
+      return groundDetection(await detectWithServer(dataUrl, provider))
+    } catch (err) {
+      reason = err instanceof Error ? err.message : 'Anthropic server error'
+    }
+  } else {
+    try {
+      return groundDetection(await detectWithServer(dataUrl, provider))
+    } catch (err) {
+      reason = err instanceof Error ? err.message : 'server error'
+    }
   }
 
-  if (apiKey.trim()) {
+  if (apiKey.trim() && (provider === 'auto' || provider === 'anthropic')) {
     try {
       return groundDetection(await detectWithClaude(apiKey.trim(), dataUrl))
     } catch (err) {
