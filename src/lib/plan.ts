@@ -170,10 +170,12 @@ export function planCapability(p: UserProfile) {
   const raceKm = raceDistanceKm(p.raceType)
   const bestKm = Math.max(1, p.bestRunDistanceKm || 5)
   const assessment = assessRunning(p)
-  const bestPace = Math.max(240, p.bestFiveKmPaceSecPerKm || p.bestRunPaceSecPerKm || 360)
-  const easyPace = bestPace + 75
-  const tempoPace = Math.max(240, bestPace + 20)
-  const intervalPace = Math.max(210, bestPace - 10)
+  const fivePace = Math.max(240, p.bestFiveKmPaceSecPerKm || p.bestRunPaceSecPerKm || 360)
+  const tenPace = Math.max(260, p.bestTenKmPaceSecPerKm || p.bestRunPaceSecPerKm + 45 || 420)
+  const bestPace = Math.round(fivePace * 0.35 + tenPace * 0.65)
+  const easyPace = Math.max(300, Math.round(bestPace + 65))
+  const tempoPace = Math.max(240, Math.round(bestPace + 8))
+  const intervalPace = Math.max(210, Math.round(fivePace - 8))
 
   const selectedGoalPace = p.raceType === 'marathon' ? null : halfMarathonGoalPace(p.halfMarathonGoal)
   const targetPace = assessment.planPace
