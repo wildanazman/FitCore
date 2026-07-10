@@ -6,6 +6,8 @@
 // Composition Database (MyFCD, MOH Malaysia — https://myfcd.moh.gov.my) and
 // common nutrition sources. Nutrition facts are factual data, not proprietary.
 
+import { MYFCD_FOODS } from './myfcdFoods'
+
 export type FoodCategory =
   | 'Rice'
   | 'Noodles'
@@ -34,7 +36,7 @@ export interface LocalFood {
   aka?: string[]
 }
 
-export const LOCAL_FOODS: LocalFood[] = [
+const CURATED_LOCAL_FOODS: LocalFood[] = [
   // Rice
   { name: 'Nasi Lemak (with sambal, egg, anchovies)', emoji: '🍚', category: 'Rice', serving: '1 plate', kcal: 644, protein: 17, carbs: 80, fat: 28, aka: ['nasi lemak'] },
   { name: 'Nasi Lemak Ayam Goreng', emoji: '🍗', category: 'Rice', serving: '1 plate', kcal: 885, protein: 34, carbs: 92, fat: 42, aka: ['nasi lemak ayam'] },
@@ -195,6 +197,9 @@ export const LOCAL_FOODS: LocalFood[] = [
   { name: 'Limau Ais', emoji: '🍋', category: 'Drink', serving: '1 glass', kcal: 90, protein: 0, carbs: 22, fat: 0, aka: ['limau ais', 'lime juice'] },
   { name: '100 Plus', emoji: '🥤', category: 'Drink', serving: '1 can', kcal: 90, protein: 0, carbs: 22, fat: 0, aka: ['100 plus', 'isotonic'] },
 ]
+
+// Keep curated foods first, then add the official MyFCD per-100 g snapshot.
+export const LOCAL_FOODS: LocalFood[] = [...CURATED_LOCAL_FOODS, ...MYFCD_FOODS]
 
 function norm(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
