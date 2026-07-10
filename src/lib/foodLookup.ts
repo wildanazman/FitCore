@@ -12,13 +12,15 @@ export interface LookupResult {
   fat: number
   confidence: number
   note?: string
-  source: 'openfoodfacts' | 'claude' | 'gemini'
+  source: 'openfoodfacts' | 'usda' | 'claude' | 'gemini'
 }
 
 export function sourceLabel(source: LookupResult['source']): string {
   switch (source) {
     case 'openfoodfacts':
       return 'Open Food Facts'
+    case 'usda':
+      return 'USDA FoodData Central'
     case 'claude':
       return 'AI web search'
     case 'gemini':

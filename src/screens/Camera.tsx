@@ -423,6 +423,8 @@ function detectionSourceLabel(source: Detection['source']) {
       return 'Claude vision'
     case 'openfoodfacts':
       return 'Open Food Facts'
+    case 'usda':
+      return 'USDA FoodData Central'
     case 'local':
     default:
       return 'rough offline estimate'
@@ -439,6 +441,8 @@ function detectionUsageLabel(source: Detection['source'], usedThisMonth: number)
       return `Anthropic · ${usedThisMonth} request(s) today · free access is trial credit, not unlimited`
     case 'openfoodfacts':
       return `Free database: Open Food Facts · ${usedThisMonth} lookup(s) today`
+    case 'usda':
+      return `Free database: USDA FoodData Central · ${usedThisMonth} lookup(s) today`
     default:
       return `Usage: Provider API · ${usedThisMonth} request(s) today · remaining depends on provider quota`
   }

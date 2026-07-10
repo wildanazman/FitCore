@@ -20,7 +20,7 @@ export interface Detection {
   carbs: number
   fat: number
   confidence: number
-  source?: 'gemini' | 'openai' | 'claude' | 'openfoodfacts' | 'local'
+  source?: 'gemini' | 'openai' | 'claude' | 'openfoodfacts' | 'usda' | 'local'
   /** Per-component breakdown from the web-grounded analysis. */
   items?: DetectionItem[]
   /** What the model assumed about portions/ingredients. */

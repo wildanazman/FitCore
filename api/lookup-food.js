@@ -91,13 +91,53 @@ async function lookupOpenFoodFacts(name) {
   return null
 }
 
+async function lookupUSDA(name) {
+  const key = process.env.USDA_FDC_API_KEY || 'DEMO_KEY'
+  const url = 'https://api.nal.usda.gov/fdc/v1/foods/search?' + new URLSearchParams({
+    api_key: key,
+    query: name,
+    pageSize: '5',
+    dataType: 'Foundation,SR Legacy,FNDDS',
+  }).toString()
+  const t = withTimeout(9000)
+  try {
+    const res = await fetch(url, { signal: t.signal })
+    if (!res.ok) return null
+    const json = await res.json()
+    for (const food of Array.isArray(json?.foods) ? json.foods : []) {
+      const nutrients = food.foodNutrients || []
+      const value = (ids) => {
+        const nutrient = nutrients.find((item) => ids.includes(Number(item.nutrientId)))
+        return num(nutrient?.value)
+      }
+      const kcal = value([1008, 2047, 2048])
+      if (kcal <= 0) continue
+      return normalize({
+        name: food.description || name,
+        serving: '100 g',
+        kcal,
+        protein: value([1003]),
+        carbs: value([1005]),
+        fat: value([1004]),
+        confidence: 0.78,
+        note: `USDA FoodData Central - ${food.dataType || 'nutrient database'}`,
+      }, 'usda', name)
+    }
+  } catch {
+    return null
+  } finally {
+    t.done()
+  }
+  return null
+}
+
 // ---------- 2. AI text lookup ----------
 
 function aiPrompt(name) {
   return [
     `Estimate the calories and macros for one typical single serving of the food named "${name}".`,
     'It is likely a Malaysian or South-East Asian dish, drink, or packaged product.',
-    'Search the web for reliable nutrition data — prefer the Malaysian Food Composition Database (MyFCD, myfcd.moh.gov.my), the product\'s own label, and reputable nutrition databases.',
+    'Search the web for reliable nutrition data — prefer the Malaysian Food Composition Database (MyFCD, myfcd.moh.gov.my), USDA FoodData Central, CalorieKing, the product\'s own label, and reputable nutrition databases.',
     'Return ONLY a raw JSON object, no markdown and no prose:',
     '{"name": string, "emoji": string, "serving": string, "kcal": number, "protein": number, "carbs": number, "fat": number, "confidence": number, "note": string}',
     'kcal should be roughly protein*4 + carbs*4 + fat*9. serving describes the portion (e.g. "1 plate", "1 pack", "1 glass"). If unsure, lower confidence and say so in note.',
@@ -174,7 +214,14 @@ export default async function handler(req, res) {
     errors.push(`OpenFoodFacts: ${err?.message || 'failed'}`)
   }
 
-  // 2. AI web-grounded estimate.
+  try {
+    const usda = await lookupUSDA(name)
+    if (usda && usda.kcal > 0) return sendJson(res, 200, usda)
+  } catch (err) {
+    errors.push(`USDA: ${err?.message || 'failed'}`)
+  }
+
+  // 3. AI web-grounded estimate.
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
 
