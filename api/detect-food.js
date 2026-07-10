@@ -217,6 +217,14 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: 'Method not allowed' })
   }
 
+  let body
+  try {
+    body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body ?? {})
+  } catch {
+    return sendJson(res, 400, { error: 'Invalid JSON body' })
+  }
+
+  const { image, provider = 'auto' } = body
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
   if (!anthropicKey && !geminiKey) {
@@ -228,15 +236,6 @@ export default async function handler(req, res) {
   if (provider === 'gemini' && !geminiKey) {
     return sendJson(res, 400, { error: 'Gemini mode needs GEMINI_API_KEY.' })
   }
-
-  let body
-  try {
-    body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body ?? {})
-  } catch {
-    return sendJson(res, 400, { error: 'Invalid JSON body' })
-  }
-
-  const { image, provider = 'auto' } = body
   if (typeof image !== 'string') return sendJson(res, 400, { error: 'Expected an image data URL' })
   if (image.length > MAX_IMAGE_CHARS) return sendJson(res, 413, { error: 'Image is too large' })
 
