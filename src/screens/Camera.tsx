@@ -95,6 +95,11 @@ export function Camera() {
     setPhase('capture')
   }
 
+  async function retryAnalysis() {
+    if (!photo || phase === 'analyzing') return
+    await analyzePhoto(photo)
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -359,8 +364,8 @@ export function Camera() {
                   Submit log <Icon name="check" />
                 </button>
               </div>
-              <button onClick={retryCapture} className="w-full py-3 rounded-xl border border-error/40 text-error font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-95 transition">
-                <Icon name="refresh" size={18} /> Retry scan
+              <button onClick={retryAnalysis} className="w-full py-3 rounded-xl border border-error/40 text-error font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-95 transition">
+                <Icon name="refresh" size={18} /> Retry AI with same photo
               </button>
             </div>
           ) : (
@@ -381,8 +386,8 @@ export function Camera() {
             </div>
           </div>
           <div className="flex gap-md mt-sm">
-            <button onClick={retryCapture} className="flex-1 py-3 rounded-xl border border-outline-variant text-on-surface font-metric-md text-metric-md">Try again</button>
-            <button onClick={() => nav('/food')} className="flex-1 py-3 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md">Log manually</button>
+            <button onClick={retryAnalysis} className="flex-1 py-3 rounded-xl border border-outline-variant text-on-surface font-metric-md text-metric-md">Retry same photo</button>
+            <button onClick={retryCapture} className="flex-1 py-3 rounded-xl border border-lime text-lime font-metric-md text-metric-md">New photo</button>
           </div>
         </div>
       )}
