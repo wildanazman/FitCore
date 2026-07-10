@@ -23,15 +23,16 @@ export function DietCard({ compact = false }: { compact?: boolean }) {
   if (def.kind === 'none') {
     return (
       <button
+        type="button"
         onClick={() => nav('/diet')}
-        className="w-full bg-tile border border-tile-border rounded-xl p-md flex items-center gap-md text-left hover:border-primary/50 transition-colors active:scale-[0.99]"
+        className="flex min-h-14 w-full items-center gap-md rounded-2xl bg-tile p-md text-left ring-1 ring-tile-border transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-container-low focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.98] motion-reduce:transition-none"
       >
         <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
           <Icon name="nutrition" fill size={18} className="text-on-primary-container" />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <p className="font-metric-md text-metric-md text-on-surface leading-none">Your diet plan</p>
-          <p className="font-data-mono text-[11px] text-on-surface-variant">Personalized targets & guidance</p>
+          <p className="truncate font-body-md text-[13px] text-on-surface-variant">Personalized targets and guidance</p>
         </div>
         <Icon name="chevron_right" className="text-on-surface-variant" />
       </button>
@@ -40,7 +41,7 @@ export function DietCard({ compact = false }: { compact?: boolean }) {
 
   if (def.kind === 'window') {
     const w = windowState(profile.eatingWindowStartHour, mode, nowMinutes())
-    const ringColor = w.eating ? '#44e2cd' : '#c5c0ff'
+    const ringColor = w.eating ? '#44e2cd' : '#c9f24e'
     const meals = mealsOn(state.foods, today)
     return (
       <Shell icon={def.icon} title={def.label} tagline={def.tagline} onClick={() => nav('/diet')}>
@@ -50,7 +51,7 @@ export function DietCard({ compact = false }: { compact?: boolean }) {
             <p className={`font-metric-md text-metric-md ${w.eating ? 'text-secondary' : 'text-primary'}`}>{w.phase}</p>
             <p className="font-data-mono text-data-mono text-on-surface-variant">{w.detail}</p>
             {!compact && (
-              <p className="font-data-mono text-[11px] text-on-surface-variant mt-1">
+              <p className="mt-1 font-body-md text-[13px] text-on-surface-variant">
                 Window {fmtHour(w.startHour)}–{fmtHour(w.endHour)} · {meals} meal{meals === 1 ? '' : 's'} today
               </p>
             )}
@@ -69,15 +70,15 @@ export function DietCard({ compact = false }: { compact?: boolean }) {
       <Shell icon={def.icon} title={def.label} tagline={def.tagline} onClick={() => nav('/diet')}>
         <div className="flex items-baseline justify-between">
           <div>
-            <span className={`font-display-hero text-display-hero ${over ? 'text-error' : 'text-on-surface'}`}>{carbs}</span>
+            <span className={`font-data-mono text-[32px] font-semibold ${over ? 'text-error' : 'text-on-surface'}`}>{carbs}</span>
             <span className="font-metric-md text-metric-md text-on-surface-variant"> / {cap}g net carbs</span>
           </div>
           <span className={`font-data-mono text-data-mono ${over ? 'text-error' : 'text-secondary'}`}>
             {over ? `+${carbs - cap}g over` : `${cap - carbs}g left`}
           </span>
         </div>
-        <div className="w-full h-2 bg-surface-container-high rounded-full mt-sm overflow-hidden">
-          <div className={`h-full rounded-full ${over ? 'bg-error' : 'bg-secondary'}`} style={{ width: `${pct}%` }} />
+        <div className="mt-sm h-2 w-full overflow-hidden rounded-full bg-surface-container-high" role="progressbar" aria-label={`${carbs} of ${cap} grams net carbs`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
+          <div className={`h-full rounded-full transition-[width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none ${over ? 'bg-error' : 'bg-secondary'}`} style={{ width: `${pct}%` }} />
         </div>
       </Shell>
     )
@@ -89,7 +90,7 @@ export function DietCard({ compact = false }: { compact?: boolean }) {
     <Shell icon={def.icon} title={def.label} tagline={def.tagline} onClick={() => nav('/diet')}>
       <div className="flex items-center justify-between">
         <div>
-          <span className="font-display-hero text-display-hero text-on-surface">{eggs}</span>
+          <span className="font-data-mono text-[32px] font-semibold text-on-surface">{eggs}</span>
           <span className="font-metric-md text-metric-md text-on-surface-variant"> egg{eggs === 1 ? '' : 's'} today</span>
         </div>
         <Icon name="egg" fill className="text-tertiary" size={32} />
@@ -100,14 +101,14 @@ export function DietCard({ compact = false }: { compact?: boolean }) {
 
 function Shell({ icon, title, tagline, children, onClick }: { icon: string; title: string; tagline: string; children: React.ReactNode; onClick?: () => void }) {
   return (
-    <section className="bg-tile border border-tile-border rounded-xl p-md">
-      <button onClick={onClick} className="w-full flex items-center gap-sm mb-md text-left active:scale-[0.99] transition">
+    <section className="rounded-2xl bg-tile p-md ring-1 ring-tile-border">
+      <button type="button" onClick={onClick} className="mb-md flex min-h-11 w-full items-center gap-sm rounded-xl text-left transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-container-low focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.98] motion-reduce:transition-none">
         <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
           <Icon name={icon} fill size={18} className="text-on-primary-container" />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <p className="font-metric-md text-metric-md text-on-surface leading-none">{title}</p>
-          <p className="font-data-mono text-[11px] text-on-surface-variant">{tagline}</p>
+          <p className="truncate font-body-md text-[13px] text-on-surface-variant">{tagline}</p>
         </div>
         <Icon name="chevron_right" className="text-on-surface-variant" size={20} />
       </button>
@@ -136,7 +137,7 @@ function Ring({ pct, color, label }: { pct: number; color: string; label: string
           strokeLinecap="round"
           strokeDasharray={circ}
           strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          className="transition-[stroke-dashoffset] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none"
         />
       </svg>
       <span

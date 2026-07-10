@@ -1,425 +1,266 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useApp } from '../store/AppContext'
 import { DietCard } from '../components/DietCard'
 import { Icon } from '../components/Icon'
-import { Rings } from '../components/Decor'
-import { CountUp, Press, Reveal, listContainer, spring } from '../components/motion'
 import { addDays, mondayIndex, startOfWeek, todayISO } from '../lib/date'
+import { morningBrief, recoveryScore, underFuelAlert } from '../lib/coach'
 import { dayFuel, tdee } from '../lib/nutrition'
-import type { PlanSession, SessionType } from '../types'
-
-type Filter = 'all' | 'run' | 'strength' | 'sport'
+import type { PlanSession } from '../types'
 
 export function Home() {
   const { state, profile, weightKg, toggleSession } = useApp()
   const nav = useNavigate()
   const today = todayISO()
-  const [filter, setFilter] = useState<Filter>('all')
-
   const fuel = dayFuel(profile, weightKg, today, state.foods, state.sessions)
-  const maintenance = tdee(profile, weightKg)
-  const targetLabel = profile.goal === 'lose' ? 'Deficit target' : profile.goal === 'gain' ? 'Surplus target' : 'Maintenance target'
-  const todaySessions = state.sessions.filter((s) => s.date === today)
-  const burned = todaySessions.filter((s) => s.completed).reduce((a, s) => a + s.kcal, 0)
-  const kmToday = todaySessions
-    .filter((s) => s.type === 'run' && s.completed)
-    .reduce((a, s) => a + (s.distanceKm ?? 0), 0)
-  const calPct = fuel.budget ? Math.min(100, Math.round((fuel.consumed / fuel.budget) * 100)) : 0
-  const hero = todaySessions.find((s) => !s.completed && s.type !== 'rest') ?? todaySessions[0] ?? null
-  const filtered = filter === 'all' ? todaySessions : todaySessions.filter((s) => s.type === filter)
+  const todaySessions = state.sessions.filter((session) => session.date === today)
+  const activeSessions = todaySessions.filter((session) => session.type !== 'rest')
+  const completedSessions = activeSessions.filter((session) => session.completed)
+  const nextSession = activeSessions.find((session) => !session.completed) ?? null
+  const readiness = recoveryScore(state.sessions, today)
+  const daysToRace = profile.raceDate ? Math.ceil((Date.parse(profile.raceDate) - Date.parse(today)) / 86_400_000) : null
+  const lateFuelAlert = new Date().getHours() >= 16 ? underFuelAlert(fuel, todaySessions) : null
+  const brief = lateFuelAlert ?? morningBrief(fuel, todaySessions, state.sessions, today, daysToRace)
+  const raceWindow = daysToRace !== null && daysToRace >= 0 && daysToRace <= 3
+  const briefTitle = lateFuelAlert || raceWindow ? brief.headline : nextSession ? nextSession.title : 'Recovery day'
+  const caloriePct = percent(fuel.consumed, fuel.budget)
+  const proteinPct = percent(fuel.protein, fuel.proteinTarget)
+  const carbPct = percent(fuel.carbs, fuel.carbTarget)
+  const fatPct = percent(fuel.fat, fuel.fatTarget)
+  const foodLogs = state.foods.filter((food) => food.date === today).length
+  const burned = completedSessions.reduce((total, session) => total + session.kcal, 0)
+  const distance = completedSessions
+    .filter((session) => session.type === 'run')
+    .reduce((total, session) => total + (session.distanceKm ?? 0), 0)
   const firstName = (profile.name || 'Athlete').split(' ')[0]
+  const maintenance = tdee(profile, weightKg)
 
   return (
-    <motion.div variants={listContainer} className="px-margin-mobile pt-lg space-y-lg">
-      {/* Header */}
-      <Reveal>
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-sm">
-            {/* Gradient-ringed avatar */}
-            <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-lime via-lilac to-violet shrink-0">
-              <div className="w-full h-full rounded-full bg-ink flex items-center justify-center font-display-hero text-metric-md text-on-surface">
-                {firstName.charAt(0).toUpperCase()}
-              </div>
+    <div className="space-y-xl px-margin-mobile pb-lg pt-lg">
+      <header className="flex items-center justify-between gap-md">
+        <div className="min-w-0">
+          <p className="font-body-md text-[14px] leading-5 text-on-surface-variant">{greeting()}</p>
+          <h1 className="truncate font-headline-lg text-headline-lg text-on-surface">{firstName}</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => nav('/settings')}
+          aria-label="Open settings"
+          className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-surface-container text-on-surface transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-container-high focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.97] motion-reduce:transition-none"
+        >
+          <Icon name="settings" size={20} />
+        </button>
+      </header>
+
+      <section className={`home-brief rounded-2xl p-lg ${brief.tone === 'error' ? 'home-brief-alert' : ''}`}>
+        <div className="flex items-start justify-between gap-md">
+          <div className="flex min-w-0 items-center gap-sm">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${brief.tone === 'error' ? 'bg-error text-on-error' : 'bg-lime text-on-lime'}`}>
+              <Icon name={brief.icon} fill size={20} />
             </div>
-            <div>
-              <p className="font-body-md text-[12px] text-on-surface-variant leading-none">{greeting()},</p>
-              <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface leading-tight">
-                {firstName}
-              </h1>
+            <div className="min-w-0">
+              <p className="font-body-md text-[14px] text-on-surface-variant">Today's brief</p>
+              <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{briefTitle}</h2>
             </div>
           </div>
-          <Press
-            onClick={() => nav('/settings')}
-            className="relative w-11 h-11 rounded-full bg-ink-card border border-white/10 flex items-center justify-center text-on-surface glow-soft"
-          >
-            <Icon name="notifications" size={20} />
-            <span className="absolute top-2.5 right-3 w-2 h-2 rounded-full bg-lime border border-ink" />
-          </Press>
-        </header>
-      </Reveal>
+          <span aria-label={`Estimated training readiness ${readiness} percent`} className="shrink-0 rounded-full bg-white/5 px-3 py-1.5 font-data-mono text-[12px] text-on-surface">
+            {readiness}% est.
+          </span>
+        </div>
 
-      {/* Hero progress card */}
-      <Reveal>
-        <Press
-          as="div"
-          onClick={() => nav('/train')}
-          className="block w-full text-left rounded-[28px] bg-gradient-to-br from-lime to-lime-dim text-on-lime p-lg relative overflow-hidden glow-lime cursor-pointer"
-        >
-          <Rings size={210} className="absolute -right-12 -top-14 text-on-lime opacity-[0.12]" />
-          <div className="relative flex justify-between items-start gap-md">
-            <div className="min-w-0">
-              <p className="font-label-caps text-label-caps uppercase opacity-60 tracking-widest">Today's focus</p>
-              <h2 className="font-display-hero text-headline-lg mt-1 leading-tight truncate">
-                {hero ? hero.title : 'Rest day'}
-              </h2>
-              <p className="font-data-mono text-[13px] opacity-75 mt-1 truncate">
-                {hero ? hero.detail : 'Recover & refuel'}
+        <p className="mt-md max-w-[65ch] font-body-md text-[14px] leading-6 text-on-surface-variant">{brief.body}</p>
+
+        <div className="mt-lg flex flex-wrap items-center justify-between gap-md border-t border-white/10 pt-md">
+          <div>
+            <p className="font-body-md text-[13px] text-on-surface-variant">Next action</p>
+            <p className="font-metric-md text-metric-md text-on-surface">
+              {nextSession ? nextSession.title : fuel.remaining > 0 ? 'Complete today\'s nutrition' : 'Review today\'s progress'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => nav(nextSession ? '/train' : '/food')}
+            className={`flex min-h-11 items-center gap-2 rounded-full px-md py-2 font-body-md text-[14px] font-semibold transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.97] motion-reduce:transition-none ${brief.tone === 'error' ? 'bg-error text-on-error focus-visible:outline-error' : 'bg-lime text-on-lime focus-visible:outline-lime'}`}
+          >
+            {nextSession ? 'View workout' : 'Open food log'}
+            <Icon name="arrow_forward" size={17} />
+          </button>
+        </div>
+      </section>
+
+      <WeekStrip today={today} sessions={state.sessions} />
+
+      <section>
+        <SectionHeading
+          title="Nutrition today"
+          action="Food log"
+          onAction={() => nav('/food')}
+        />
+        <div className="mt-md overflow-hidden rounded-2xl bg-tile ring-1 ring-tile-border">
+          <button
+            type="button"
+            onClick={() => nav('/food')}
+            className="block w-full p-md text-left transition-colors duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-container-low focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-lime active:bg-surface-container motion-reduce:transition-none"
+          >
+            <div className="flex items-end justify-between gap-md">
+              <div>
+                <p className="font-body-md text-[14px] text-on-surface-variant">
+                  {fuel.remaining >= 0 ? 'Calories remaining' : 'Over today\'s target'}
+                </p>
+                <p className={`mt-1 font-data-mono text-[32px] font-semibold leading-none tabular-nums ${fuel.remaining < 0 ? 'text-error' : 'text-on-surface'}`}>
+                  {Math.abs(fuel.remaining).toLocaleString()}
+                  <span className="ml-1 text-[14px] font-normal text-on-surface-variant">kcal</span>
+                </p>
+              </div>
+              <p className="text-right font-data-mono text-[12px] leading-5 text-on-surface-variant">
+                {fuel.consumed.toLocaleString()} eaten<br />{fuel.budget.toLocaleString()} target
               </p>
             </div>
-            <ProgressBadge pct={calPct} />
+            <Progress value={caloriePct} tone={fuel.remaining < 0 ? 'error' : 'lime'} label={`${fuel.consumed} of ${fuel.budget} calories`} className="mt-md" />
+          </button>
+
+          <div className="grid grid-cols-3 gap-px bg-tile-border border-t border-tile-border">
+            <Macro label="Protein" value={fuel.protein} target={fuel.proteinTarget} pct={proteinPct} tone="secondary" />
+            <Macro label="Carbs" value={fuel.carbs} target={fuel.carbTarget} pct={carbPct} tone="lime" />
+            <Macro label="Fat" value={fuel.fat} target={fuel.fatTarget} pct={fatPct} tone="tertiary" />
           </div>
-          <div className="relative mt-lg flex items-center justify-between">
-            <div className="inline-flex items-center gap-2 bg-on-lime text-lime rounded-full pl-md pr-1.5 py-1.5">
-              <span className="font-display-hero text-metric-md">
-                <CountUp value={fuel.consumed} />
-              </span>
-              <span className="font-label-caps text-label-caps uppercase opacity-80">kcal in</span>
-              <span className="w-8 h-8 rounded-full bg-lime text-on-lime flex items-center justify-center">
-                <Icon name="arrow_outward" size={16} />
-              </span>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-container-low px-md py-3 font-body-md text-[13px] text-on-surface-variant">
+            <span>{foodLogs} food log{foodLogs === 1 ? '' : 's'} today</span>
+            <span>Maintenance {maintenance.toLocaleString()} kcal</span>
+          </div>
+        </div>
+      </section>
+
+      <DietCard />
+
+      <section>
+        <SectionHeading title="Training today" action="Full plan" onAction={() => nav('/train')} />
+        <div className="mt-md overflow-hidden rounded-2xl bg-tile ring-1 ring-tile-border">
+          <div className="flex items-center justify-between gap-md border-b border-tile-border bg-surface-container-low px-md py-3">
+            <div>
+              <p className="font-body-md text-[14px] text-on-surface-variant">Completion</p>
+              <p className="font-metric-md text-metric-md text-on-surface">
+                {activeSessions.length > 0 ? `${completedSessions.length} of ${activeSessions.length} sessions` : 'Rest day'}
+              </p>
             </div>
-            {burned > 0 && (
-              <span className="font-data-mono text-[12px] opacity-70 flex items-center gap-1">
-                <Icon name="local_fire_department" size={15} fill /> {burned} burned
-              </span>
-            )}
+            <div className="text-right">
+              <p className="font-data-mono text-[13px] text-lime">{burned} kcal burned</p>
+              {distance > 0 && <p className="font-data-mono text-[12px] text-on-surface-variant">{distance.toFixed(1)} km completed</p>}
+            </div>
           </div>
-        </Press>
-      </Reveal>
 
-      {/* Week strip */}
-      <Reveal>
-        <WeekStrip today={today} sessions={state.sessions} />
-      </Reveal>
-
-      {/* Stat cards */}
-      <Reveal>
-        <div className="grid grid-cols-2 gap-md">
-          <StatCard
-            gradient="bg-gradient-to-br from-lilac to-lilac-deep"
-            fg="text-on-lilac"
-            icon="directions_run"
-            label="Distance"
-            value={<CountUp value={kmToday} format={(n) => n.toFixed(1)} />}
-            unit="km"
-            sub="logged today"
-            onClick={() => nav('/train')}
-          />
-          <StatCard
-            gradient="bg-gradient-to-br from-pink to-pink-deep"
-            fg="text-on-pink"
-            icon="target"
-            label={targetLabel}
-            value={<CountUp value={fuel.budget} />}
-            unit="kcal"
-            sub={`${Math.max(0, fuel.remaining)} kcal left`}
-            onClick={() => nav('/food')}
-          />
-        </div>
-      </Reveal>
-
-      {/* Energy donut */}
-      <Reveal>
-        <ActivityCard target={fuel.budget} targetLabel={targetLabel} maintenance={maintenance} eaten={fuel.consumed} burned={burned} remaining={Math.max(0, fuel.remaining)} />
-      </Reveal>
-
-      {/* Diet plan card */}
-      <Reveal>
-        <DietCard />
-      </Reveal>
-
-      {/* Plan with filter pills */}
-      <Reveal>
-        <div className="space-y-md">
-          <div className="flex items-center justify-between">
-            <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Your plan</h3>
-            <Press onClick={() => nav('/train')} className="text-lime font-data-mono text-[12px] flex items-center gap-1">
-              All <Icon name="chevron_right" size={16} />
-            </Press>
-          </div>
-          <div className="flex gap-sm overflow-x-auto no-scrollbar">
-            {([['all', 'All'], ['run', 'Cardio'], ['strength', 'Strength'], ['sport', 'Sport']] as const).map(([id, label]) => (
-              <FilterPill key={id} active={filter === id} label={label} onClick={() => setFilter(id)} />
-            ))}
-          </div>
-          <div className="space-y-sm">
-            {filtered.length === 0 ? (
-              <div className="rounded-[24px] bg-ink-card border border-white/5 p-md flex items-center gap-md glow-soft">
-                <div className="w-11 h-11 rounded-full bg-lilac/15 flex items-center justify-center">
-                  <Icon name="self_improvement" className="text-lilac" />
-                </div>
-                <p className="font-body-md text-body-md text-on-surface-variant">Nothing here today. Recover well.</p>
+          {activeSessions.length === 0 ? (
+            <div className="flex items-center gap-md p-md">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
+                <Icon name="self_improvement" size={22} />
               </div>
-            ) : (
-              filtered.map((s, i) => <PlanCard key={s.id} session={s} index={i} onToggle={() => toggleSession(s.id)} />)
-            )}
-          </div>
+              <div>
+                <p className="font-metric-md text-metric-md text-on-surface">Recovery day</p>
+                <p className="font-body-md text-[14px] text-on-surface-variant">Keep moving lightly and prioritise sleep.</p>
+              </div>
+            </div>
+          ) : (
+            activeSessions.map((session) => (
+              <SessionRow key={session.id} session={session} onToggle={() => toggleSession(session.id)} />
+            ))
+          )}
         </div>
-      </Reveal>
-    </motion.div>
+      </section>
+    </div>
   )
 }
 
-function greeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+function SectionHeading({ title, action, onAction }: { title: string; action: string; onAction: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-md">
+      <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{title}</h2>
+      <button
+        type="button"
+        onClick={onAction}
+        className="flex min-h-11 items-center gap-1 rounded-full px-sm font-body-md text-[14px] font-semibold text-lime transition-[color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:text-lime-dim focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.97] motion-reduce:transition-none"
+      >
+        {action} <Icon name="chevron_right" size={17} />
+      </button>
+    </div>
+  )
 }
 
-function ProgressBadge({ pct }: { pct: number }) {
-  const size = 58
-  const stroke = 5
-  const r = (size - stroke) / 2
-  const circ = 2 * Math.PI * r
+function Progress({ value, label, tone, className = '' }: { value: number; label: string; tone: 'lime' | 'secondary' | 'tertiary' | 'error'; className?: string }) {
+  const color = tone === 'secondary' ? 'bg-secondary' : tone === 'tertiary' ? 'bg-tertiary' : tone === 'error' ? 'bg-error' : 'bg-lime'
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(20,26,5,0.15)" strokeWidth={stroke} />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="#141a05"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: circ * (1 - pct / 100) }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center font-display-hero text-[15px]">{pct}%</span>
+    <div className={`h-2 overflow-hidden rounded-full bg-surface-container-highest ${className}`} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value)}>
+      <div className={`h-full rounded-full ${color} transition-[width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none`} style={{ width: `${Math.min(100, Math.max(3, value))}%` }} />
+    </div>
+  )
+}
+
+function Macro({ label, value, target, pct, tone }: { label: string; value: number; target: number; pct: number; tone: 'lime' | 'secondary' | 'tertiary' }) {
+  return (
+    <div className="bg-tile px-sm py-md text-center">
+      <p className="font-body-md text-[13px] text-on-surface-variant">{label}</p>
+      <p className="mt-1 font-data-mono text-[16px] font-semibold text-on-surface tabular-nums">{value}<span className="text-[11px] font-normal text-on-surface-variant">/{target}g</span></p>
+      <Progress value={pct} tone={tone} label={`${value} of ${target} grams ${label.toLowerCase()}`} className="mt-sm" />
+    </div>
+  )
+}
+
+function SessionRow({ session, onToggle }: { session: PlanSession; onToggle: () => void }) {
+  return (
+    <div className="flex items-center gap-md border-b border-tile-border p-md last:border-b-0">
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${session.completed ? 'bg-secondary/10 text-secondary' : 'bg-lime/10 text-lime'}`}>
+        <Icon name={session.completed ? 'check' : session.icon} fill={session.completed} size={22} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={`truncate font-metric-md text-metric-md ${session.completed ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{session.title}</p>
+        <p className="truncate font-body-md text-[13px] text-on-surface-variant">{session.detail}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={`${session.completed ? 'Mark incomplete' : 'Mark complete'}: ${session.title}`}
+        aria-pressed={session.completed}
+        className={`flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full transition-[background-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime active:scale-[0.97] motion-reduce:transition-none ${session.completed ? 'bg-secondary text-on-secondary' : 'bg-surface-container-high text-on-surface-variant hover:bg-lime hover:text-on-lime'}`}
+      >
+        <Icon name={session.completed ? 'check' : 'done'} size={19} />
+      </button>
     </div>
   )
 }
 
 function WeekStrip({ today, sessions }: { today: string; sessions: PlanSession[] }) {
   const start = startOfWeek(today)
-  const idx = mondayIndex(today)
+  const todayIndex = mondayIndex(today)
   const letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
   return (
-    <div className="rounded-[24px] bg-ink-card border border-white/5 px-md py-sm flex justify-between glow-soft">
-      {letters.map((l, i) => {
-        const date = addDays(start, i)
-        const dayNum = Number(date.slice(-2))
-        const active = i === idx
-        const dayDone = sessions.some((s) => s.date === date && s.completed)
-        const dayPlanned = sessions.some((s) => s.date === date && s.type !== 'rest')
-        return (
-          <div key={i} className="flex flex-col items-center gap-1.5 py-1">
-            <span className={`font-label-caps text-label-caps ${active ? 'text-lime' : 'text-on-surface-variant'}`}>{l}</span>
-            <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center font-metric-md text-[14px] transition-colors ${
-                active ? 'bg-lime text-on-lime shadow-[0_6px_16px_rgba(201,242,78,0.35)]' : 'text-on-surface-variant'
-              }`}
-            >
-              {dayNum}
-            </div>
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                dayDone ? 'bg-lime' : dayPlanned ? 'bg-white/15' : 'bg-transparent'
-              }`}
-            />
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function StatCard({
-  gradient,
-  fg,
-  icon,
-  label,
-  value,
-  unit,
-  sub,
-  onClick,
-}: {
-  gradient: string
-  fg: string
-  icon: string
-  label: string
-  value: React.ReactNode
-  unit: string
-  sub: string
-  onClick: () => void
-}) {
-  return (
-    <Press
-      as="div"
-      onClick={onClick}
-      className={`relative overflow-hidden rounded-[24px] ${gradient} ${fg} p-md flex flex-col justify-between min-h-[132px] cursor-pointer glow-soft`}
-    >
-      <Rings size={120} className="absolute -right-8 -bottom-10 opacity-[0.14]" />
-      <div className="relative flex items-center justify-between">
-        <span className="font-metric-md text-[15px]">{label}</span>
-        <span className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center">
-          <Icon name={icon} size={17} />
-        </span>
-      </div>
-      <div className="relative">
-        <div className="font-display-hero text-display-hero leading-none">
-          {value}
-          <span className="text-metric-md opacity-70"> {unit}</span>
-        </div>
-        <span className="font-data-mono text-[11px] opacity-70">{sub}</span>
-      </div>
-    </Press>
-  )
-}
-
-function ActivityCard({ target, targetLabel, maintenance, eaten, burned, remaining }: { target: number; targetLabel: string; maintenance: number; eaten: number; burned: number; remaining: number }) {
-  const rows = [
-    { label: targetLabel, value: target, color: '#c8c4d5' },
-    { label: 'Eaten', value: eaten, color: '#c9f24e' },
-    { label: 'Burned', value: burned, color: '#7c6cf0' },
-    { label: 'Remaining', value: remaining, color: '#f0b8db' },
-  ]
-  return (
-    <div className="rounded-[28px] bg-ink-card border border-white/5 p-lg glow-soft">
-      <div className="flex items-center justify-between mb-md">
-        <span className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-widest">Energy today</span>
-        <span className="font-data-mono text-[10px] text-on-surface-variant">Maintenance {maintenance} kcal</span>
-      </div>
-      <div className="flex items-center justify-between gap-md">
-        <div className="space-y-2.5">
-          {rows.map((r) => (
-            <div key={r.label} className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-              <div className="leading-tight">
-                <span className="font-display-hero text-metric-md text-on-surface block">
-                  <CountUp value={r.value} />
-                </span>
-                <span className="font-data-mono text-[10px] text-on-surface-variant uppercase">{r.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <ActivityDonut eaten={eaten} burned={burned} remaining={remaining} />
-      </div>
-    </div>
-  )
-}
-
-function ActivityDonut({ eaten, burned, remaining }: { eaten: number; burned: number; remaining: number }) {
-  const size = 136
-  const stroke = 15
-  const r = (size - stroke) / 2
-  const circ = 2 * Math.PI * r
-  const total = Math.max(1, eaten + burned + remaining)
-  const segs = [
-    { v: eaten, color: '#c9f24e' },
-    { v: burned, color: '#7c6cf0' },
-    { v: remaining, color: '#f0b8db' },
-  ]
-  let acc = 0
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
-        {segs.map((s, i) => {
-          const frac = s.v / total
-          const dash = Math.max(0, frac * circ - 4) // small gap between segments
-          const offset = acc
-          acc += frac * circ
-          if (dash <= 0) return null
+    <section aria-label="Weekly training consistency" className="rounded-2xl bg-tile px-sm py-sm ring-1 ring-tile-border">
+      <div className="grid grid-cols-7">
+        {letters.map((letter, index) => {
+          const date = addDays(start, index)
+          const isToday = index === todayIndex
+          const hasCompleted = sessions.some((session) => session.date === date && session.type !== 'rest' && session.completed)
+          const hasPlan = sessions.some((session) => session.date === date && session.type !== 'rest')
           return (
-            <motion.circle
-              key={i}
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              fill="none"
-              stroke={s.color}
-              strokeWidth={stroke}
-              strokeLinecap="round"
-              strokeDasharray={`${dash} ${circ - dash}`}
-              initial={{ strokeDashoffset: circ, opacity: 0 }}
-              animate={{ strokeDashoffset: -offset, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.12 * i, ease: [0.22, 1, 0.36, 1] }}
-            />
+            <div key={date} className="flex flex-col items-center gap-1 py-1">
+              <span className="font-body-md text-[12px] text-on-surface-variant">{letter}</span>
+              <span className={`flex h-9 w-9 items-center justify-center rounded-full font-data-mono text-[13px] ${isToday ? 'bg-lime text-on-lime' : 'text-on-surface'}`}>
+                {Number(date.slice(-2))}
+              </span>
+              <span className={`h-1.5 w-1.5 rounded-full ${hasCompleted ? 'bg-secondary' : hasPlan ? 'bg-on-surface-variant/30' : 'bg-transparent'}`} aria-hidden="true" />
+            </div>
           )
         })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display-hero text-headline-lg-mobile text-on-surface leading-none">
-          <CountUp value={remaining} />
-        </span>
-        <span className="font-label-caps text-[9px] uppercase text-on-surface-variant tracking-widest mt-0.5">left</span>
       </div>
-    </div>
+    </section>
   )
 }
 
-function FilterPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="relative shrink-0 px-md py-sm rounded-full">
-      {active && <motion.span layoutId="home-filter" transition={spring} className="absolute inset-0 rounded-full bg-on-surface" />}
-      <span className={`relative z-10 font-body-md text-[13px] ${active ? 'text-ink' : 'text-on-surface-variant'}`}>{label}</span>
-    </button>
-  )
+function greeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
 }
 
-const PASTELS: Record<SessionType, { bg: string; fg: string }> = {
-  run: { bg: 'bg-gradient-to-br from-lilac to-lilac-deep', fg: 'text-on-lilac' },
-  strength: { bg: 'bg-gradient-to-br from-pink to-pink-deep', fg: 'text-on-pink' },
-  sport: { bg: 'bg-gradient-to-br from-lime to-lime-dim', fg: 'text-on-lime' },
-  rest: { bg: 'bg-ink-card', fg: 'text-on-surface' },
-}
-
-function PlanCard({ session: s, index, onToggle }: { session: PlanSession; index: number; onToggle: () => void }) {
-  const pastel = PASTELS[s.type]
-  const done = s.completed
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, ...spring }}
-    >
-      <Press
-        as="div"
-        onClick={onToggle}
-        className={`relative overflow-hidden rounded-[24px] p-md flex items-center justify-between cursor-pointer ${
-          done ? 'bg-ink-card border border-white/5' : `${pastel.bg} ${pastel.fg} glow-soft`
-        }`}
-      >
-        {!done && <Rings size={110} className="absolute -right-7 -top-9 opacity-[0.1]" />}
-        <div className="relative flex items-center gap-md min-w-0">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-secondary/20 text-secondary' : 'bg-black/10'}`}>
-            <Icon name={done ? 'check' : s.icon} fill />
-          </div>
-          <div className="min-w-0">
-            <p className={`font-metric-md text-metric-md truncate ${done ? 'text-on-surface line-through' : ''}`}>{s.title}</p>
-            <p className={`font-data-mono text-[12px] truncate ${done ? 'text-on-surface-variant' : 'opacity-70'}`}>{s.detail}</p>
-          </div>
-        </div>
-        <div className={`relative w-12 h-12 rounded-full flex flex-col items-center justify-center shrink-0 ${done ? 'bg-transparent' : 'bg-black/85 text-lime'}`}>
-          {done ? (
-            <Icon name="check_circle" fill className="text-secondary" />
-          ) : (
-            <>
-              <span className="font-display-hero text-[15px] leading-none">{s.durationMin}</span>
-              <span className="font-label-caps text-[8px] uppercase">min</span>
-            </>
-          )}
-        </div>
-      </Press>
-    </motion.div>
-  )
+function percent(value: number, target: number): number {
+  return target > 0 ? Math.min(100, Math.max(0, (value / target) * 100)) : 0
 }
