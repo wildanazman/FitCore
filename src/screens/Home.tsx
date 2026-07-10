@@ -7,7 +7,7 @@ import { Icon } from '../components/Icon'
 import { Rings } from '../components/Decor'
 import { CountUp, Press, Reveal, listContainer, spring } from '../components/motion'
 import { addDays, mondayIndex, startOfWeek, todayISO } from '../lib/date'
-import { dayFuel } from '../lib/nutrition'
+import { dayFuel, tdee } from '../lib/nutrition'
 import type { PlanSession, SessionType } from '../types'
 
 type Filter = 'all' | 'run' | 'strength' | 'sport'
@@ -19,6 +19,8 @@ export function Home() {
   const [filter, setFilter] = useState<Filter>('all')
 
   const fuel = dayFuel(profile, weightKg, today, state.foods, state.sessions)
+  const maintenance = tdee(profile, weightKg)
+  const targetLabel = profile.goal === 'lose' ? 'Deficit target' : profile.goal === 'gain' ? 'Surplus target' : 'Maintenance target'
   const todaySessions = state.sessions.filter((s) => s.date === today)
   const burned = todaySessions.filter((s) => s.completed).reduce((a, s) => a + s.kcal, 0)
   const kmToday = todaySessions
@@ -119,9 +121,9 @@ export function Home() {
             gradient="bg-gradient-to-br from-pink to-pink-deep"
             fg="text-on-pink"
             icon="target"
-            label="Calorie goal"
-            value={<CountUp value={calPct} format={(n) => `${Math.round(n)}`} />}
-            unit="%"
+            label={targetLabel}
+            value={<CountUp value={fuel.budget} />}
+            unit="kcal"
             sub={`${Math.max(0, fuel.remaining)} kcal left`}
             onClick={() => nav('/food')}
           />
@@ -130,7 +132,7 @@ export function Home() {
 
       {/* Energy donut */}
       <Reveal>
-        <ActivityCard target={fuel.budget} eaten={fuel.consumed} burned={burned} remaining={Math.max(0, fuel.remaining)} />
+        <ActivityCard target={fuel.budget} targetLabel={targetLabel} maintenance={maintenance} eaten={fuel.consumed} burned={burned} remaining={Math.max(0, fuel.remaining)} />
       </Reveal>
 
       {/* Diet plan card */}
@@ -282,9 +284,9 @@ function StatCard({
   )
 }
 
-function ActivityCard({ target, eaten, burned, remaining }: { target: number; eaten: number; burned: number; remaining: number }) {
+function ActivityCard({ target, targetLabel, maintenance, eaten, burned, remaining }: { target: number; targetLabel: string; maintenance: number; eaten: number; burned: number; remaining: number }) {
   const rows = [
-    { label: 'Target', value: target, color: '#c8c4d5' },
+    { label: targetLabel, value: target, color: '#c8c4d5' },
     { label: 'Eaten', value: eaten, color: '#c9f24e' },
     { label: 'Burned', value: burned, color: '#7c6cf0' },
     { label: 'Remaining', value: remaining, color: '#f0b8db' },
@@ -293,7 +295,7 @@ function ActivityCard({ target, eaten, burned, remaining }: { target: number; ea
     <div className="rounded-[28px] bg-ink-card border border-white/5 p-lg glow-soft">
       <div className="flex items-center justify-between mb-md">
         <span className="font-label-caps text-label-caps uppercase text-on-surface-variant tracking-widest">Energy today</span>
-        <span className="font-data-mono text-[11px] text-on-surface-variant">kcal</span>
+        <span className="font-data-mono text-[10px] text-on-surface-variant">Maintenance {maintenance} kcal</span>
       </div>
       <div className="flex items-center justify-between gap-md">
         <div className="space-y-2.5">
