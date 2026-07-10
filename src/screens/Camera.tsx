@@ -12,6 +12,7 @@ export function Camera() {
   const { profile, addFood } = useApp()
   const nav = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const [phase, setPhase] = useState<Phase>('capture')
   const [photo, setPhoto] = useState<string | null>(null)
   const [det, setDet] = useState<Detection | null>(null)
@@ -86,6 +87,8 @@ export function Camera() {
       </div>
 
       <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
+      {/* No capture attribute — opens the photo library / file picker instead of the camera */}
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
 
       {/* Capture phase */}
       {phase === 'capture' && (
@@ -99,9 +102,25 @@ export function Camera() {
               {profile.anthropicApiKey ? 'Live AI will estimate macros.' : 'Gemini vision estimates calories & macros in seconds.'}
             </p>
           </div>
-          <button onClick={() => fileRef.current?.click()} className="w-20 h-20 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-[0_0_24px_rgba(197,192,255,0.4)] active:scale-95 transition">
-            <Icon name="photo_camera" fill size={36} />
-          </button>
+          <div className="flex items-center gap-lg">
+            <button
+              onClick={() => galleryRef.current?.click()}
+              className="w-14 h-14 rounded-full bg-ink-card border border-white/15 text-on-surface flex items-center justify-center active:scale-95 transition"
+              aria-label="Upload from gallery"
+            >
+              <Icon name="photo_library" size={24} />
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="w-20 h-20 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-[0_0_24px_rgba(197,192,255,0.4)] active:scale-95 transition"
+              aria-label="Take photo"
+            >
+              <Icon name="photo_camera" fill size={36} />
+            </button>
+            {/* spacer to keep the shutter centered */}
+            <div className="w-14 h-14" aria-hidden="true" />
+          </div>
+          <p className="font-data-mono text-[11px] text-on-surface-variant">Snap with camera or upload from gallery</p>
         </div>
       )}
 
