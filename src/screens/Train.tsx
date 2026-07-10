@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
@@ -177,6 +177,11 @@ function RunningPlanCard({
   const [startMode, setStartMode] = useState<StartMode>(initialMode)
   const [customStart, setCustomStart] = useState(initialStart)
   const [preferredDays, setPreferredDays] = useState<number[]>(normalPreferred(profile.runPreferredDays, profile.trainingDaysPerWeek))
+  const [expanded, setExpanded] = useState(false)
+
+  useEffect(() => {
+    setExpanded(false)
+  }, [])
 
   const parsedFive = parsePace(fivePace)
   const parsedTen = parsePace(tenPace)
@@ -225,6 +230,7 @@ function RunningPlanCard({
       runPreferredDays: cleanDays,
       sports: profile.sports.includes('running') ? profile.sports : [...profile.sports, 'running'],
     })
+    setExpanded(false)
   }
 
   return (
@@ -232,22 +238,32 @@ function RunningPlanCard({
       <section className="rounded-2xl bg-ink-card ring-1 ring-tile-border overflow-hidden">
         <div className="p-md border-b border-white/5">
           <div className="flex items-start justify-between gap-md">
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-sm">
                 <div className="h-10 w-10 rounded-xl bg-lime/15 text-lime flex items-center justify-center">
                   <Icon name="speed" size={22} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Running</h2>
                   <p className="font-body-md text-[13px] text-on-surface-variant">
-                    Update race data here. Week 1 starts from your chosen start date.
+                    {raceDate ? `${raceType === 'half-marathon' ? 'Half marathon' : 'Marathon'} on ${shortDate(raceDate)} · ${trainingDays} days/week` : `${trainingDays} days/week · race date not set`}
                   </p>
                 </div>
               </div>
             </div>
-            <span className={`rounded-full px-sm py-xs font-data-mono text-[12px] ${assessment.difficulty === 'unrealistic' ? 'bg-error/15 text-error' : assessment.difficulty === 'stretch' ? 'bg-tertiary/15 text-tertiary' : 'bg-lime/15 text-lime'}`}>
-              {assessment.difficulty === 'unrealistic' ? 'Too aggressive' : assessment.difficulty === 'stretch' ? 'Stretch' : 'Achievable'}
-            </span>
+            <div className="flex items-center gap-sm shrink-0">
+              <span className={`hidden sm:inline-flex rounded-full px-sm py-xs font-data-mono text-[12px] ${assessment.difficulty === 'unrealistic' ? 'bg-error/15 text-error' : assessment.difficulty === 'stretch' ? 'bg-tertiary/15 text-tertiary' : 'bg-lime/15 text-lime'}`}>
+                {assessment.difficulty === 'unrealistic' ? 'Too aggressive' : assessment.difficulty === 'stretch' ? 'Stretch' : 'Achievable'}
+              </span>
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="min-h-11 rounded-full bg-lime text-on-lime px-md font-metric-md text-[14px] inline-flex items-center gap-xs transition-transform duration-150 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
+                aria-expanded={expanded}
+              >
+                <Icon name={expanded ? 'expand_less' : 'edit'} size={18} />
+                {expanded ? 'Done' : 'Edit plan'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -265,126 +281,135 @@ function RunningPlanCard({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-sm">
-            <Field label="Race">
-              <select value={raceType} onChange={(e) => setRaceType(e.target.value as RaceType)} className={fieldCls}>
-                <option value="half-marathon">Half Marathon</option>
-                <option value="marathon">Marathon</option>
-              </select>
-            </Field>
-            <Field label="Race date">
-              <input type="date" value={raceDate} onChange={(e) => setRaceDate(e.target.value)} className={fieldCls} />
-            </Field>
-          </div>
-
-          {raceType === 'half-marathon' && (
-            <Field label="Target concept">
+          {expanded && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-md border-t border-white/5 pt-md"
+            >
               <div className="grid grid-cols-2 gap-sm">
-                {HALF_MARATHON_GOALS.map((goal) => {
-                  const pace = halfMarathonGoalPace(goal)
-                  return (
+                <Field label="Race">
+                  <select value={raceType} onChange={(e) => setRaceType(e.target.value as RaceType)} className={fieldCls}>
+                    <option value="half-marathon">Half Marathon</option>
+                    <option value="marathon">Marathon</option>
+                  </select>
+                </Field>
+                <Field label="Race date">
+                  <input type="date" value={raceDate} onChange={(e) => setRaceDate(e.target.value)} className={fieldCls} />
+                </Field>
+              </div>
+
+              {raceType === 'half-marathon' && (
+                <Field label="Target concept">
+                  <div className="grid grid-cols-2 gap-sm">
+                    {HALF_MARATHON_GOALS.map((goal) => {
+                      const pace = halfMarathonGoalPace(goal)
+                      return (
+                        <button
+                          key={goal}
+                          onClick={() => setHalfGoal(goal)}
+                          className={`min-h-12 rounded-xl p-sm text-left ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
+                            halfGoal === goal ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
+                          }`}
+                        >
+                          <span className="block font-metric-md text-[14px]">{halfMarathonGoalLabel(goal)}</span>
+                          <span className={`block font-data-mono text-[12px] ${halfGoal === goal ? 'opacity-75' : 'text-on-surface-variant'}`}>
+                            {pace ? formatPace(pace) : 'No time pressure'}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Field>
+              )}
+
+              <div className="grid grid-cols-3 gap-sm">
+                <Field label="Best 5K pace">
+                  <input value={fivePace} onChange={(e) => setFivePace(e.target.value)} placeholder="6:20" className={fieldCls} />
+                </Field>
+                <Field label="Best 10K pace">
+                  <input value={tenPace} onChange={(e) => setTenPace(e.target.value)} placeholder="7:00" className={fieldCls} />
+                </Field>
+                <Field label="Longest run">
+                  <input type="number" min={1} step="0.1" value={longestKm} onChange={(e) => setLongestKm(e.target.value)} className={fieldCls} />
+                </Field>
+              </div>
+
+              <Field label="Training days / week">
+                <div className="grid grid-cols-5 gap-sm">
+                  {[3, 4, 5, 6, 7].map((d) => (
                     <button
-                      key={goal}
-                      onClick={() => setHalfGoal(goal)}
-                      className={`min-h-12 rounded-xl p-sm text-left ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
-                        halfGoal === goal ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
+                      key={d}
+                      onClick={() => {
+                        setTrainingDays(d)
+                        setPreferredDays((current) => normalPreferred(current, d))
+                      }}
+                      className={`min-h-11 rounded-xl font-metric-md text-[15px] ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
+                        trainingDays === d ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
                       }`}
                     >
-                      <span className="block font-metric-md text-[14px]">{halfMarathonGoalLabel(goal)}</span>
-                      <span className={`block font-data-mono text-[12px] ${halfGoal === goal ? 'opacity-75' : 'text-on-surface-variant'}`}>
-                        {pace ? formatPace(pace) : 'No time pressure'}
-                      </span>
+                      {d}
                     </button>
-                  )
-                })}
-              </div>
-            </Field>
+                  ))}
+                </div>
+              </Field>
+
+              <Field label="Preferred run days">
+                <div className="grid grid-cols-7 gap-xs">
+                  {DAY_OPTIONS.map((day) => {
+                    const active = cleanDays.includes(day.id)
+                    return (
+                      <button
+                        key={day.id}
+                        onClick={() => setPreferredDays((current) => toggleDay(current, day.id, trainingDays))}
+                        className={`min-h-11 rounded-lg font-data-mono text-[12px] ring-1 transition-colors duration-150 ${
+                          active ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </Field>
+
+              <Field label="Start training">
+                <div className="grid grid-cols-3 gap-sm">
+                  {[
+                    { id: 'this-week' as StartMode, label: 'This week', sub: shortDate(thisWeek) },
+                    { id: 'next-week' as StartMode, label: 'Next week', sub: shortDate(nextWeek) },
+                    { id: 'custom' as StartMode, label: 'Custom', sub: customStart ? shortDate(customStart) : 'Pick date' },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setStartMode(option.id)}
+                      className={`min-h-[58px] rounded-xl p-sm text-left ring-1 transition-colors duration-150 ${
+                        startMode === option.id ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
+                      }`}
+                    >
+                      <span className="block font-metric-md text-[13px]">{option.label}</span>
+                      <span className={`block font-data-mono text-[12px] ${startMode === option.id ? 'opacity-75' : 'text-on-surface-variant'}`}>{option.sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {startMode === 'custom' && (
+                <Field label="Custom start date">
+                  <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={fieldCls} />
+                </Field>
+              )}
+
+              <button
+                disabled={!dirty || !canSave}
+                onClick={handleSave}
+                className="w-full min-h-12 rounded-full bg-lime text-on-lime font-metric-md disabled:opacity-40 transition-transform duration-150 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
+              >
+                Update plan
+              </button>
+            </motion.div>
           )}
-
-          <div className="grid grid-cols-3 gap-sm">
-            <Field label="Best 5K pace">
-              <input value={fivePace} onChange={(e) => setFivePace(e.target.value)} placeholder="6:20" className={fieldCls} />
-            </Field>
-            <Field label="Best 10K pace">
-              <input value={tenPace} onChange={(e) => setTenPace(e.target.value)} placeholder="7:00" className={fieldCls} />
-            </Field>
-            <Field label="Longest run">
-              <input type="number" min={1} step="0.1" value={longestKm} onChange={(e) => setLongestKm(e.target.value)} className={fieldCls} />
-            </Field>
-          </div>
-
-          <Field label="Training days / week">
-            <div className="grid grid-cols-5 gap-sm">
-              {[3, 4, 5, 6, 7].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => {
-                    setTrainingDays(d)
-                    setPreferredDays((current) => normalPreferred(current, d))
-                  }}
-                  className={`min-h-11 rounded-xl font-metric-md text-[15px] ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
-                    trainingDays === d ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          <Field label="Preferred run days">
-            <div className="grid grid-cols-7 gap-xs">
-              {DAY_OPTIONS.map((day) => {
-                const active = cleanDays.includes(day.id)
-                return (
-                  <button
-                    key={day.id}
-                    onClick={() => setPreferredDays((current) => toggleDay(current, day.id, trainingDays))}
-                    className={`min-h-11 rounded-lg font-data-mono text-[12px] ring-1 transition-colors duration-150 ${
-                      active ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
-                    }`}
-                  >
-                    {day.label}
-                  </button>
-                )
-              })}
-            </div>
-          </Field>
-
-          <Field label="Start training">
-            <div className="grid grid-cols-3 gap-sm">
-              {[
-                { id: 'this-week' as StartMode, label: 'This week', sub: shortDate(thisWeek) },
-                { id: 'next-week' as StartMode, label: 'Next week', sub: shortDate(nextWeek) },
-                { id: 'custom' as StartMode, label: 'Custom', sub: customStart ? shortDate(customStart) : 'Pick date' },
-              ].map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => setStartMode(option.id)}
-                  className={`min-h-[58px] rounded-xl p-sm text-left ring-1 transition-colors duration-150 ${
-                    startMode === option.id ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
-                  }`}
-                >
-                  <span className="block font-metric-md text-[13px]">{option.label}</span>
-                  <span className={`block font-data-mono text-[12px] ${startMode === option.id ? 'opacity-75' : 'text-on-surface-variant'}`}>{option.sub}</span>
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          {startMode === 'custom' && (
-            <Field label="Custom start date">
-              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={fieldCls} />
-            </Field>
-          )}
-
-          <button
-            disabled={!dirty || !canSave}
-            onClick={handleSave}
-            className="w-full min-h-12 rounded-full bg-lime text-on-lime font-metric-md disabled:opacity-40 transition-transform duration-150 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
-          >
-            Update plan
-          </button>
         </div>
       </section>
     </Reveal>
