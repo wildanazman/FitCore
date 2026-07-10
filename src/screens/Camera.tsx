@@ -191,7 +191,7 @@ export function Camera() {
           <Icon name="close" />
         </button>
         {photo && phase !== 'analyzing' && (
-          <button onClick={() => { setPhoto(null); setDet(null); setPhase('capture') }} className="w-12 h-12 flex items-center justify-center rounded-full bg-surface/50 backdrop-blur-md border border-outline-variant text-on-surface">
+          <button onClick={retryCapture} className="w-12 h-12 flex items-center justify-center rounded-full bg-surface/50 backdrop-blur-md border border-outline-variant text-on-surface" aria-label="Retry scan">
             <Icon name="refresh" />
           </button>
         )}
@@ -359,6 +359,9 @@ export function Camera() {
                   Submit log <Icon name="check" />
                 </button>
               </div>
+              <button onClick={retryCapture} className="w-full py-3 rounded-xl border border-error/40 text-error font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-95 transition">
+                <Icon name="refresh" size={18} /> Retry scan
+              </button>
             </div>
           ) : (
             <EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} />
