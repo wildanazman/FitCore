@@ -1,6 +1,6 @@
 // Client wrapper for the online text-based nutrition lookup (/api/lookup-food).
 
-import type { LocalFood } from './localFoods'
+import { matchLocalFood, type LocalFood } from './localFoods'
 
 export interface LookupResult {
   name: string
@@ -12,7 +12,7 @@ export interface LookupResult {
   fat: number
   confidence: number
   note?: string
-  source: 'openfoodfacts' | 'usda' | 'claude' | 'gemini'
+  source: 'openfoodfacts' | 'usda' | 'claude' | 'gemini' | 'local'
 }
 
 export function sourceLabel(source: LookupResult['source']): string {
@@ -25,19 +25,43 @@ export function sourceLabel(source: LookupResult['source']): string {
       return 'AI web search'
     case 'gemini':
       return 'AI web search'
+    case 'local':
+      return 'Local Malaysian reference'
   }
 }
 
 /** Look a food up online by name. Throws with a readable message on failure. */
 export async function lookupFood(name: string): Promise<LookupResult> {
-  const res = await fetch('/api/lookup-food', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name }),
-  })
-  const json = await res.json().catch(() => null)
-  if (!res.ok) throw new Error(json?.error || `Lookup failed (${res.status})`)
-  return json as LookupResult
+  const local = matchLocalFood(name)
+  try {
+    const res = await fetch('/api/lookup-food', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+    const json = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(json?.error || `Lookup failed (${res.status})`)
+    const online = json as LookupResult
+    if (!local) return online
+    return {
+      ...online,
+      note: `${online.note ? `${online.note} · ` : ''}Local ref: ${local.name} (${local.kcal} kcal / ${local.serving}).`,
+    }
+  } catch (error) {
+    if (!local) throw error
+    return {
+      name: local.name,
+      emoji: local.emoji,
+      serving: local.serving,
+      kcal: local.kcal,
+      protein: local.protein,
+      carbs: local.carbs,
+      fat: local.fat,
+      confidence: 0.72,
+      note: 'Internet lookup unavailable; using the stored Malaysian local reference.',
+      source: 'local',
+    }
+  }
 }
 
 export function resultToLocalFood(r: LookupResult): LocalFood {
