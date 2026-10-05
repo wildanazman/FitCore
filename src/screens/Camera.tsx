@@ -244,7 +244,7 @@ export function Camera() {
             </div>
             <details className="w-full max-w-sm text-left rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-on-surface-variant">
               <summary className="cursor-pointer font-data-mono text-[11px]">Analysis options</summary>
-              <div className="pt-3"><ProviderPicker value={provider} onChange={setProvider} /></div>
+              <div className="pt-3"><ProviderPicker value={provider} onChange={setProvider} /><p className="mt-2 text-[11px] leading-snug">For offline logging, search the on-device food list from Food. A photo still needs an online vision service.</p></div>
             </details>
             <div className="flex items-center gap-lg">
               <button
@@ -309,13 +309,13 @@ export function Camera() {
             <Icon name="error" size={22} className="text-error shrink-0" />
             <div>
               <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">AI unavailable</h2>
-              <p className="font-body-md text-[13px] text-on-surface-variant mt-xs">No reliable calorie result was returned, so this photo was not guessed or saved.</p>
+              <p className="font-body-md text-[13px] text-on-surface-variant mt-xs">No reliable calorie result was returned, so this photo was not guessed or saved. You can search the local food list instead.</p>
               <p className="font-data-mono text-[11px] text-error mt-sm break-words">{error}</p>
             </div>
           </div>
           <div className="flex gap-md mt-sm">
             <button onClick={retryAnalysis} className="flex-1 py-3 rounded-xl border border-outline-variant text-on-surface font-metric-md text-metric-md">Retry same photo</button>
-            <button onClick={retryCapture} className="flex-1 py-3 rounded-xl border border-lime text-lime font-metric-md text-metric-md">New photo</button>
+            <button onClick={() => nav('/food')} className="flex-1 py-3 rounded-xl border border-lime text-lime font-metric-md text-metric-md">Search food list</button>
           </div>
         </div>
       )}
@@ -328,7 +328,6 @@ function ProviderPicker({ value, onChange }: { value: FoodAIProvider; onChange: 
     { value: 'auto', label: 'Auto', detail: 'Best available' },
     { value: 'gemini', label: 'Gemini', detail: 'Vision + web' },
     { value: 'anthropic', label: 'Anthropic', detail: 'Claude vision' },
-    { value: 'local', label: 'Local + web', detail: 'Search first, offline fallback' },
   ]
 
   return (
@@ -337,7 +336,7 @@ function ProviderPicker({ value, onChange }: { value: FoodAIProvider; onChange: 
         <span className="font-label-caps text-[10px] uppercase tracking-widest text-on-surface-variant">Analysis engine</span>
         <span className="font-data-mono text-[10px] text-lime">{options.find((option) => option.value === value)?.detail}</span>
       </div>
-      <div className="grid grid-cols-4 gap-1 rounded-xl border border-white/15 bg-black/35 p-1 backdrop-blur-md">
+      <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/15 bg-black/35 p-1 backdrop-blur-md">
         {options.map((option) => (
           <button
             key={option.value}
@@ -379,8 +378,6 @@ function foodProviderLabel(provider: FoodAIProvider) {
       return 'Gemini'
     case 'anthropic':
       return 'Anthropic'
-    case 'local':
-      return 'Local + web'
   }
 }
 

@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { Icon } from '../components/Icon'
 import { ProteinIdeas } from '../components/ProteinIdeas'
+import { ChatFoodImport } from '../components/ChatFoodImport'
 import { CountUp, Press, Reveal, listContainer, spring } from '../components/motion'
 import { todayISO, timeLabel, uid } from '../lib/date'
 import { dayFuel } from '../lib/nutrition'
@@ -13,9 +15,11 @@ import { slotForNow } from '../lib/foodAI'
 import { QUICK_FOODS } from '../lib/quickFoods'
 import { searchLocalFoods, type LocalFood } from '../lib/localFoods'
 import { lookupFood, resultToLocalFood, sourceLabel, type LookupResult } from '../lib/foodLookup'
+import { RESTAURANT_BRANDS, hasCompleteMacros, searchRestaurantFoods, type RestaurantBrand, type RestaurantFood } from '../lib/restaurantFoods'
 import type { DietWarning } from '../lib/diet'
 import type { FoodEntry } from '../types'
 import type { MealSlot } from '../types'
+import type { ChatFoodEstimate } from '../lib/chatFoodImport'
 import './food.css'
 
 export function Food() {
@@ -24,6 +28,7 @@ export function Food() {
   const today = todayISO()
   const [editing, setEditing] = useState<FoodEntry | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [chatImportOpen, setChatImportOpen] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>(slotForNow())
 
   const fuel = dayFuel(profile, weightKg, today, state.foods, state.sessions)
@@ -45,6 +50,11 @@ export function Food() {
   const addLocal = (f: LocalFood) => {
     quickAdd(f)
     setSearchOpen(false)
+  }
+
+  const addChatEstimate = (estimate: ChatFoodEstimate, slot: MealSlot) => {
+    addFood({ id: uid(), name: estimate.name.trim(), emoji: '', date: today, loggedAt: new Date().toISOString(), slot, kcal: estimate.kcal, protein: estimate.protein, carbs: estimate.carbs, fat: estimate.fat, servings: 1, confidence: 0.5 })
+    setChatImportOpen(false)
   }
 
   return (
@@ -106,6 +116,7 @@ export function Food() {
         <div>
           <div className="food-editorial-heading"><span>04 / YOUR TIMELINE</span><h2>What you've eaten.</h2></div>
           <button type="button" className="food-find" onClick={() => setSearchOpen(true)}><Icon name="search" size={21} /><span>Search food or add your own</span><Icon name="arrow_forward" size={20} /></button>
+          <button type="button" className="food-chat-import" onClick={() => setChatImportOpen(true)}><Icon name="content_paste" size={20} /><span>Paste a ChatGPT food estimate</span><Icon name="arrow_forward" size={20} /></button>
           <div className="space-y-sm mt-sm">
             {todayFoods.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No meals logged yet. Capture one or find a food above.</p>}
             {todayFoods.map((f, i) => (
@@ -130,6 +141,7 @@ export function Food() {
       </Reveal>
 
       {searchOpen && <SearchSheet onClose={() => setSearchOpen(false)} onPick={addLocal} />}
+      {chatImportOpen && <ChatFoodImport initialSlot={selectedSlot} onClose={() => setChatImportOpen(false)} onSave={addChatEstimate} />}
 
       {editing && (
         <FoodEditSheet
@@ -146,10 +158,22 @@ export function Food() {
 function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: LocalFood) => void }) {
   const [q, setQ] = useState('')
   const [custom, setCustom] = useState(false)
+  const [brand, setBrand] = useState<RestaurantBrand | null>(null)
+  const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null } | null>(null)
   const [online, setOnline] = useState<LookupResult | null>(null)
   const [searching, setSearching] = useState(false)
   const [onlineErr, setOnlineErr] = useState<string | null>(null)
-  const results = searchLocalFoods(q, 40)
+  const results = brand ? [] : searchLocalFoods(q, 30)
+  const restaurantResults = q.trim() || brand ? searchRestaurantFoods(q, brand, 45) : []
+
+  const chooseRestaurant = (item: RestaurantFood) => {
+    if (hasCompleteMacros(item)) {
+      onPick({ name: `${item.brand} · ${item.name}`, emoji: '', category: 'Basics', serving: item.serving, kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat })
+      return
+    }
+    setCustomDefaults({ name: `${item.brand} · ${item.name}`, kcal: item.kcal })
+    setCustom(true)
+  }
 
   const searchOnline = async () => {
     const name = q.trim()
@@ -165,36 +189,45 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
       setSearching(false)
     }
   }
-  return (
+  return createPortal(
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div
         className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-white/10 p-margin-mobile pb-xl max-h-[85%] flex flex-col"
+        role="dialog" aria-modal="true" aria-labelledby="food-search-title"
         onClick={(e) => e.stopPropagation()}
         initial={{ y: 320 }} animate={{ y: 0 }} transition={spring}
       >
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
-        <div className="flex items-center justify-between mb-sm">
-          <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{custom ? 'Custom food' : 'Add food'}</h2>
-          <button onClick={() => setCustom((v) => !v)} className="font-data-mono text-[12px] text-lime flex items-center gap-1">
-            <Icon name={custom ? 'search' : 'edit'} size={16} /> {custom ? 'Search' : 'Enter my own'}
-          </button>
+        <div className="flex items-center justify-between gap-sm mb-sm">
+          <h2 id="food-search-title" className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{custom ? 'Custom food' : 'Add food'}</h2>
+          <div className="flex items-center gap-sm">
+            <button type="button" onClick={() => { setCustomDefaults(null); setCustom((v) => !v) }} className="font-data-mono text-[12px] text-lime flex items-center gap-1">
+              <Icon name={custom ? 'search' : 'edit'} size={16} /> {custom ? 'Search' : 'Enter my own'}
+            </button>
+            <button type="button" onClick={onClose} aria-label="Close food search" className="text-on-surface-variant"><Icon name="close" size={22} /></button>
+          </div>
         </div>
 
         {custom ? (
-          <CustomFoodForm onSubmit={onPick} defaultName={q} />
+          <CustomFoodForm key={customDefaults?.name ?? 'manual'} onSubmit={onPick} defaultName={customDefaults?.name ?? q} defaultKcal={customDefaults?.kcal ?? null} requireMacros={customDefaults !== null} />
         ) : (
           <>
             <div className="flex items-center gap-2 bg-ink rounded-full px-md py-2 mb-md">
               <Icon name="search" className="text-on-surface-variant" size={18} />
               <input
-                autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                autoFocus aria-label="Search food or restaurant" value={q} onChange={(e) => setQ(e.target.value)}
                 placeholder="mi sedaap, buttermilk chicken, teh tarik…"
                 className="flex-1 bg-transparent text-on-surface font-body-md focus:outline-none placeholder:text-on-surface-variant"
               />
             </div>
+            <div className="food-brand-filters" role="group" aria-label="Filter restaurant">
+              <button type="button" aria-pressed={brand === null} onClick={() => setBrand(null)}>All</button>
+              {RESTAURANT_BRANDS.map((name) => <button type="button" key={name} aria-pressed={brand === name} onClick={() => setBrand(name)}>{name}</button>)}
+            </div>
             <div className="overflow-y-auto no-scrollbar space-y-sm">
-              {results.length === 0 && (
+              {!q.trim() && !brand && <p className="font-body-md text-[12px] text-on-surface-variant">Search a meal or choose a restaurant to browse its offline menu.</p>}
+              {results.length === 0 && restaurantResults.length === 0 && (
                 <div className="text-center py-md">
                   <p className="font-body-md text-body-md text-on-surface-variant mb-md">No match for “{q}”.</p>
                   <Press onClick={() => setCustom(true)} className="inline-flex items-center gap-2 bg-lime text-on-lime rounded-full px-lg py-2 font-metric-md text-[14px]">
@@ -202,6 +235,18 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
                   </Press>
                 </div>
               )}
+              {restaurantResults.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-lime uppercase pt-sm">Malaysia restaurant menu · offline</p>}
+              {restaurantResults.map((item) => (
+                <div key={`${item.brand}:${item.name}`} className="food-restaurant-result">
+                  <button type="button" onClick={() => chooseRestaurant(item)} className="food-restaurant-main">
+                    <span className="food-restaurant-identity"><strong>{item.name}</strong><small>{item.brand} · {item.serving}</small></span>
+                    <span className="food-restaurant-numbers"><strong>{item.kcal === null ? 'No verified kcal' : `${item.kcal} kcal`}</strong><small>{hasCompleteMacros(item) ? `${item.protein}P · ${item.carbs}C · ${item.fat}F` : item.kcal === null ? 'Add your own values' : 'Calories only · add macros to log'}</small></span>
+                  </button>
+                  <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="food-restaurant-source">{item.sourceLabel} <Icon name="open_in_new" size={12} /></a>
+                  {item.note && <p className="food-restaurant-note">{item.note}</p>}
+                </div>
+              ))}
+              {results.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-on-surface-variant uppercase pt-sm">General food references</p>}
               {results.map((f) => (
                 <Press key={f.name} as="div" onClick={() => onPick(f)} className="rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-md">
@@ -253,17 +298,17 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
                 </div>
               )}
             </div>
-            <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Local list first · online search checks Open Food Facts + web.</p>
+            <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Restaurant values are stored offline. Menu and portions can change; check the linked source.</p>
           </>
         )}
       </motion.div>
-    </motion.div>
+    </motion.div>, document.body
   )
 }
 
-function CustomFoodForm({ onSubmit, defaultName }: { onSubmit: (f: LocalFood) => void; defaultName: string }) {
+function CustomFoodForm({ onSubmit, defaultName, defaultKcal, requireMacros }: { onSubmit: (f: LocalFood) => void; defaultName: string; defaultKcal: number | null; requireMacros: boolean }) {
   const [name, setName] = useState(defaultName)
-  const [kcal, setKcal] = useState('')
+  const [kcal, setKcal] = useState(defaultKcal === null ? '' : String(defaultKcal))
   const [protein, setProtein] = useState('')
   const [carbs, setCarbs] = useState('')
   const [fat, setFat] = useState('')
@@ -274,7 +319,7 @@ function CustomFoodForm({ onSubmit, defaultName }: { onSubmit: (f: LocalFood) =>
   // Auto-fill kcal from macros if the user leaves it blank.
   const fromMacros = Math.round(p * 4 + c * 4 + f * 9)
   const kcalNum = Number(kcal) || fromMacros
-  const valid = name.trim().length > 0 && kcalNum > 0
+  const valid = name.trim().length > 0 && kcalNum > 0 && (!requireMacros || (protein !== '' && carbs !== '' && fat !== ''))
 
   const save = () => {
     if (!valid) return
@@ -306,6 +351,7 @@ function CustomFoodForm({ onSubmit, defaultName }: { onSubmit: (f: LocalFood) =>
         <NumInput label="Carbs (g)" value={carbs} onChange={setCarbs} />
         <NumInput label="Fat (g)" value={fat} onChange={setFat} />
       </div>
+      {requireMacros && <p className="font-body-md text-[12px] text-on-surface-variant">This restaurant reference has {defaultKcal === null ? 'no verified calories or macros' : 'verified calories but no macros'}. Enter the missing values from a label or your own estimate before logging; zero is only for a true zero.</p>}
       {fromMacros > 0 && !kcal && (
         <p className="font-data-mono text-[11px] text-lime">Calories auto-filled from macros: {fromMacros} kcal (edit above to override).</p>
       )}
@@ -392,11 +438,12 @@ function FoodEditSheet({
     }
   }
 
-  return (
+  return createPortal(
     <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div
         className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-white/10 p-margin-mobile pb-xl"
+        role="dialog" aria-modal="true" aria-label={`Edit ${entry.name}`}
         onClick={(e) => e.stopPropagation()}
         initial={{ y: 260 }} animate={{ y: 0 }} exit={{ y: 260 }} transition={spring}
         drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.2}
@@ -451,6 +498,6 @@ function FoodEditSheet({
           <Press onClick={() => onSave({ name: draft.name.trim() || entry.name, emoji: draft.emoji, kcal: draft.kcal, protein: draft.protein, carbs: draft.carbs, fat: draft.fat, confidence: draft.confidence, servings })} className="flex-[2] py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2">Save <Icon name="check" size={18} /></Press>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>, document.body
   )
 }

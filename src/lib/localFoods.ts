@@ -1,6 +1,5 @@
 // Local (Malaysian / SEA) food reference — factual per-serving nutrition used to
-// power manual search, quick-add, the offline fallback, and to GROUND the AI
-// vision result against vetted local values.
+// power manual search, quick-add, and cautious checks against AI results.
 //
 // Values are typical single servings, cross-referenced with the Malaysian Food
 // Composition Database (MyFCD, MOH Malaysia — https://myfcd.moh.gov.my) and
@@ -162,7 +161,6 @@ const CURATED_LOCAL_FOODS: LocalFood[] = [
   { name: 'Chee Cheong Fun', emoji: '🍥', category: 'Snack', serving: '1 plate', kcal: 300, protein: 8, carbs: 48, fat: 8, aka: ['chee cheong fun', 'ccf'] },
 
   // Western / fast food
-  { name: 'Fried Chicken (KFC-style, 1pc)', emoji: '🍗', category: 'Meat', serving: '1 piece', kcal: 320, protein: 22, carbs: 10, fat: 21, aka: ['fried chicken', 'kfc'] },
   { name: 'Ramly Burger Special', emoji: '🍔', category: 'Snack', serving: '1 burger', kcal: 550, protein: 24, carbs: 38, fat: 34, aka: ['ramly', 'ramly burger'] },
   { name: 'Fish & Chips', emoji: '🍟', category: 'Seafood', serving: '1 plate', kcal: 780, protein: 34, carbs: 68, fat: 40, aka: ['fish and chips'] },
   { name: 'Lamb Chop', emoji: '🍖', category: 'Meat', serving: '1 plate', kcal: 640, protein: 40, carbs: 32, fat: 38, aka: ['lamb chop'] },
@@ -222,28 +220,35 @@ export function searchLocalFoods(query: string, limit = 20): LocalFood[] {
   return scored.slice(0, limit).map((x) => x.f)
 }
 
-/**
- * Best single match for a free-text food name (e.g. AI-detected label).
- * Returns null when nothing matches well enough to trust.
- */
-export function matchLocalFood(name: string): LocalFood | null {
-  const q = norm(name)
-  if (!q) return null
-  let best: { f: LocalFood; score: number } | null = null
-  for (const f of LOCAL_FOODS) {
-    const names = [norm(f.name), ...(f.aka ?? []).map(norm)]
-    let score = 0
-    for (const n of names) {
-      if (n === q) score = Math.max(score, 100)
-      else if (q.includes(n) || n.includes(q)) score = Math.max(score, Math.min(n.length, q.length))
-      else {
-        const shared = n.split(' ').filter((w) => w.length > 2 && q.includes(w)).length
-        if (shared) score = Math.max(score, shared * 3)
-      }
-    }
-    if (!best || score > best.score) best = { f, score }
+/** An exact food/alias match, optionally with an explicit weight in grams. */
+export interface LocalFoodMatch { food: LocalFood; grams: number | null }
+
+function wordsMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  const aWords = a.split(' ').sort()
+  const bWords = b.split(' ').sort()
+  return aWords.length === bWords.length && aWords.every((word, index) => word === bWords[index])
+}
+
+export function matchLocalFoodDetails(name: string): LocalFoodMatch | null {
+  const amount = name.match(/(?:^|\s)(\d+(?:\.\d+)?)\s*(?:g|grams?)(?=\s|$)/i)
+  const grams = amount ? Number(amount[1]) : null
+  const query = norm(amount ? name.replace(amount[0], ' ') : name)
+  if (!query) return null
+
+  // Exact names and aliases are evidence; shared words are only suggestions.
+  // "Salted egg chicken with rice" must not become chicken rice or briyani.
+  for (const food of LOCAL_FOODS) {
+    if (norm(food.name) === query || food.aka?.some((alias) => norm(alias) === query)) return { food, grams }
   }
-  return best && best.score >= 6 ? best.f : null
+  for (const food of LOCAL_FOODS) {
+    if (wordsMatch(norm(food.name), query) || food.aka?.some((alias) => wordsMatch(norm(alias), query))) return { food, grams }
+  }
+  return null
+}
+
+export function matchLocalFood(name: string): LocalFood | null {
+  return matchLocalFoodDetails(name)?.food ?? null
 }
 
 export const FOOD_CATEGORIES: FoodCategory[] = [

@@ -1,6 +1,7 @@
 // Client wrapper for the online text-based nutrition lookup (/api/lookup-food).
 
-import { matchLocalFood, type LocalFood } from './localFoods'
+import { matchLocalFoodDetails, type LocalFood } from './localFoods'
+import { hasCompleteMacros, matchRestaurantFood } from './restaurantFoods'
 import { apiUrl } from './apiBase'
 
 export interface LookupResult {
@@ -31,9 +32,44 @@ export function sourceLabel(source: LookupResult['source']): string {
   }
 }
 
-/** Look a food up online by name. Throws with a readable message on failure. */
+/** Use a named local entry only when its serving can be represented honestly. */
+export function lookupLocalFood(name: string): LookupResult | null {
+  const restaurant = matchRestaurantFood(name)
+  if (restaurant && hasCompleteMacros(restaurant)) return {
+    name: `${restaurant.brand} · ${restaurant.name}`,
+    serving: restaurant.serving,
+    kcal: restaurant.kcal,
+    protein: restaurant.protein,
+    carbs: restaurant.carbs,
+    fat: restaurant.fat,
+    confidence: 0.9,
+    note: `${restaurant.sourceLabel}: ${restaurant.sourceUrl}. ${restaurant.note ?? 'Standard recipe; check current portion.'}`,
+    source: 'local',
+  }
+  const match = matchLocalFoodDetails(name)
+  if (!match) return null
+  const { food, grams } = match
+  const referenceGrams = /^\s*(\d+(?:\.\d+)?)\s*g\s*$/i.exec(food.serving)
+  if (grams !== null && (!referenceGrams || grams <= 0 || grams > 2000)) return null
+  const multiplier = grams === null ? 1 : grams / Number(referenceGrams?.[1])
+  return {
+    name: food.name,
+    emoji: food.emoji,
+    serving: grams === null ? food.serving : `${grams} g`,
+    kcal: Math.round(food.kcal * multiplier),
+    protein: Math.round(food.protein * multiplier),
+    carbs: Math.round(food.carbs * multiplier),
+    fat: Math.round(food.fat * multiplier),
+    confidence: 0.8,
+    note: grams === null ? `Stored reference for ${food.serving}; adjust if your portion differs.` : `Scaled from the stored ${food.serving} reference; preparation can differ.`,
+    source: 'local',
+  }
+}
+
+/** Search locally first; ask the online lookup only for foods absent from the table. */
 export async function lookupFood(name: string): Promise<LookupResult> {
-  const local = matchLocalFood(name)
+  const local = lookupLocalFood(name)
+  if (local) return local
   try {
     const res = await fetch(apiUrl('/api/lookup-food'), {
       method: 'POST',
@@ -42,26 +78,9 @@ export async function lookupFood(name: string): Promise<LookupResult> {
     })
     const json = await res.json().catch(() => null)
     if (!res.ok) throw new Error(json?.error || `Lookup failed (${res.status})`)
-    const online = json as LookupResult
-    if (!local) return online
-    return {
-      ...online,
-      note: `${online.note ? `${online.note} · ` : ''}Local ref: ${local.name} (${local.kcal} kcal / ${local.serving}).`,
-    }
+    return json as LookupResult
   } catch (error) {
-    if (!local) throw error
-    return {
-      name: local.name,
-      emoji: local.emoji,
-      serving: local.serving,
-      kcal: local.kcal,
-      protein: local.protein,
-      carbs: local.carbs,
-      fat: local.fat,
-      confidence: 0.72,
-      note: 'Internet lookup unavailable; using the stored Malaysian local reference.',
-      source: 'local',
-    }
+    throw error
   }
 }
 

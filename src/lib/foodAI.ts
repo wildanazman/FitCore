@@ -1,10 +1,9 @@
 // Photo calorie detection (PRD 3.2).
 // Real path: same-origin /api/detect-food, backed by Gemini vision on the server.
-// Fallbacks: optional Claude browser key, then a clearly-marked rough offline estimate.
-// Detected names are grounded against the local Malaysian food reference (MyFCD /
-// Kal) so calories for local dishes come from vetted values.
+// Fallback: optional Claude browser key. Local food references are name-based,
+// never a substitute for image recognition or a measured photo portion.
 
-import { LOCAL_FOODS, matchLocalFood } from './localFoods'
+import { matchLocalFood } from './localFoods'
 import { apiUrl } from './apiBase'
 
 export interface DetectionItem {
@@ -31,7 +30,7 @@ export interface Detection {
   requestedProvider?: FoodAIProvider
 }
 
-export type FoodAIProvider = 'auto' | 'gemini' | 'anthropic' | 'local'
+export type FoodAIProvider = 'auto' | 'gemini' | 'anthropic'
 
 const USAGE_KEY = 'fitcore-food-ai-usage-v1'
 
@@ -65,56 +64,14 @@ export function foodAIUsage(source: Detection['source']): number {
   }
 }
 
-/** Hash a string to a stable index (deterministic mock selection). */
-function hashIndex(seed: string, mod: number): number {
-  let h = 2166136261
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return Math.abs(h) % mod
-}
-
-export async function detectFromMock(seed: string, reason?: string): Promise<Detection> {
-  await new Promise((r) => setTimeout(r, 700))
-  const f = LOCAL_FOODS[hashIndex(seed, LOCAL_FOODS.length)]
-  const why = reason ? ` (${reason})` : ''
-  return {
-    name: f.name,
-    emoji: f.emoji,
-    kcal: f.kcal,
-    protein: f.protein,
-    carbs: f.carbs,
-    fat: f.fat,
-    confidence: 0.5,
-    source: 'local',
-    note: `Live AI was unavailable${why}. Rough estimate from the local food reference \u2014 review before saving.`,
-  }
-}
-
 /**
- * Ground an AI detection against the local Malaysian food reference (MyFCD / Kal).
- * Strong local match + low AI confidence \u2192 snap macros to the vetted local values;
- * otherwise keep the AI's (image-informed) estimate but attach the local reference.
+ * Add an exact-dish reference without replacing photo-specific portions.
+ * A standard serving is not interchangeable with food seen in an image.
  */
 export function groundDetection(det: Detection): Detection {
   const match = matchLocalFood(det.name)
   if (!match) return det
-  // The Gemini path now searches the web for real nutrition data, so trust its
-  // (image-informed) totals. Only snap to the local table for the offline
-  // fallback or a genuinely unsure read; otherwise just show the local ref.
-  if (det.source === 'local' || det.confidence < 0.45) {
-    return {
-      ...det,
-      kcal: match.kcal,
-      protein: match.protein,
-      carbs: match.carbs,
-      fat: match.fat,
-      emoji: det.emoji || match.emoji,
-      note: `Calories from local reference: ${match.name} (${match.serving}).`,
-    }
-  }
-  return { ...det, note: `Local ref \u2014 ${match.name}: ${match.kcal} kcal / ${match.serving}.` }
+  return { ...det, note: `Reference for a standard serving only: ${match.name} · ${match.kcal} kcal / ${match.serving}. Photo estimate above is separate.` }
 }
 
 const SYSTEM_PROMPT =
@@ -207,7 +164,7 @@ export async function detectWithClaude(apiKey: string, dataUrl: string): Promise
   return normalizeDetection(parseJsonObject(text), 'claude')
 }
 
-/** Top-level detect: tries server Gemini vision, optional Claude, then rough local fallback. */
+/** Top-level detect: tries server vision, then optional Claude fallback. */
 export async function detectFood(dataUrl: string, apiKey: string, provider: FoodAIProvider = 'auto'): Promise<Detection> {
   let reason: string | undefined
   if (provider === 'anthropic') {
@@ -232,11 +189,7 @@ export async function detectFood(dataUrl: string, apiKey: string, provider: Food
     }
   }
 
-  if (provider === 'local') {
-    return detectFromMock(dataUrl.slice(-64), `Online nutrition search unavailable${reason ? `: ${reason}` : ''}`)
-  }
-
-  throw new Error(reason || 'Food AI endpoint is unavailable. Check the deployment API route.')
+  throw new Error(reason || 'Photo analysis is unavailable. Search the local food list to log manually.')
 }
 
 export function slotForNow(d = new Date()): 'breakfast' | 'lunch' | 'dinner' | 'snack' {
