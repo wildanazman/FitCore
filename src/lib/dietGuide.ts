@@ -2,7 +2,7 @@
 // activity, goal) into a recommended protocol + detailed, actionable diet detail.
 
 import type { DietMode, UserProfile } from '../types'
-import { baseCalorieTarget, macroTargets, tdee } from './nutrition'
+import { baseCalorieTarget, bmiValue, macroTargets, tdee } from './nutrition'
 
 export interface BmiInfo {
   value: number
@@ -11,8 +11,7 @@ export interface BmiInfo {
 }
 
 export function bmi(heightCm: number, weightKg: number): BmiInfo {
-  const m = heightCm / 100
-  const v = m > 0 ? Math.round((weightKg / (m * m)) * 10) / 10 : 0
+  const v = bmiValue(heightCm, weightKg)
   let category: BmiInfo['category'] = 'Healthy'
   let tone: BmiInfo['tone'] = 'good'
   if (v < 18.5) {

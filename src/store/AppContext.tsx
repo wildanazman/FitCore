@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
-import type { AppState, FoodEntry, PlanSession, ProgressPhoto, UserProfile, WeightEntry } from '../types'
+import type { AppState, DietTask, FoodEntry, PlanSession, ProgressPhoto, UserProfile, WeightEntry } from '../types'
 import { clearState, emptyState, loadState, saveState, seedForProfile } from '../lib/storage'
 import { generatePlan } from '../lib/plan'
 import { latestMeasured } from '../lib/body'
+import { todayISO } from '../lib/date'
 
 type Action =
   | { type: 'onboard'; profile: UserProfile }
@@ -17,6 +18,9 @@ type Action =
   | { type: 'addSession'; session: PlanSession }
   | { type: 'removeSession'; id: string }
   | { type: 'toggleSession'; id: string }
+  | { type: 'addDietTask'; task: DietTask }
+  | { type: 'toggleDietTask'; id: string }
+  | { type: 'removeDietTask'; id: string }
   | { type: 'refresh' }
   | { type: 'reset' }
 
@@ -67,6 +71,13 @@ function reducer(state: AppState, action: Action): AppState {
         sessions: state.sessions.map((s) => (s.id === action.id ? { ...s, completed: !s.completed } : s)),
       }
 
+    case 'addDietTask':
+      return { ...state, dietTasks: [...state.dietTasks, action.task] }
+    case 'toggleDietTask':
+      return { ...state, dietTasks: state.dietTasks.map((task) => task.id === action.id ? { ...task, completed: !task.completed, completedAt: task.completed ? undefined : todayISO() } : task) }
+    case 'removeDietTask':
+      return { ...state, dietTasks: state.dietTasks.filter((task) => task.id !== action.id) }
+
     case 'refresh':
       return loadState() ?? state
 
@@ -102,6 +113,9 @@ interface Ctx {
   addSession: (session: PlanSession) => void
   removeSession: (id: string) => void
   toggleSession: (id: string) => void
+  addDietTask: (task: DietTask) => void
+  toggleDietTask: (id: string) => void
+  removeDietTask: (id: string) => void
   refresh: () => void
   reset: () => void
 }
@@ -132,6 +146,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addSession: (session) => dispatch({ type: 'addSession', session }),
       removeSession: (id) => dispatch({ type: 'removeSession', id }),
       toggleSession: (id) => dispatch({ type: 'toggleSession', id }),
+      addDietTask: (task) => dispatch({ type: 'addDietTask', task }),
+      toggleDietTask: (id) => dispatch({ type: 'toggleDietTask', id }),
+      removeDietTask: (id) => dispatch({ type: 'removeDietTask', id }),
       refresh: () => dispatch({ type: 'refresh' }),
       reset: () => {
         clearState()

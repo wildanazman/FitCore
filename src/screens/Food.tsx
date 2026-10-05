@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { Icon } from '../components/Icon'
+import { ProteinIdeas } from '../components/ProteinIdeas'
 import { CountUp, Press, Reveal, listContainer, spring } from '../components/motion'
 import { todayISO, timeLabel, uid } from '../lib/date'
 import { dayFuel } from '../lib/nutrition'
@@ -14,6 +15,8 @@ import { searchLocalFoods, type LocalFood } from '../lib/localFoods'
 import { lookupFood, resultToLocalFood, sourceLabel, type LookupResult } from '../lib/foodLookup'
 import type { DietWarning } from '../lib/diet'
 import type { FoodEntry } from '../types'
+import type { MealSlot } from '../types'
+import './food.css'
 
 export function Food() {
   const { state, profile, weightKg, addFood, updateFood, removeFood } = useApp()
@@ -21,6 +24,7 @@ export function Food() {
   const today = todayISO()
   const [editing, setEditing] = useState<FoodEntry | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [selectedSlot, setSelectedSlot] = useState<MealSlot>(slotForNow())
 
   const fuel = dayFuel(profile, weightKg, today, state.foods, state.sessions)
   const todayFoods = state.foods.filter((f) => f.date === today).sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
@@ -34,7 +38,7 @@ export function Food() {
   const quickAdd = (q: { name: string; emoji: string; kcal: number; protein: number; carbs: number; fat: number }) => {
     addFood({
       id: uid(), name: q.name, emoji: q.emoji, date: today, loggedAt: new Date().toISOString(),
-      slot: slotForNow(), kcal: q.kcal, protein: q.protein, carbs: q.carbs, fat: q.fat, servings: 1, confidence: 1,
+      slot: selectedSlot, kcal: q.kcal, protein: q.protein, carbs: q.carbs, fat: q.fat, servings: 1, confidence: 1,
     })
   }
 
@@ -44,40 +48,24 @@ export function Food() {
   }
 
   return (
-    <motion.div variants={listContainer} className="px-margin-mobile pt-sm space-y-lg">
+    <motion.div variants={listContainer} className="food-page px-margin-mobile pt-sm space-y-lg">
       <TopBar />
+      <header className="food-hero">
+        <div className="food-hero-top"><span>NUTRITION / TODAY</span><span>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</span></div>
+        <h1>Eat with<br /><em>intention.</em></h1>
+        <p>Every meal moves the number. Capture it, check the estimate, keep going.</p>
+        <button type="button" className="food-capture" onClick={() => nav('/camera')}><span className="food-capture-icon"><Icon name="photo_camera" size={24} /></span><span>CAPTURE A MEAL</span><Icon name="arrow_outward" size={22} /></button>
+      </header>
 
-      {/* Snap hero (lime) */}
       <Reveal>
-        <Press as="div" onClick={() => nav('/camera')} className="rounded-[28px] bg-lime text-on-lime p-lg flex flex-col items-center gap-md cursor-pointer relative overflow-hidden">
-          <div className="w-16 h-16 rounded-full bg-on-lime text-lime flex items-center justify-center">
-            <Icon name="photo_camera" fill size={32} />
-          </div>
-          <div className="text-center">
-            <p className="font-headline-lg-mobile text-headline-lg-mobile">Snap food photo</p>
-            <p className="font-data-mono text-[12px] opacity-70">AI detects macros & calories instantly</p>
-          </div>
-        </Press>
-      </Reveal>
-
-      {/* Daily progress */}
-      <Reveal>
-        <div className="rounded-[24px] bg-ink-card border border-white/5 p-md">
-          <div className="flex justify-between items-baseline mb-sm">
-            <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Daily progress</span>
-            <span className="font-data-mono text-[13px] text-on-surface">
-              <CountUp value={fuel.consumed} /> <span className="text-on-surface-variant">/ {fuel.budget.toLocaleString()} kcal</span>
-            </span>
-          </div>
-          <div className="w-full h-3 bg-ink rounded-full overflow-hidden">
-            <motion.div className="h-full bg-lime rounded-full" initial={{ width: 0 }} animate={{ width: `${calPct}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
-          </div>
-          {fuel.trainingBonus > 0 && (
-            <p className="font-data-mono text-[12px] text-lime mt-sm flex items-center gap-1">
-              <Icon name="bolt" size={14} fill /> +{fuel.trainingBonus} kcal training bonus
-            </p>
-          )}
-        </div>
+        <section className="food-score" aria-label="Daily calorie summary">
+          <div className="food-score-top"><span>01 / DAILY ENERGY</span><span>{Math.round(calPct)}% USED</span></div>
+          <div className="food-score-main"><div><span>{fuel.remaining < 0 ? 'OVER TARGET' : 'LEFT TO EAT'}</span><strong>{Math.abs(fuel.remaining).toLocaleString()}</strong><small>KCAL</small></div><div className="food-score-ring" style={{ background: `conic-gradient(#c9f24e ${calPct}%, #373e35 ${calPct}%)` }}><div><Icon name="restaurant" size={26} /></div></div></div>
+          <div className="food-score-rule" />
+          <div className="food-score-bottom"><div><span>EATEN</span><strong>{fuel.consumed.toLocaleString()}</strong></div><div><span>DAILY TARGET</span><strong>{fuel.budget.toLocaleString()}</strong></div></div>
+          <div className="food-score-track" role="progressbar" aria-label={`${fuel.consumed} of ${fuel.budget} calories eaten`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(calPct)}><span style={{ width: `${calPct}%` }} /></div>
+          {fuel.trainingBonus > 0 && <p className="food-score-note">+{fuel.trainingBonus} kcal activity allowance included</p>}
+        </section>
       </Reveal>
 
       {/* Diet warnings */}
@@ -88,22 +76,20 @@ export function Food() {
       )}
 
       {/* Macro cards */}
-      <Reveal>
-        <div className="grid grid-cols-3 gap-sm">
-          <MacroCard label="Protein" v={fuel.protein} t={fuel.proteinTarget} bg="bg-lilac" fg="text-on-lilac" />
-          <MacroCard label="Carbs" v={fuel.carbs} t={fuel.carbTarget} bg="bg-pink" fg="text-on-pink" />
-          <MacroCard label="Fat" v={fuel.fat} t={fuel.fatTarget} bg="bg-lime" fg="text-on-lime" />
-        </div>
-      </Reveal>
+      <Reveal><section className="food-macro-section"><div className="food-editorial-heading"><span>02 / THE BREAKDOWN</span><h2>Macros, at a glance.</h2></div><div className="food-macros"><MacroCard label="Protein" v={fuel.protein} t={fuel.proteinTarget} /><MacroCard label="Carbs" v={fuel.carbs} t={fuel.carbTarget} /><MacroCard label="Fat" v={fuel.fat} t={fuel.fatTarget} /></div></section></Reveal>
+
+      {/* Quick add */}
+      <Reveal><ProteinIdeas target={fuel.proteinTarget} eaten={fuel.protein} /></Reveal>
 
       {/* Quick add */}
       <Reveal>
         <div>
-          <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Quick add · {def.short}</span>
+          <div className="food-editorial-heading"><span>03 / FAST TRACK · {def.short.toUpperCase()}</span><h2>Quick add.</h2></div>
+          <div className="food-slots" role="group" aria-label="Meal to log">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => <button key={slot} type="button" aria-pressed={selectedSlot === slot} onClick={() => setSelectedSlot(slot)}>{slot}</button>)}</div>
           <div className="flex gap-sm overflow-x-auto no-scrollbar mt-sm pb-1">
             {quickFoods.map((q) => (
               <Press key={q.name} onClick={() => quickAdd(q)} className="shrink-0 flex items-center gap-sm bg-ink-card border border-white/5 rounded-full pl-sm pr-md py-sm">
-                <span className="text-[20px]">{q.emoji}</span>
+                <Icon name="restaurant" size={20} className="text-lime" />
                 <span className="text-left">
                   <span className="block font-body-md text-[13px] text-on-surface whitespace-nowrap">{q.name}</span>
                   <span className="block font-data-mono text-[11px] text-on-surface-variant">{q.kcal} kcal · {q.carbs}c</span>
@@ -118,22 +104,18 @@ export function Food() {
       {/* Log */}
       <Reveal>
         <div>
-          <div className="flex items-center justify-between">
-            <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Today's log</span>
-            <Press onClick={() => setSearchOpen(true)} className="flex items-center gap-1 text-lime font-data-mono text-[12px]">
-              <Icon name="search" size={16} /> Search food
-            </Press>
-          </div>
+          <div className="food-editorial-heading"><span>04 / YOUR TIMELINE</span><h2>What you've eaten.</h2></div>
+          <button type="button" className="food-find" onClick={() => setSearchOpen(true)}><Icon name="search" size={21} /><span>Search food or add your own</span><Icon name="arrow_forward" size={20} /></button>
           <div className="space-y-sm mt-sm">
-            {todayFoods.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No meals yet. Snap one above.</p>}
+            {todayFoods.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No meals logged yet. Capture one or find a food above.</p>}
             {todayFoods.map((f, i) => (
               <motion.div key={f.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04, ...spring }}>
                 <Press as="div" onClick={() => setEditing(f)} className="rounded-[20px] bg-ink-card border border-white/5 p-sm flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-md">
-                    {f.photo ? <img src={f.photo} alt="" className="w-11 h-11 rounded-full object-cover" /> : <div className="w-11 h-11 rounded-full bg-lilac/20 flex items-center justify-center text-[20px]">{f.emoji}</div>}
+                    {f.photo ? <img src={f.photo} alt="" className="w-11 h-11 rounded-xl object-cover" /> : <div className="w-11 h-11 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={22} /></div>}
                     <div>
                       <div className="font-metric-md text-[15px] text-on-surface">{f.name}{f.servings !== 1 && <span className="text-on-surface-variant"> ×{f.servings}</span>}</div>
-                      <div className="font-data-mono text-[11px] text-on-surface-variant">{timeLabel(f.loggedAt)}</div>
+                      <div className="font-data-mono text-[11px] text-on-surface-variant capitalize">{f.slot} · {timeLabel(f.loggedAt)}</div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -223,7 +205,7 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
               {results.map((f) => (
                 <Press key={f.name} as="div" onClick={() => onPick(f)} className="rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-md">
-                    <div className="w-10 h-10 rounded-full bg-lilac/15 flex items-center justify-center text-[20px]">{f.emoji}</div>
+                    <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
                     <div>
                       <div className="font-metric-md text-[14px] text-on-surface leading-tight">{f.name}</div>
                       <div className="font-data-mono text-[11px] text-on-surface-variant">{f.serving} · {f.category}</div>
@@ -256,7 +238,7 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
                   {online && !searching && (
                     <Press as="div" onClick={() => onPick(resultToLocalFood(online))} className="rounded-[18px] bg-ink border border-lime/30 p-sm flex items-center justify-between cursor-pointer">
                       <div className="flex items-center gap-md min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-lime/15 flex items-center justify-center text-[20px]">{online.emoji || '🍽️'}</div>
+                        <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
                         <div className="min-w-0">
                           <div className="font-metric-md text-[14px] text-on-surface leading-tight truncate">{online.name}</div>
                           <div className="font-data-mono text-[11px] text-lime">{online.serving} · {sourceLabel(online.source)}</div>
@@ -298,7 +280,7 @@ function CustomFoodForm({ onSubmit, defaultName }: { onSubmit: (f: LocalFood) =>
     if (!valid) return
     onSubmit({
       name: name.trim(),
-      emoji: '🍽️',
+      emoji: '',
       category: 'Basics',
       serving: '1 serving',
       kcal: kcalNum,
@@ -357,16 +339,13 @@ function WarnRow({ w }: { w: DietWarning }) {
   )
 }
 
-function MacroCard({ label, v, t, bg, fg }: { label: string; v: number; t: number; bg: string; fg: string }) {
+function MacroCard({ label, v, t }: { label: string; v: number; t: number }) {
   const pct = t ? Math.min(100, (v / t) * 100) : 0
   return (
-    <div className={`rounded-[20px] ${bg} ${fg} p-md flex flex-col items-center`}>
-      <span className="font-display-hero text-headline-lg-mobile"><CountUp value={v} /><span className="text-metric-md">g</span></span>
-      <span className="font-label-caps text-label-caps uppercase opacity-70">{label}</span>
-      <div className="w-full bg-on-lime/15 h-1 mt-sm rounded-full overflow-hidden">
-        <motion.div className="h-full bg-on-lime/60 rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7 }} />
-      </div>
-      <span className="font-data-mono text-[10px] opacity-60 mt-1">/ {t}g</span>
+    <div className="food-macro">
+      <span>{label}</span>
+      <strong><CountUp value={v} /><small> / {t} g</small></strong>
+      <div role="progressbar" aria-label={`${v} of ${t} grams ${label.toLowerCase()}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}><span style={{ width: `${pct}%` }} /></div>
     </div>
   )
 }
@@ -425,7 +404,7 @@ function FoodEditSheet({
       >
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
         <div className="flex items-center gap-md mb-lg">
-          <div className="w-12 h-12 rounded-full bg-lilac/20 flex items-center justify-center text-[24px]">{draft.emoji}</div>
+          <div className="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={23} /></div>
           <div>
             <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{draft.name}</h2>
             <p className="font-data-mono text-[12px] text-on-surface-variant">{Math.round(draft.kcal * servings)} kcal - {Math.round(draft.protein * servings)}g protein</p>

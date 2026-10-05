@@ -1,7 +1,7 @@
 // localStorage persistence + default profile + first-run demo seed.
 
-import type { AppState, FoodEntry, UserProfile, WeightEntry } from '../types'
-import { addDays, startOfWeek, todayISO, uid } from './date'
+import type { AppState, UserProfile } from '../types'
+import { todayISO, uid } from './date'
 import { generatePlan } from './plan'
 
 const KEY = 'fitcore.state.v1'
@@ -14,6 +14,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   heightCm: 178,
   startWeightKg: 78.4,
   goal: 'lose',
+  weightLossPace: 'steady',
   sports: ['running', 'strength', 'badminton'],
   raceDate: null,
   planStartDate: null,
@@ -40,7 +41,7 @@ export const DEFAULT_PROFILE: UserProfile = {
 }
 
 export function emptyState(): AppState {
-  return { profile: { ...DEFAULT_PROFILE }, foods: [], weights: [], photos: [], sessions: [], v: STATE_VERSION }
+  return { profile: { ...DEFAULT_PROFILE }, foods: [], weights: [], photos: [], sessions: [], dietTasks: [], v: STATE_VERSION }
 }
 
 export function loadState(): AppState | null {
@@ -59,6 +60,7 @@ export function loadState(): AppState | null {
         ? goalFromMinutes(legacyProfile.targetFinishMin)
         : DEFAULT_PROFILE.halfMarathonGoal
     parsed.profile = { ...DEFAULT_PROFILE, ...parsed.profile }
+    parsed.dietTasks = Array.isArray(parsed.dietTasks) ? parsed.dietTasks : []
     parsed.profile.bestFiveKmPaceSecPerKm = parsed.profile.bestFiveKmPaceSecPerKm || parsed.profile.bestRunPaceSecPerKm || DEFAULT_PROFILE.bestFiveKmPaceSecPerKm
     parsed.profile.bestTenKmPaceSecPerKm = parsed.profile.bestTenKmPaceSecPerKm || Math.round((parsed.profile.bestRunPaceSecPerKm || DEFAULT_PROFILE.bestRunPaceSecPerKm) + 45)
     parsed.profile.runPreferredDays = Array.isArray(parsed.profile.runPreferredDays) && parsed.profile.runPreferredDays.length
@@ -111,52 +113,15 @@ export function clearState(): void {
   }
 }
 
-/**
- * Build a populated state for a freshly-onboarded profile so dashboards are alive:
- * 8 weeks of weigh-ins trending down, the generated plan with past sessions completed,
- * and a couple of meals logged today.
- */
+/** Start from the user's real baseline, never simulated meals or workouts. */
 export function seedForProfile(profile: UserProfile): AppState {
-  const today = todayISO()
-  const seeded = { ...profile, planStartDate: profile.planStartDate ?? startOfWeek(today) }
-  const p = seeded
-  const weights: WeightEntry[] = []
-  const start = p.startWeightKg + 4.2
-  for (let i = 56; i >= 0; i -= 1) {
-    if (i % 2 === 1 && i !== 0) continue // ~every other day
-    const t = (56 - i) / 56
-    const noise = ((i * 9301 + 49297) % 233280) / 233280 // deterministic 0..1
-    const kg = Math.round((start - 4.2 * t + (noise - 0.5) * 0.6) * 10) / 10
-    const date = addDays(today, -i)
-    const entry: WeightEntry = { id: uid(), date, weightKg: kg }
-    if (i === 0) {
-      entry.neckCm = 38
-      entry.waistCm = 82
-      entry.hipCm = 98
-    }
-    weights.push(entry)
+  return {
+    profile,
+    foods: [],
+    weights: [{ id: uid(), date: todayISO(), weightKg: profile.startWeightKg }],
+    photos: [],
+    sessions: generatePlan(profile, profile.startWeightKg),
+    dietTasks: [],
+    v: STATE_VERSION,
   }
-
-  const sessions = generatePlan(p, p.startWeightKg)
-  for (const s of sessions) {
-    if (s.date < today) s.completed = true
-  }
-
-  const mk = (h: number, m: number) => {
-    const d = new Date()
-    d.setHours(h, m, 0, 0)
-    return d.toISOString()
-  }
-  const foods: FoodEntry[] = [
-    {
-      id: uid(), name: 'Protein Oats & Eggs', emoji: '🥣', date: today, loggedAt: mk(8, 30),
-      slot: 'breakfast', kcal: 540, protein: 38, carbs: 52, fat: 18, servings: 1, confidence: 1,
-    },
-    {
-      id: uid(), name: 'Apple & Almonds', emoji: '🍎', date: today, loggedAt: mk(11, 15),
-      slot: 'snack', kcal: 280, protein: 8, carbs: 30, fat: 14, servings: 1, confidence: 1,
-    },
-  ]
-
-  return { profile: p, foods, weights, photos: [], sessions, v: STATE_VERSION }
 }

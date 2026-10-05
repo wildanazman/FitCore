@@ -205,6 +205,7 @@ function RunningPlanCard({
   const cap = planCapability(draftProfile)
   const assessment = cap.assessment
   const dirty =
+    !profile.planStartDate ||
     raceType !== profile.raceType ||
     raceDate !== (profile.raceDate ?? '') ||
     trainingDays !== profile.trainingDaysPerWeek ||
@@ -410,7 +411,7 @@ function RunningPlanCard({
                 onClick={handleSave}
                 className="w-full min-h-12 rounded-full bg-lime text-on-lime font-metric-md disabled:opacity-40 transition-transform duration-150 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime"
               >
-                Update plan
+                {profile.planStartDate ? 'Update plan' : 'Start running plan'}
               </button>
             </motion.div>
           )}

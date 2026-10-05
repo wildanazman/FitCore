@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useApp } from '../store/AppContext'
+import { FitCoreLogo } from './FitCoreLogo'
+import './fitcore-logo.css'
 
 export function TopBar({ greeting }: { greeting?: boolean }) {
   const { profile } = useApp()
@@ -17,10 +19,7 @@ export function TopBar({ greeting }: { greeting?: boolean }) {
           <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{profile.name || 'Athlete'}</h1>
         </div>
       ) : (
-        <div className="flex items-center gap-sm">
-          <Avatar initial={initial} />
-          <span className="font-display-hero text-headline-lg-mobile text-primary tracking-tighter">FitCore</span>
-        </div>
+        <FitCoreLogo />
       )}
       <div className="flex items-center gap-sm">
         {greeting && <Avatar initial={initial} size={48} />}

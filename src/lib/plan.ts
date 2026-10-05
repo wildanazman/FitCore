@@ -261,6 +261,8 @@ function session(
  * on that date. Without a race date, this builds a rolling 6-week base block.
  */
 export function generatePlan(p: UserProfile, weightKg: number): PlanSession[] {
+  // A running schedule is opt-in. Choosing a sport during setup is not consent to a race plan.
+  if (!p.sports.includes('running') || !p.planStartDate) return []
   const hasStrength = p.sports.includes('strength')
   const sport: 'badminton' | 'pickleball' | null = p.sports.includes('badminton')
     ? 'badminton'

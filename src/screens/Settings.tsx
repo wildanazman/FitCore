@@ -69,8 +69,8 @@ export function Settings() {
               onChange={(e) => updateProfile({ calorieTargetOverride: e.target.value ? +e.target.value : null })}
             />
           </Row>
-          <Row label="Protein g/kg">
-            <input type="number" step="0.1" className={inp} value={profile.proteinPerKg} onChange={(e) => updateProfile({ proteinPerKg: +e.target.value })} />
+          <Row label="Daily protein (g)">
+            <input type="number" min="1" step="1" className={inp} value={Math.round(profile.proteinPerKg * weightKg)} onChange={(e) => updateProfile({ proteinPerKg: +e.target.value / Math.max(1, weightKg) })} />
           </Row>
         </Group>
 

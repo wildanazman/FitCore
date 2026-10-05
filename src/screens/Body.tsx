@@ -4,6 +4,7 @@ import { TopBar } from '../components/TopBar'
 import { ProgressBar, SectionLabel } from '../components/ui'
 import { Sparkline } from '../components/Sparkline'
 import { Icon } from '../components/Icon'
+import { WeightOutlook } from '../components/WeightOutlook'
 import { todayISO, shortDate, uid } from '../lib/date'
 import { fatMassKg, latestMeasured, latestWithMeasurements, leanMassKg, navyBodyFat, rollingTrend, sortByDate } from '../lib/body'
 import { leanMassInsight } from '../lib/coach'
@@ -63,14 +64,14 @@ export function Body() {
         {tab === 'weight' && (
           <>
             <div className="grid grid-cols-2 gap-gutter">
-              <div className="bg-lilac text-on-lilac rounded-[24px] p-md flex flex-col justify-between min-h-[130px]">
+              <div className="bg-lime text-on-lime rounded-2xl p-md flex flex-col justify-between min-h-[130px]">
                 <span className="font-label-caps text-label-caps uppercase opacity-70">Current Weight</span>
                 <div className="mt-auto flex items-baseline gap-xs">
                   <span className="font-display-hero text-display-hero leading-none">{latestDisp.toFixed(1)}</span>
                   <span className="font-metric-md text-metric-md opacity-70">{unit}</span>
                 </div>
               </div>
-              <div className="bg-pink text-on-pink rounded-[24px] p-md flex flex-col justify-between min-h-[130px]">
+              <div className="bg-ink-card text-on-surface border border-white/10 rounded-2xl p-md flex flex-col justify-between min-h-[130px]">
                 <span className="font-label-caps text-label-caps uppercase opacity-70">8-Week Change</span>
                 <div className="mt-auto flex items-baseline gap-xs">
                   <Icon name={change <= 0 ? 'trending_down' : 'trending_up'} fill size={24} />
@@ -79,6 +80,8 @@ export function Body() {
                 </div>
               </div>
             </div>
+
+            <WeightOutlook profile={profile} weightKg={latest?.weightKg ?? profile.startWeightKg} />
 
             <section className="bg-ink-card border border-white/5 rounded-[24px] p-md flex flex-col gap-md">
               <div className="flex justify-between items-center">

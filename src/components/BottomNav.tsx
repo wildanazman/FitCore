@@ -6,7 +6,7 @@ import { spring } from './motion'
 const TABS = [
   { to: '/', icon: 'home', label: 'Home', end: true },
   { to: '/food', icon: 'nutrition', label: 'Food', end: false },
-  { to: '/train', icon: 'fitness_center', label: 'Train', end: false },
+  { to: '/train', icon: 'fitness_center', label: 'Activity', end: false },
   { to: '/body', icon: 'monitoring', label: 'Body', end: false },
 ]
 
@@ -18,7 +18,7 @@ export function BottomNav() {
     <div data-testid="bottom-nav" className="absolute bottom-4 inset-x-4 z-50 flex items-end justify-center gap-3">
       <nav className="flex-1 h-16 rounded-full bg-ink-card/95 backdrop-blur-xl border border-white/10 shadow-[0_12px_32px_rgba(0,0,0,0.5)] flex items-center justify-around px-2">
         {TABS.map((t) => {
-          const active = t.end ? pathname === '/' : pathname.startsWith(t.to)
+          const active = t.end ? pathname === '/' : pathname.startsWith(t.to) || (t.to === '/train' && pathname.startsWith('/running'))
           return (
             <NavLink key={t.to} to={t.to} aria-label={t.label} className="relative w-12 h-12 flex items-center justify-center">
               {active && (

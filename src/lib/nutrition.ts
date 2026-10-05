@@ -1,7 +1,7 @@
 // Nutrition math — Mifflin-St Jeor BMR, TDEE, goal-adjusted targets,
 // training-load calorie bonuses, per-day fuel rollup.
 
-import type { ActivityLevel, DayFuel, FoodEntry, Goal, MacroTargets, PlanSession, UserProfile } from '../types'
+import type { ActivityLevel, DayFuel, FoodEntry, MacroTargets, PlanSession, UserProfile, WeightLossPace } from '../types'
 
 const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
   sedentary: 1.2,
@@ -9,12 +9,6 @@ const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
   moderate: 1.55,
   high: 1.725,
   athlete: 1.9,
-}
-
-const GOAL_DELTA: Record<Goal, number> = {
-  lose: -0.18, // ~18% deficit
-  maintain: 0,
-  gain: 0.1, // ~10% surplus
 }
 
 /** Basal metabolic rate (kcal/day), Mifflin-St Jeor. */
@@ -28,11 +22,75 @@ export function tdee(p: UserProfile, weightKg: number): number {
   return Math.round(bmr(p, weightKg) * ACTIVITY_FACTOR[p.activity])
 }
 
+export type BmiCategory = 'Underweight' | 'Healthy' | 'Overweight' | 'Obesity'
+
+export function bmiValue(heightCm: number, weightKg: number): number {
+  const heightM = heightCm / 100
+  return heightM > 0 ? Math.round((weightKg / (heightM * heightM)) * 10) / 10 : 0
+}
+
+export function bmiCategory(value: number): BmiCategory {
+  if (value < 18.5) return 'Underweight'
+  if (value < 25) return 'Healthy'
+  if (value < 30) return 'Overweight'
+  return 'Obesity'
+}
+
+export interface AutoCaloriePlan {
+  maintenance: number
+  target: number
+  bmi: number
+  category: BmiCategory
+  pace: WeightLossPace
+  aggressiveAllowed: boolean
+  deficitKcal: number
+  estimatedWeeklyKg: number
+  minimumKcal: number
+}
+
+/**
+ * Automatic calorie plan derived from Mifflin-St Jeor TDEE and adult BMI.
+ * Faster cuts are only offered from BMI 25 and every deficit is capped at
+ * 1,000 kcal/day plus a conservative sex-specific intake floor.
+ */
+export function autoCaloriePlan(p: UserProfile, weightKg: number): AutoCaloriePlan {
+  const maintenance = tdee(p, weightKg)
+  const bmi = bmiValue(p.heightCm, weightKg)
+  const category = bmiCategory(bmi)
+  const aggressiveAllowed = bmi >= 25
+  const pace: WeightLossPace = p.weightLossPace === 'faster' && aggressiveAllowed ? 'faster' : 'steady'
+  const minimumKcal = p.sex === 'female' ? 1200 : 1500
+
+  let deficitKcal = 0
+  if (p.goal === 'lose' && bmi >= 18.5) {
+    const deficitPct = pace === 'faster'
+      ? bmi >= 30 ? 0.25 : 0.2
+      : bmi >= 30 ? 0.18 : bmi >= 25 ? 0.15 : 0.1
+    deficitKcal = Math.min(1000, Math.round(maintenance * deficitPct))
+  }
+
+  let target = maintenance
+  if (p.goal === 'lose') target = Math.min(maintenance, Math.max(minimumKcal, maintenance - deficitKcal))
+  if (p.goal === 'gain') target = Math.round(maintenance * 1.1)
+  deficitKcal = Math.max(0, maintenance - target)
+
+  return {
+    maintenance,
+    target,
+    bmi,
+    category,
+    pace,
+    aggressiveAllowed,
+    deficitKcal,
+    estimatedWeeklyKg: Math.round((deficitKcal * 7 / 7700) * 10) / 10,
+    minimumKcal,
+  }
+}
+
 /** Resting daily calorie target after goal adjustment (before training bonus). */
 export function baseCalorieTarget(p: UserProfile, weightKg: number): number {
   if (p.calorieTargetOverride && p.calorieTargetOverride > 0) return p.calorieTargetOverride
-  const maint = tdee(p, weightKg)
-  return Math.round(maint * (1 + GOAL_DELTA[p.goal]))
+  return autoCaloriePlan(p, weightKg).target
 }
 
 /**
@@ -56,7 +114,7 @@ export function macroTargets(p: UserProfile, weightKg: number, budget: number): 
 
   // Low-carb protocols pin carbs and let fat fill the remaining energy.
   if (p.dietMode === 'keto' || p.dietMode === 'egg') {
-    const carbs = p.dietMode === 'keto' ? p.netCarbCapG : 30
+    const carbs = p.netCarbCapG
     const fat = Math.max(0, Math.round((budget - protein * 4 - carbs * 4) / 9))
     return { kcal: budget, protein, carbs, fat }
   }

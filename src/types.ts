@@ -2,6 +2,7 @@
 
 export type Sex = 'male' | 'female'
 export type Goal = 'lose' | 'maintain' | 'gain'
+export type WeightLossPace = 'steady' | 'faster'
 export type Sport = 'running' | 'strength' | 'badminton' | 'pickleball'
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete'
 export type HalfMarathonGoal = 'finish' | 'sub245' | 'sub240' | 'sub235' | 'sub230' | 'sub215' | 'sub200' | 'sub145'
@@ -30,6 +31,8 @@ export interface UserProfile {
   heightCm: number
   startWeightKg: number
   goal: Goal
+  /** Intensity of the automatic calorie deficit when the goal is fat loss. */
+  weightLossPace: WeightLossPace
   sports: Sport[]
   /** ISO yyyy-mm-dd of the goal race, or null if none. */
   raceDate: string | null
@@ -111,12 +114,22 @@ export interface ProgressPhoto {
   dataUrl: string
 }
 
+export interface DietTask {
+  id: string
+  date: string
+  title: string
+  completed: boolean
+  completedAt?: string
+}
+
 export type SessionType = 'run' | 'strength' | 'sport' | 'rest'
 
 export interface PlanSession {
   id: string
   /** ISO yyyy-mm-dd */
   date: string
+  /** ISO timestamp when manually logged. */
+  loggedAt?: string
   type: SessionType
   title: string
   /** short technical descriptor, e.g. "45 min • Z2 HR" */
@@ -141,6 +154,7 @@ export interface AppState {
   weights: WeightEntry[]
   photos: ProgressPhoto[]
   sessions: PlanSession[]
+  dietTasks: DietTask[]
   /** version for migrations */
   v: number
 }

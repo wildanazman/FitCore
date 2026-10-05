@@ -1,0 +1,5 @@
+.camera-idle-visual{position:absolute;z-index:10;top:15%;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 24px;text-align:center;pointer-events:none}
+.camera-idle-icon{position:relative;display:grid;place-items:center;width:126px;height:126px;border:1px solid rgba(201,242,78,.5);border-radius:50%;box-shadow:0 0 0 27px rgba(201,242,78,.035),0 0 0 55px rgba(201,242,78,.025)}
+.camera-idle-visual p{max-width:28ch;margin:0;color:#bec4b9;font-size:12px;line-height:1.35}
+.camera-capture-controls{gap:15px!important}.camera-capture-controls h1{font-size:32px;line-height:1;letter-spacing:-.035em}.camera-capture-controls>div:nth-child(2) p{font-size:12px;line-height:1.4}
+@media(max-height:700px){.camera-idle-visual{top:12%}.camera-idle-icon{width:91px;height:91px}.camera-capture-controls{gap:10px!important}}

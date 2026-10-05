@@ -1,19 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useApp } from '../store/AppContext'
 import { DEFAULT_PROFILE } from '../lib/storage'
-import type { Goal, HalfMarathonGoal, Sport, UserProfile } from '../types'
+import type { Goal, Sport, UserProfile } from '../types'
 import { Icon } from '../components/Icon'
-import { GhostButton, PrimaryButton } from '../components/ui'
-import { baseCalorieTarget, tdee } from '../lib/nutrition'
+import { FitCoreLogo } from '../components/FitCoreLogo'
+import '../components/fitcore-logo.css'
+import { ProteinIdeas } from '../components/ProteinIdeas'
+import { autoCaloriePlan } from '../lib/nutrition'
 import { DIET_LIST } from '../lib/diet'
-import { formatPace, HALF_MARATHON_GOALS, halfMarathonGoalLabel, halfMarathonGoalPace } from '../lib/plan'
+import './onboarding.css'
 
-const STEPS = ['Profile', 'Goal', 'Sports', 'Race', 'Targets', 'Diet']
+const STEPS = ['Name', 'Baseline', 'Daily rhythm', 'Goal', 'Sports', 'Targets', 'Diet'] as const
 
-const GOALS: { id: Goal; label: string; sub: string; icon: string }[] = [
-  { id: 'lose', label: 'Lose fat', sub: 'Calorie deficit, preserve muscle', icon: 'trending_down' },
-  { id: 'maintain', label: 'Maintain', sub: 'Hold weight, build performance', icon: 'horizontal_rule' },
-  { id: 'gain', label: 'Build', sub: 'Lean mass surplus', icon: 'trending_up' },
+const ACTIVITIES: { id: UserProfile['activity']; label: string; detail: string; icon: string }[] = [
+  { id: 'sedentary', label: 'Mostly seated', detail: 'Desk work and little walking', icon: 'horizontal_rule' },
+  { id: 'light', label: 'Some movement', detail: 'Walking through the day', icon: 'directions_run' },
+  { id: 'moderate', label: 'On my feet', detail: 'A job that keeps me moving', icon: 'trending_up' },
+  { id: 'high', label: 'Very active', detail: 'Physical work or frequent training', icon: 'directions_run' },
+  { id: 'athlete', label: 'Training hard', detail: 'Demanding sessions most days', icon: 'fitness_center' },
+]
+
+const GOALS: { id: Goal; label: string; detail: string; icon: string }[] = [
+  { id: 'lose', label: 'Lose fat', detail: 'A measured calorie deficit', icon: 'trending_down' },
+  { id: 'maintain', label: 'Maintain', detail: 'Hold weight, build consistency', icon: 'horizontal_rule' },
+  { id: 'gain', label: 'Build muscle', detail: 'A steady calorie surplus', icon: 'trending_up' },
 ]
 
 const SPORTS: { id: Sport; label: string; icon: string }[] = [
@@ -26,282 +36,225 @@ const SPORTS: { id: Sport; label: string; icon: string }[] = [
 export function Onboarding() {
   const { onboard } = useApp()
   const [step, setStep] = useState(0)
-  const [p, setP] = useState<UserProfile>({ ...DEFAULT_PROFILE })
+  const [profile, setProfile] = useState<UserProfile>({
+    ...DEFAULT_PROFILE,
+    age: 0,
+    heightCm: 0,
+    startWeightKg: 0,
+    activity: 'light',
+    sports: [],
+  })
+  const contentRef = useRef<HTMLElement>(null)
 
-  const set = (patch: Partial<UserProfile>) => setP((prev) => ({ ...prev, ...patch }))
-  const toggleSport = (s: Sport) =>
-    set({ sports: p.sports.includes(s) ? p.sports.filter((x) => x !== s) : [...p.sports, s] })
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 })
+  }, [step])
 
-  const isRunner = p.sports.includes('running')
-  const computedTarget = baseCalorieTarget({ ...p, calorieTargetOverride: null }, p.startWeightKg)
-  const maint = tdee(p, p.startWeightKg)
-
-  const canNext =
-    step === 0
-      ? p.name.trim().length > 0 && p.age > 0 && p.heightCm > 0 && p.startWeightKg > 0
-      : step === 2
-        ? p.sports.length > 0
-        : true
-
-  const finish = () => onboard(p)
-  const next = () => {
-    if (step === 2 && !isRunner) setStep(4)
-    else if (step < STEPS.length - 1) setStep(step + 1)
-    else finish()
+  const update = (patch: Partial<UserProfile>) => setProfile((current) => ({ ...current, ...patch }))
+  const toggleSport = (sport: Sport) => {
+    setProfile((current) => ({
+      ...current,
+      sports: current.sports.includes(sport)
+        ? current.sports.filter((item) => item !== sport)
+        : [...current.sports, sport],
+    }))
   }
-  const back = () => {
-    if (step === 4 && !isRunner) setStep(2)
-    else setStep(Math.max(0, step - 1))
+
+  const plan = autoCaloriePlan(profile, profile.startWeightKg)
+  const validBody = profile.age >= 18 && profile.heightCm > 0 && profile.startWeightKg > 0
+  const canContinue = step === 0 ? profile.name.trim().length > 0 : step === 1 ? validBody : true
+  const next = () => {
+    if (!canContinue) return
+    if (step === STEPS.length - 1) onboard(profile)
+    else setStep((current) => current + 1)
   }
 
   return (
-    <div className="min-h-full flex flex-col px-margin-mobile pt-xl pb-lg">
-      <div className="flex items-center gap-sm mb-lg">
-        <span className="font-display-hero text-headline-lg text-primary tracking-tighter">FitCore</span>
-      </div>
+    <div className="onboarding">
+      <header className="onboarding-header">
+        <div className="onboarding-header-top">
+          <FitCoreLogo size={36} />
+          <span className="onboarding-progress-text" aria-live="polite">{String(step + 1).padStart(2, '0')} / {String(STEPS.length).padStart(2, '0')}</span>
+        </div>
+        <div className="onboarding-progress-track" role="progressbar" aria-label="Setup progress" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS.length}>
+          <div style={{ transform: `scaleX(${(step + 1) / STEPS.length})` }} />
+        </div>
+      </header>
 
-      <div className="flex gap-2 mb-xl">
-        {STEPS.map((_, i) => (
-          <div key={i} className={`h-1.5 rounded-full flex-1 transition-all ${i <= step ? 'bg-primary' : 'bg-surface-container-high'}`} />
-        ))}
-      </div>
-
-      <div className="flex-1 animate-fade-in">
-        {step === 0 && (
-          <Stepper title="Tell us about you" sub="We use this to calculate your energy needs.">
-            <Field label="Name">
-              <input className={inputCls} value={p.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ahmad" />
-            </Field>
-            <Field label="Sex">
-              <Segmented options={[{ v: 'male', l: 'Male' }, { v: 'female', l: 'Female' }]} value={p.sex} onChange={(v) => set({ sex: v as UserProfile['sex'] })} />
-            </Field>
-            <div className="grid grid-cols-3 gap-md">
-              <Field label="Age">
-                <input type="number" className={inputCls} value={p.age || ''} onChange={(e) => set({ age: +e.target.value })} />
+      <main ref={contentRef} className="onboarding-content">
+        <div key={step} className="onboarding-step">
+          {step === 0 && (
+            <StepIntro title={<>First things first.<br /><em>What’s your name?</em></>} description="We’ll put your name on the plan we build together.">
+              <Field label="Your name" htmlFor="onboarding-name">
+                <input id="onboarding-name" className="onboarding-input onboarding-name-input" autoComplete="given-name" autoFocus value={profile.name} onChange={(event) => update({ name: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter' && profile.name.trim()) next() }} placeholder="Your name" />
               </Field>
-              <Field label="Height cm">
-                <input type="number" className={inputCls} value={p.heightCm || ''} onChange={(e) => set({ heightCm: +e.target.value })} />
-              </Field>
-              <Field label="Weight kg">
-                <input type="number" step="0.1" className={inputCls} value={p.startWeightKg || ''} onChange={(e) => set({ startWeightKg: +e.target.value })} />
-              </Field>
-            </div>
-            <Field label="Activity level">
-              <select className={inputCls} value={p.activity} onChange={(e) => set({ activity: e.target.value as UserProfile['activity'] })}>
-                <option value="sedentary">Sedentary</option>
-                <option value="light">Lightly active</option>
-                <option value="moderate">Moderately active</option>
-                <option value="high">Highly active (4–6 days/wk)</option>
-                <option value="athlete">Athlete</option>
-              </select>
-            </Field>
-          </Stepper>
-        )}
+              <div className="onboarding-intro-ticket" aria-live="polite">
+                <span>FITCORE STARTING LINE</span>
+                <strong>{profile.name.trim() || 'Your name here'}</strong>
+                <span className="onboarding-ticket-arrow" aria-hidden="true">↗</span>
+              </div>
+              <p className="onboarding-note">About two minutes. Your details stay on this device.</p>
+            </StepIntro>
+          )}
 
-        {step === 1 && (
-          <Stepper title="What's your goal?" sub="Sets your daily calorie strategy.">
-            <div className="flex flex-col gap-md">
-              {GOALS.map((g) => (
-                <SelectCard key={g.id} active={p.goal === g.id} icon={g.icon} title={g.label} sub={g.sub} onClick={() => set({ goal: g.id })} />
-              ))}
-            </div>
-          </Stepper>
-        )}
+          {step === 1 && (
+            <StepIntro title={<>Build your<br /><em>baseline.</em></>} description={`A few numbers shape your daily target, ${profile.name.trim() || 'athlete'}.`}>
+              <fieldset className="onboarding-fieldset">
+                <legend>Sex for calorie estimate</legend>
+                <div className="onboarding-segmented">
+                  {([{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }] as const).map(({ value, label }) => (
+                    <button key={value} type="button" aria-pressed={profile.sex === value} onClick={() => update({ sex: value })}>{label}</button>
+                  ))}
+                </div>
+              </fieldset>
+              <div className="onboarding-measurements">
+                <Field label="Age" htmlFor="onboarding-age">
+                  <div className="onboarding-input-unit"><input id="onboarding-age" type="number" inputMode="numeric" min={18} className="onboarding-input" value={profile.age || ''} onChange={(event) => update({ age: +event.target.value })} placeholder="32" /><span>years</span></div>
+                </Field>
+                <Field label="Height" htmlFor="onboarding-height">
+                  <div className="onboarding-input-unit"><input id="onboarding-height" type="number" inputMode="decimal" min={1} className="onboarding-input" value={profile.heightCm || ''} onChange={(event) => update({ heightCm: +event.target.value })} placeholder="170" /><span>cm</span></div>
+                </Field>
+                <Field label="Weight" htmlFor="onboarding-weight">
+                  <div className="onboarding-input-unit"><input id="onboarding-weight" type="number" inputMode="decimal" min={1} step="0.1" className="onboarding-input" value={profile.startWeightKg || ''} onChange={(event) => update({ startWeightKg: +event.target.value })} placeholder="70" /><span>kg</span></div>
+                </Field>
+              </div>
+              <div className="onboarding-live-readout" aria-live="polite">
+                <span className="onboarding-readout-mark" aria-hidden="true">01</span>
+                <div><span>Baseline check</span><strong>{validBody ? `BMI ${plan.bmi.toFixed(1)} · ${plan.category}` : 'Add your measurements to see a preview'}</strong></div>
+              </div>
+            </StepIntro>
+          )}
 
-        {step === 2 && (
-          <Stepper title="Which sports?" sub="Pick all you train. We schedule around them.">
-            <div className="grid grid-cols-2 gap-md">
-              {SPORTS.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => toggleSport(s.id)}
-                  className={`p-md rounded-xl border flex flex-col items-center gap-sm transition ${
-                    p.sports.includes(s.id) ? 'bg-primary-container/30 border-primary text-on-surface' : 'bg-tile border-tile-border text-on-surface-variant'
-                  }`}
-                >
-                  <Icon name={s.icon} fill={p.sports.includes(s.id)} size={28} />
-                  <span className="font-metric-md text-metric-md">{s.label}</span>
-                </button>
-              ))}
-            </div>
-          </Stepper>
-        )}
-
-        {step === 3 && (
-          <Stepper title="Running plan" sub="Pick your race and how often you can train. We build a periodized plan that auto-tapers.">
-            <Field label="Race distance">
-              <div className="grid grid-cols-2 gap-sm">
-                {([['half-marathon', 'Half Marathon', '21.1 km'], ['marathon', 'Full Marathon', '42.2 km']] as const).map(([id, label, dist]) => (
-                  <button
-                    key={id}
-                    onClick={() => set({ raceType: id })}
-                    className={`p-sm rounded-xl border text-left transition ${p.raceType === id ? 'bg-primary-container/30 border-primary text-on-surface' : 'bg-tile border-tile-border text-on-surface-variant'}`}
-                  >
-                    <span className="block font-metric-md text-[14px]">{label}</span>
-                    <span className="block font-data-mono text-[11px]">{dist}</span>
-                  </button>
+          {step === 2 && (
+            <StepIntro title={<>What does your<br /><em>day feel like?</em></>} description="Think about work and everyday movement. We'll use this to estimate your energy needs.">
+              <div className="onboarding-live-readout onboarding-live-readout-lime" aria-live="polite">
+                <span className="onboarding-readout-mark" aria-hidden="true">02</span>
+                <div><span>Estimated maintenance</span><strong>{plan.maintenance.toLocaleString()} kcal / day</strong></div>
+              </div>
+              <div className="onboarding-choices" role="group" aria-label="Daily activity level">
+                {ACTIVITIES.map((activity) => (
+                  <Choice key={activity.id} active={profile.activity === activity.id} icon={activity.icon} title={activity.label} detail={activity.detail} onClick={() => update({ activity: activity.id })} />
                 ))}
               </div>
-            </Field>
-            <Field label="Training days per week">
-              <div className="grid grid-cols-5 gap-1">
-                {[3, 4, 5, 6, 7].map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => set({ trainingDaysPerWeek: d })}
-                    className={`py-2 rounded-lg border font-metric-md text-[15px] transition ${p.trainingDaysPerWeek === d ? 'bg-primary text-on-primary border-primary' : 'bg-tile border-tile-border text-on-surface-variant'}`}
-                  >
-                    {d}
-                  </button>
+            </StepIntro>
+          )}
+
+          {step === 3 && (
+            <StepIntro title={<>What are you<br /><em>working toward?</em></>} description="Choose your direction. Your daily calorie target will follow it.">
+              <div className="onboarding-live-readout onboarding-live-readout-lime" aria-live="polite">
+                <span className="onboarding-readout-mark" aria-hidden="true">03</span>
+                <div><span>Daily target with this goal</span><strong>{plan.target.toLocaleString()} kcal</strong></div>
+              </div>
+              <div className="onboarding-choices" role="group" aria-label="Fitness goal">
+                {GOALS.map((goal) => (
+                  <Choice key={goal.id} active={profile.goal === goal.id} icon={goal.icon} title={goal.label} detail={goal.detail} onClick={() => update({ goal: goal.id })} />
                 ))}
               </div>
-            </Field>
-            <Field label="Race date (optional)">
-              <input type="date" className={inputCls} value={p.raceDate ?? ''} onChange={(e) => set({ raceDate: e.target.value || null })} />
-            </Field>
-            {p.raceType === 'half-marathon' && (
-            <Field label="Half marathon goal">
-              <div className="grid grid-cols-2 gap-sm">
-                {HALF_MARATHON_GOALS.map((goal) => {
-                  const pace = halfMarathonGoalPace(goal)
+              {profile.goal === 'lose' && (
+                <section className="onboarding-pace" aria-labelledby="onboarding-pace-title">
+                  <div className="onboarding-section-heading">
+                    <h2 id="onboarding-pace-title">Choose your pace</h2>
+                    <span>BMI {plan.bmi.toFixed(1)}</span>
+                  </div>
+                  <div className="onboarding-pace-options">
+                    <button type="button" aria-pressed={profile.weightLossPace === 'steady'} onClick={() => update({ weightLossPace: 'steady' })}>
+                      <strong>Steady</strong><span>Made for consistency</span>
+                    </button>
+                    <button type="button" aria-pressed={profile.weightLossPace === 'faster' && plan.aggressiveAllowed} disabled={!plan.aggressiveAllowed} onClick={() => update({ weightLossPace: 'faster' })}>
+                      <strong>Faster</strong><span>{plan.aggressiveAllowed ? 'A larger measured deficit' : 'Available from BMI 25'}</span>
+                    </button>
+                  </div>
+                  {plan.bmi < 18.5 && <p className="onboarding-note">Your BMI is below the usual healthy range. FitCore will use maintenance calories.</p>}
+                </section>
+              )}
+            </StepIntro>
+          )}
+
+          {step === 4 && (
+            <StepIntro title={<>Move your<br /><em>own way.</em></>} description="Optional. Pick activities you enjoy, or skip if you're here to focus on food and weight.">
+              <div className="onboarding-sport-grid" role="group" aria-label="Sports you train">
+                {SPORTS.map((sport) => {
+                  const active = profile.sports.includes(sport.id)
                   return (
-                    <button
-                      key={goal}
-                      onClick={() => set({ halfMarathonGoal: goal as HalfMarathonGoal })}
-                      className={`p-sm rounded-xl border text-left transition ${
-                        p.halfMarathonGoal === goal ? 'bg-primary-container/30 border-primary text-on-surface' : 'bg-tile border-tile-border text-on-surface-variant'
-                      }`}
-                    >
-                      <span className="block font-metric-md text-[14px]">{halfMarathonGoalLabel(goal)}</span>
-                      <span className="block font-data-mono text-[11px]">{pace ? formatPace(pace) : 'Build finish confidence'}</span>
+                    <button key={sport.id} type="button" className="onboarding-sport" aria-pressed={active} onClick={() => toggleSport(sport.id)}>
+                      <Icon name={sport.icon} size={27} />
+                      <span>{sport.label}</span>
+                      <Icon name={active ? 'check_circle' : 'add_circle'} size={22} className="onboarding-sport-state" />
                     </button>
                   )
                 })}
               </div>
-            </Field>
-            )}
-            <p className="font-data-mono text-data-mono text-on-surface-variant">Leave the date blank to start with a rolling base block instead.</p>
-          </Stepper>
-        )}
+              <p className="onboarding-note" aria-live="polite">{profile.sports.length ? `${profile.sports.length} ${profile.sports.length === 1 ? 'activity' : 'activities'} in your mix` : 'No training plan needed. You can log activity any time.'}</p>
+            </StepIntro>
+          )}
 
-        {step === 4 && (
-          <Stepper title="Daily targets" sub="Auto-calculated from your profile. Adjust if you like.">
-            <div className="bg-tile border border-tile-border rounded-xl p-md mb-md">
-              <p className="font-label-caps text-label-caps text-on-surface-variant uppercase">Maintenance (TDEE)</p>
-              <p className="font-data-mono text-data-mono text-on-surface">{maint} kcal/day</p>
-            </div>
-            <Field label="Daily calorie target">
-              <input type="number" className={inputCls} value={p.calorieTargetOverride ?? computedTarget} onChange={(e) => set({ calorieTargetOverride: +e.target.value })} />
-            </Field>
-            <Field label="Protein (g per kg bodyweight)">
-              <input type="number" step="0.1" className={inputCls} value={p.proteinPerKg} onChange={(e) => set({ proteinPerKg: +e.target.value })} />
-            </Field>
-            <Field label="Connect wearables">
-              <div className="flex flex-col gap-sm">
-                {([['appleHealth', 'Apple Health'], ['garmin', 'Garmin Connect'], ['strava', 'Strava']] as const).map(([k, label]) => (
-                  <button
-                    key={k}
-                    onClick={() => set({ wearables: { ...p.wearables, [k]: !p.wearables[k] } })}
-                    className={`flex items-center justify-between p-md rounded-xl border transition ${
-                      p.wearables[k] ? 'bg-secondary/10 border-secondary text-on-surface' : 'bg-tile border-tile-border text-on-surface-variant'
-                    }`}
-                  >
-                    <span className="font-body-md text-body-md">{label}</span>
-                    <Icon name={p.wearables[k] ? 'check_circle' : 'add_circle'} fill={p.wearables[k]} />
-                  </button>
+          {step === 5 && (
+            <StepIntro title={<>Your starting<br /><em>number.</em></>} description="An estimate based on your body stats, daily activity and goal.">
+              <div className="onboarding-target">
+                <div className="onboarding-target-main">
+                  <span>Daily calorie target</span>
+                  <p>{plan.target.toLocaleString()}<small>kcal</small></p>
+                  <strong>{profile.goal === 'lose' ? `${plan.pace === 'faster' ? 'Faster' : 'Steady'} fat loss` : profile.goal === 'gain' ? 'Build muscle' : 'Maintain weight'}</strong>
+                </div>
+                <div className="onboarding-target-details">
+                  <div><span>Maintenance estimate</span><strong>{plan.maintenance.toLocaleString()} kcal</strong></div>
+                  <div><span>BMI <small>(screening only)</small></span><strong>{plan.bmi.toFixed(1)} · {plan.category}</strong></div>
+                </div>
+              </div>
+              {profile.goal === 'lose' && <p className="onboarding-note">Estimated change: about {plan.estimatedWeeklyKg} kg per week. Your needs can differ; adjust your plan as you log progress.</p>}
+              <ProteinIdeas target={Math.round(profile.proteinPerKg * profile.startWeightKg)} />
+              {profile.goal === 'lose' && plan.bmi < 18.5 && <p className="onboarding-note onboarding-note-warning">BMI is below the usual healthy range, so the target stays at maintenance.</p>}
+            </StepIntro>
+          )}
+
+          {step === 6 && (
+            <StepIntro title={<>How do you<br /><em>prefer to eat?</em></>} description="A balanced plan works for most people. Choose a specific protocol only if it suits you.">
+              <div className="onboarding-choices" role="group" aria-label="Eating protocol">
+                {DIET_LIST.map((diet) => (
+                  <Choice key={diet.id} active={profile.dietMode === diet.id} icon={diet.icon} title={diet.label} detail={diet.tagline} onClick={() => update({ dietMode: diet.id })} />
                 ))}
               </div>
-            </Field>
-          </Stepper>
-        )}
+              {profile.dietMode === 'keto' && (
+                <Field label="Daily net carb cap" htmlFor="onboarding-carb">
+                  <div className="onboarding-input-unit"><input id="onboarding-carb" type="number" inputMode="numeric" min={1} className="onboarding-input" value={profile.netCarbCapG} onChange={(event) => update({ netCarbCapG: +event.target.value })} /><span>g/day</span></div>
+                </Field>
+              )}
+              {(profile.dietMode === 'omad' || profile.dietMode === '16:8') && (
+                <Field label="Eating window starts" htmlFor="onboarding-window">
+                  <div className="onboarding-input-unit"><input id="onboarding-window" type="number" inputMode="numeric" min={0} max={23} className="onboarding-input" value={profile.eatingWindowStartHour} onChange={(event) => update({ eatingWindowStartHour: Math.max(0, Math.min(23, +event.target.value)) })} /><span>hour</span></div>
+                </Field>
+              )}
+            </StepIntro>
+          )}
+        </div>
+      </main>
 
-        {step === 5 && (
-          <Stepper title="Eating protocol" sub="Pick a diet mode. Shapes your macros, fasting window, and daily nudges.">
-            <div className="flex flex-col gap-sm">
-              {DIET_LIST.map((d) => (
-                <SelectCard key={d.id} active={p.dietMode === d.id} icon={d.icon} title={d.label} sub={d.tagline} onClick={() => set({ dietMode: d.id })} />
-              ))}
-            </div>
-            {p.dietMode === 'keto' && (
-              <Field label="Net carb cap (g/day)">
-                <input type="number" className={inputCls} value={p.netCarbCapG} onChange={(e) => set({ netCarbCapG: +e.target.value })} />
-              </Field>
-            )}
-            {(p.dietMode === 'omad' || p.dietMode === '16:8') && (
-              <Field label="Eating window opens (hour, 0–23)">
-                <input type="number" min={0} max={23} className={inputCls} value={p.eatingWindowStartHour} onChange={(e) => set({ eatingWindowStartHour: Math.max(0, Math.min(23, +e.target.value)) })} />
-              </Field>
-            )}
-          </Stepper>
-        )}
-      </div>
-
-      <div className="flex gap-md mt-lg">
-        {step > 0 && <GhostButton onClick={back} className="flex-1">Back</GhostButton>}
-        <PrimaryButton onClick={next} disabled={!canNext} className="flex-[2]">
-          {step === STEPS.length - 1 ? 'Start training' : 'Next'}
-          <Icon name="arrow_forward" size={20} />
-        </PrimaryButton>
-      </div>
-    </div>
-  )
-}
-
-const inputCls =
-  'w-full bg-surface-container-low border border-outline-variant rounded-lg px-md py-3 text-on-surface font-body-md focus:border-primary focus:outline-none transition-colors'
-
-function Stepper({ title, sub, children }: { title: string; sub: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-lg">
-      <div>
-        <h1 className="font-headline-lg text-headline-lg text-on-surface">{title}</h1>
-        <p className="font-body-md text-body-md text-on-surface-variant mt-xs">{sub}</p>
-      </div>
-      <div className="flex flex-col gap-md">{children}</div>
-    </div>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-sm">
-      <span className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-function Segmented({ options, value, onChange }: { options: { v: string; l: string }[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex gap-sm">
-      {options.map((o) => (
-        <button
-          key={o.v}
-          onClick={() => onChange(o.v)}
-          className={`flex-1 py-3 rounded-lg border font-metric-md text-metric-md transition ${
-            value === o.v ? 'bg-primary-container/30 border-primary text-on-surface' : 'bg-tile border-tile-border text-on-surface-variant'
-          }`}
-        >
-          {o.l}
+      <footer className="onboarding-footer">
+        {step > 0 && <button className="onboarding-back" type="button" onClick={() => setStep((current) => current - 1)} aria-label="Go back"><Icon name="arrow_back" size={22} /></button>}
+        <button className="onboarding-next" type="button" disabled={!canContinue} onClick={next}>
+          <span>{step === STEPS.length - 1 ? 'Open FitCore' : 'Continue'}</span>
+          <Icon name="arrow_forward" size={23} />
         </button>
-      ))}
+      </footer>
     </div>
   )
 }
 
-function SelectCard({ active, icon, title, sub, onClick }: { active: boolean; icon: string; title: string; sub: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`p-md rounded-xl border flex items-center gap-md text-left transition ${active ? 'bg-primary-container/30 border-primary' : 'bg-tile border-tile-border'}`}
-    >
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${active ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant'}`}>
-        <Icon name={icon} fill={active} />
-      </div>
-      <div>
-        <p className="font-metric-md text-metric-md text-on-surface">{title}</p>
-        <p className="font-data-mono text-[12px] text-on-surface-variant">{sub}</p>
-      </div>
-    </button>
-  )
+function StepIntro({ title, description, children }: { title: ReactNode; description: string; children: ReactNode }) {
+  return <>
+    <div className="onboarding-intro"><h1>{title}</h1><p>{description}</p></div>
+    <div className="onboarding-step-body">{children}</div>
+  </>
+}
+
+function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: ReactNode }) {
+  return <div className="onboarding-field"><label htmlFor={htmlFor}>{label}</label>{children}{hint && <p>{hint}</p>}</div>
+}
+
+function Choice({ active, icon, title, detail, onClick }: { active: boolean; icon: string; title: string; detail: string; onClick: () => void }) {
+  return <button type="button" className="onboarding-choice" aria-pressed={active} onClick={onClick}>
+    <span className="onboarding-choice-icon"><Icon name={icon} size={22} /></span>
+    <span className="onboarding-choice-copy"><strong>{title}</strong><small>{detail}</small></span>
+    <Icon name={active ? 'check_circle' : 'arrow_forward'} size={22} className="onboarding-choice-state" />
+  </button>
 }

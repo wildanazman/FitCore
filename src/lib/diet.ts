@@ -106,7 +106,7 @@ export function windowState(startHour: number, mode: DietMode, nowMinutes: numbe
   const endAbsolute = start + len
   const end = endAbsolute % 24 || 24
 
-  // Windows here never wrap midnight (start 0-16, len 1-8 → end ≤ 24).
+  // Compare against the same 24-hour window even when it crosses midnight.
   const nowAbsolute = now < start ? now + 24 : now
   const eating = nowAbsolute >= start && nowAbsolute < endAbsolute
   if (eating) {
@@ -114,7 +114,7 @@ export function windowState(startHour: number, mode: DietMode, nowMinutes: numbe
     return {
       startHour: start,
       endHour: end,
-      pct: (now - start) / len,
+      pct: (nowAbsolute - start) / len,
       eating: true,
       phase: 'Eating window',
       detail: `${fmtDuration(remaining)} left`,
@@ -193,6 +193,8 @@ export function dietWarnings(
   if (mode === 'egg') {
     const eggs = eggsOn(foods, date)
     out.push({ tone: eggs > 0 ? 'good' : 'warn', icon: 'egg', text: eggs > 0 ? `${eggs} egg${eggs === 1 ? '' : 's'} logged today.` : 'No eggs logged yet today.' })
+    const carbs = netCarbsOn(foods, date)
+    if (carbs > netCarbCapG) out.push({ tone: 'warn', icon: 'warning', text: `${carbs}g carbs logged, above your ${netCarbCapG}g cap.` })
   }
 
   return out

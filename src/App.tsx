@@ -6,6 +6,7 @@ import { Home } from './screens/Home'
 import { Food } from './screens/Food'
 import { Camera } from './screens/Camera'
 import { Train } from './screens/Train'
+import { Activity } from './screens/Activity'
 import { Body } from './screens/Body'
 import { Settings } from './screens/Settings'
 import { DietPlan } from './screens/DietPlan'
@@ -30,7 +31,8 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/food" element={<Food />} />
-        <Route path="/train" element={<Train />} />
+        <Route path="/train" element={<Activity />} />
+        <Route path="/running" element={<Train />} />
         <Route path="/body" element={<Body />} />
         <Route path="/diet" element={<DietPlan />} />
         <Route path="/settings" element={<Settings />} />

@@ -2,7 +2,7 @@
 // Works fully offline. A live Claude path can layer on top via foodAI's client when a key is set.
 
 import type { DayFuel, PlanSession, UserProfile, WeightEntry } from '../types'
-import { latestWithMeasurements, navyBodyFat } from './body'
+import { latestMeasured, latestWithMeasurements, navyBodyFat } from './body'
 
 export interface CoachBrief {
   headline: string
@@ -95,5 +95,5 @@ export function leanMassInsight(p: UserProfile, weights: WeightEntry[]): string 
   if (!m) return 'Log a weigh-in with neck & waist measurements to estimate body composition.'
   const bf = navyBodyFat(p.sex, p.heightCm, m.neckCm, m.waistCm, m.hipCm)
   if (bf === null) return 'Add waist & neck measurements to estimate body fat.'
-  return `You're losing fat while holding lean mass — keep protein at ${Math.round(p.proteinPerKg * 10) / 10}g/kg or above.`
+  return `You're losing fat while holding lean mass — aim for about ${Math.round(p.proteinPerKg * (latestMeasured(weights)?.weightKg ?? p.startWeightKg))}g protein a day.`
 }

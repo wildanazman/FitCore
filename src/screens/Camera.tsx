@@ -5,7 +5,8 @@ import { Icon } from '../components/Icon'
 import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type FoodAIProvider } from '../lib/foodAI'
 import { lookupFood, sourceLabel } from '../lib/foodLookup'
 import { todayISO, uid } from '../lib/date'
-import type { FoodEntry } from '../types'
+import type { FoodEntry, MealSlot } from '../types'
+import './camera.css'
 
 type Phase = 'capture' | 'analyzing' | 'result' | 'edit'
 
@@ -21,11 +22,13 @@ export function Camera() {
   const [servings, setServings] = useState(1)
   const [error, setError] = useState<string | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
+  const [cameraRequested, setCameraRequested] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [provider, setProvider] = useState<FoodAIProvider>('auto')
+  const [mealSlot, setMealSlot] = useState<MealSlot>(slotForNow())
 
   useEffect(() => {
-    if (phase !== 'capture' || photo) {
+    if (phase !== 'capture' || photo || !cameraRequested) {
       stopCamera()
       return
     }
@@ -63,7 +66,7 @@ export function Camera() {
       cancelled = true
       stopCamera()
     }
-  }, [phase, photo])
+  }, [phase, photo, cameraRequested])
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -92,6 +95,8 @@ export function Camera() {
     setPhoto(null)
     setDet(null)
     setError(null)
+    setCameraRequested(false)
+    setCameraError(null)
     setPhase('capture')
   }
 
@@ -131,10 +136,10 @@ export function Camera() {
     const entry: FoodEntry = {
       id: uid(),
       name: det.name,
-      emoji: det.emoji,
+      emoji: '',
       date: todayISO(),
       loggedAt: new Date().toISOString(),
-      slot: slotForNow(),
+      slot: mealSlot,
       kcal: det.kcal,
       protein: det.protein,
       carbs: det.carbs,
@@ -152,7 +157,7 @@ export function Camera() {
     setDet((current) => ({
       ...(current ?? det ?? {
         name: result.name,
-        emoji: result.emoji || '🍽️',
+        emoji: '',
         kcal: result.kcal,
         protein: result.protein,
         carbs: result.carbs,
@@ -160,7 +165,7 @@ export function Camera() {
         confidence: result.confidence,
       }),
       name: result.name,
-      emoji: result.emoji || current?.emoji || det?.emoji || '🍽️',
+      emoji: '',
       kcal: result.kcal,
       protein: result.protein,
       carbs: result.carbs,
@@ -192,7 +197,7 @@ export function Camera() {
 
       {/* Top actions */}
       <div className="absolute top-0 left-0 w-full p-margin-mobile flex justify-between items-center z-30 pt-lg">
-        <button onClick={() => nav('/food')} className="w-12 h-12 flex items-center justify-center rounded-full bg-surface/50 backdrop-blur-md border border-outline-variant text-on-surface">
+        <button onClick={() => nav('/food')} className="w-12 h-12 flex items-center justify-center rounded-full bg-surface/50 backdrop-blur-md border border-outline-variant text-on-surface" aria-label="Close food capture">
           <Icon name="close" />
         </button>
         {photo && phase !== 'analyzing' && (
@@ -217,29 +222,30 @@ export function Camera() {
           />
           <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
           {!cameraReady && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-sm px-margin-mobile text-center">
-              <div className="w-20 h-20 border-2 border-lime/30 rounded-full flex items-center justify-center relative">
-                {!cameraError && <div className="absolute inset-0 border-t-2 border-lime rounded-full animate-spin" />}
+            <div className="camera-idle-visual">
+              <div className="camera-idle-icon">
+                {cameraRequested && !cameraError && <div className="absolute inset-0 border-t-2 border-lime rounded-full animate-spin" />}
                 <Icon name={cameraError ? 'no_photography' : 'photo_camera'} size={34} className="text-lime" />
               </div>
-              <p className="font-body-md text-[13px] text-on-surface-variant max-w-[260px]">
-                {cameraError ?? 'Opening live camera...'}
-              </p>
+              {(cameraError || cameraRequested) && <p>{cameraError ?? 'Opening live camera...'}</p>}
             </div>
           )}
-          <div className="z-20 flex w-full flex-col items-center text-center px-margin-mobile pb-xl gap-lg">
+          <div className="camera-capture-controls z-20 flex w-full flex-col items-center text-center px-margin-mobile pb-xl gap-lg">
             <div className="rounded-full border border-lime/40 bg-black/35 px-md py-xs backdrop-blur-md">
               <span className="font-label-caps text-label-caps uppercase tracking-widest text-lime">
-                {cameraReady ? 'Live camera' : 'Camera'}
+                {cameraReady ? 'Live camera' : 'Food capture'}
               </span>
             </div>
             <div>
-              <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Snap your meal</h1>
+              <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Capture your meal.</h1>
               <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
                 Point at your food, snap, or add a photo from gallery.
               </p>
             </div>
-            <ProviderPicker value={provider} onChange={setProvider} />
+            <details className="w-full max-w-sm text-left rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-on-surface-variant">
+              <summary className="cursor-pointer font-data-mono text-[11px]">Analysis options</summary>
+              <div className="pt-3"><ProviderPicker value={provider} onChange={setProvider} /></div>
+            </details>
             <div className="flex items-center gap-lg">
               <button
                 onClick={() => galleryRef.current?.click()}
@@ -249,16 +255,16 @@ export function Camera() {
                 <Icon name="photo_library" size={24} />
               </button>
               <button
-                onClick={captureLivePhoto}
+                onClick={cameraReady ? captureLivePhoto : () => setCameraRequested(true)}
                 className="w-20 h-20 rounded-full bg-lime text-on-lime flex items-center justify-center shadow-[0_0_24px_rgba(201,242,78,0.45)] active:scale-95 transition disabled:opacity-60"
                 aria-label="Take photo"
-                disabled={!cameraReady}
+                disabled={cameraRequested && !cameraReady && !cameraError}
               >
                 <Icon name="photo_camera" fill size={36} />
               </button>
               <div className="w-14 h-14" aria-hidden="true" />
             </div>
-            <p className="font-data-mono text-[11px] text-on-surface-variant">Live camera + add photo</p>
+            <p className="font-data-mono text-[11px] text-on-surface-variant">{cameraReady ? 'Tap to take photo' : 'Tap camera to enable it, or choose a saved photo'}</p>
           </div>
         </>
       )}
@@ -288,7 +294,7 @@ export function Camera() {
             <div className="flex flex-col gap-lg">
               <div className="flex flex-col gap-xs">
                 <div className="flex justify-between items-start">
-                  <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{det.emoji} {det.name}</h2>
+                  <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{det.name}</h2>
                   <div className={`flex items-center gap-1 ${confidenceHigh ? 'text-secondary' : 'text-tertiary'}`}>
                     <Icon name={confidenceHigh ? 'verified' : 'help'} size={16} />
                     <span className="font-label-caps text-label-caps uppercase">{Math.round(det.confidence * 100)}% {confidenceHigh ? 'confident' : 'review'}</span>
@@ -337,6 +343,12 @@ export function Camera() {
                 <MacroChip label="Protein" v={Math.round(det.protein * servings)} color="text-tertiary" bar="bg-tertiary" />
                 <MacroChip label="Carbs" v={Math.round(det.carbs * servings)} color="text-secondary" bar="bg-secondary" />
                 <MacroChip label="Fat" v={Math.round(det.fat * servings)} color="text-error" bar="bg-error" />
+              </div>
+
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Meal type">
+                {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => (
+                  <button key={slot} type="button" aria-pressed={mealSlot === slot} onClick={() => setMealSlot(slot)} className={`rounded-lg border px-3 py-2 text-xs font-semibold capitalize ${mealSlot === slot ? 'border-lime bg-lime/10 text-lime' : 'border-outline-variant text-on-surface-variant'}`}>{slot}</button>
+                ))}
               </div>
 
               {/* Quantity */}
