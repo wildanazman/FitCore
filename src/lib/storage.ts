@@ -5,6 +5,7 @@ import { todayISO, uid } from './date'
 import { generatePlan } from './plan'
 
 const KEY = 'fitcore.state.v1'
+const FOOD_AI_USAGE_KEY = 'fitcore-food-ai-usage-v1'
 export const STATE_VERSION = 1
 
 export const DEFAULT_PROFILE: UserProfile = {
@@ -108,6 +109,7 @@ export function saveState(state: AppState): void {
 export function clearState(): void {
   try {
     localStorage.removeItem(KEY)
+    localStorage.removeItem(FOOD_AI_USAGE_KEY)
   } catch {
     /* noop */
   }

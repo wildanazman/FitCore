@@ -126,7 +126,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, () => loadState() ?? emptyState())
 
   useEffect(() => {
-    saveState(state)
+    if (state.profile.onboarded) saveState(state)
+    else clearState()
   }, [state])
 
   const value = useMemo<Ctx>(

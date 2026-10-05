@@ -185,7 +185,7 @@ export function Camera() {
   return (
     <div className="app-shell flex flex-col items-center justify-end relative overflow-hidden">
       {/* Background */}
-      {photo ? (
+      {photo && phase === 'analyzing' ? (
         <div className="absolute inset-0 bg-cover bg-center blur-sm" style={{ backgroundImage: `url(${photo})` }}>
           <div className="absolute inset-0 bg-background/60" />
         </div>
@@ -196,7 +196,7 @@ export function Camera() {
       )}
 
       {/* Top actions */}
-      <div className="absolute top-0 left-0 w-full p-margin-mobile flex justify-between items-center z-30 pt-lg">
+      {(phase === 'capture' || phase === 'analyzing') && <div className="absolute top-0 left-0 w-full p-margin-mobile flex justify-between items-center z-30 pt-lg">
         <button onClick={() => nav('/food')} className="w-12 h-12 flex items-center justify-center rounded-full bg-surface/50 backdrop-blur-md border border-outline-variant text-on-surface" aria-label="Close food capture">
           <Icon name="close" />
         </button>
@@ -205,7 +205,7 @@ export function Camera() {
             <Icon name="refresh" />
           </button>
         )}
-      </div>
+      </div>}
 
       {/* No capture attribute: opens the photo library / file picker instead of the camera */}
       <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
@@ -283,106 +283,22 @@ export function Camera() {
         </div>
       )}
 
-      {/* Result / Edit bottom sheet */}
+      {/* Result / edit screen */}
       {(phase === 'result' || phase === 'edit') && det && (
-        <div className="w-full bg-[#26262A] rounded-t-[24px] shadow-[0px_8px_24px_rgba(0,0,0,0.5)] z-20 flex flex-col pt-sm pb-xl px-margin-mobile animate-fade-in" style={{ backdropFilter: 'blur(10px)' }}>
-          <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
-
-          {error && <p className="font-data-mono text-data-mono text-error mb-md text-center">{error}</p>}
-
-          {phase === 'result' ? (
-            <div className="flex flex-col gap-lg">
-              <div className="flex flex-col gap-xs">
-                <div className="flex justify-between items-start">
-                  <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{det.name}</h2>
-                  <div className={`flex items-center gap-1 ${confidenceHigh ? 'text-secondary' : 'text-tertiary'}`}>
-                    <Icon name={confidenceHigh ? 'verified' : 'help'} size={16} />
-                    <span className="font-label-caps text-label-caps uppercase">{Math.round(det.confidence * 100)}% {confidenceHigh ? 'confident' : 'review'}</span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-data-mono text-[11px] text-lime uppercase">
-                    Mode: {foodProviderLabel(det.requestedProvider ?? provider)}
-                  </span>
-                  <span className="font-data-mono text-[11px] text-on-surface-variant uppercase">
-                    Actual source: {detectionSourceLabel(det.source)}
-                  </span>
-                  {det.note && <span className="font-data-mono text-[11px] text-tertiary">{det.note}</span>}
-                </div>
-                <p className="font-data-mono text-[10px] text-on-surface-variant">
-                  {detectionUsageLabel(det.source, foodAIUsage(det.source))}
-                </p>
-                <div className="flex items-baseline gap-2 mt-sm">
-                  <span className="font-display-hero text-display-hero text-primary">{Math.round(det.kcal * servings)}</span>
-                  <span className="font-metric-md text-metric-md text-on-surface-variant">kcal</span>
-                </div>
-              </div>
-
-              {/* Always show a review breakdown before the log is submitted. */}
-              {breakdownItems.length > 0 && (
-                <div className="bg-surface rounded-xl border border-outline-variant p-sm">
-                  <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Breakdown</span>
-                  <div className="mt-sm space-y-1">
-                    {breakdownItems.map((it, i) => (
-                      <div key={i} className="flex justify-between font-data-mono text-[12px]">
-                        <span className="text-on-surface truncate pr-2">{it.name}{it.grams ? ` · ${it.grams}g` : ''}</span>
-                        <span className="text-on-surface-variant shrink-0">{Math.round(it.kcal * servings)} kcal</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {det.assumptions && (
-                <p className="font-body-md text-[12px] text-on-surface-variant -mt-sm flex gap-1.5">
-                  <Icon name="info" size={14} className="text-tertiary shrink-0 mt-0.5" />
-                  {det.assumptions}
-                </p>
-              )}
-
-              <div className="grid grid-cols-3 gap-sm">
-                <MacroChip label="Protein" v={Math.round(det.protein * servings)} color="text-tertiary" bar="bg-tertiary" />
-                <MacroChip label="Carbs" v={Math.round(det.carbs * servings)} color="text-secondary" bar="bg-secondary" />
-                <MacroChip label="Fat" v={Math.round(det.fat * servings)} color="text-error" bar="bg-error" />
-              </div>
-
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Meal type">
-                {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => (
-                  <button key={slot} type="button" aria-pressed={mealSlot === slot} onClick={() => setMealSlot(slot)} className={`rounded-lg border px-3 py-2 text-xs font-semibold capitalize ${mealSlot === slot ? 'border-lime bg-lime/10 text-lime' : 'border-outline-variant text-on-surface-variant'}`}>{slot}</button>
-                ))}
-              </div>
-
-              {/* Quantity */}
-              <div className="flex items-center justify-between bg-surface p-sm rounded-xl border border-outline-variant">
-                <span className="font-metric-md text-metric-md text-on-surface ml-sm">Quantity</span>
-                <div className="flex items-center gap-md">
-                  <button onClick={() => setServings((s) => Math.max(0.5, Math.round((s - 0.5) * 10) / 10))} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface hover:bg-outline-variant transition">
-                    <Icon name="remove" />
-                  </button>
-                  <div className="flex flex-col items-center w-16">
-                    <span className="font-metric-md text-metric-md text-on-surface">{servings.toFixed(1)}</span>
-                    <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Serving</span>
-                  </div>
-                  <button onClick={() => setServings((s) => Math.round((s + 0.5) * 10) / 10)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface hover:bg-outline-variant transition">
-                    <Icon name="add" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-md mt-sm">
-                <button onClick={() => setPhase('edit')} className="flex-1 py-4 rounded-xl border border-outline-variant bg-transparent text-on-surface font-metric-md text-metric-md hover:bg-surface-variant transition active:scale-95 flex justify-center items-center gap-2">
-                  <Icon name="edit" /> Edit
-                </button>
-                <button onClick={confirm} className="flex-[2] py-4 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md hover:opacity-90 transition active:scale-95 shadow-[0_0_18px_rgba(201,242,78,0.35)] flex justify-center items-center gap-2">
-                  Submit log <Icon name="check" />
-                </button>
-              </div>
-              <button onClick={retryAnalysis} className="w-full py-3 rounded-xl border border-error/40 text-error font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-95 transition">
-                <Icon name="refresh" size={18} /> Retry AI with same photo
-              </button>
-            </div>
-          ) : (
-            <EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} />
-          )}
+        <div className="camera-result-screen">
+          <div className="camera-result-scroll">
+            <header className="camera-result-header"><button type="button" onClick={() => phase === 'edit' ? setPhase('result') : nav('/food')} aria-label={phase === 'edit' ? 'Back to result' : 'Close result'}><Icon name="arrow_back" size={22} /></button><span>{phase === 'edit' ? 'EDIT ESTIMATE' : 'REVIEW YOUR MEAL'}</span><button type="button" onClick={retryCapture} aria-label="Take another photo"><Icon name="refresh" size={22} /></button></header>
+            {phase === 'result' ? <>
+              <div className="camera-result-hero"><div className="camera-result-photo">{photo && <img src={photo} alt="Meal being reviewed" />}</div><div className="camera-result-intro"><h1>{det.name}</h1><div className="camera-result-energy"><strong>{Math.round(det.kcal * servings).toLocaleString()}</strong><span>kcal estimated</span></div><p><Icon name={confidenceHigh ? 'verified' : 'info'} size={17} /> {confidenceHigh ? 'High confidence' : 'Review portion and ingredients'} · {Math.round(det.confidence * 100)}%</p></div></div>
+              {error && <p className="camera-result-alert">{error}</p>}
+              <div className="camera-result-macros"><MacroChip label="Protein" v={Math.round(det.protein * servings)} /><MacroChip label="Carbs" v={Math.round(det.carbs * servings)} /><MacroChip label="Fat" v={Math.round(det.fat * servings)} /></div>
+              <section className="camera-result-section"><h2>Log this meal</h2><p>Choose where it belongs and check the portion.</p><div className="camera-result-slots" role="group" aria-label="Meal type">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => <button key={slot} type="button" aria-pressed={mealSlot === slot} onClick={() => setMealSlot(slot)}>{slot}</button>)}</div><div className="camera-result-quantity"><span>Servings</span><div><button type="button" aria-label="Decrease servings" disabled={servings <= 0.5} onClick={() => setServings((s) => Math.max(0.5, Math.round((s - 0.5) * 10) / 10))}><Icon name="remove" size={20} /></button><strong>{servings.toFixed(1)}</strong><button type="button" aria-label="Increase servings" onClick={() => setServings((s) => Math.round((s + 0.5) * 10) / 10)}><Icon name="add" size={20} /></button></div></div></section>
+              {breakdownItems.length > 0 && <section className="camera-result-section"><h2>What we found</h2><div className="camera-result-breakdown">{breakdownItems.map((item, index) => <div key={index}><span>{item.name}{item.grams ? <small>{item.grams} g estimated</small> : null}</span><strong>{Math.round(item.kcal * servings)} <small>kcal</small></strong></div>)}</div></section>}
+              {(det.assumptions || det.note) && <details className="camera-result-details"><summary>About this estimate <Icon name="expand_more" size={20} /></summary><div>{det.assumptions && <p>{det.assumptions}</p>}{det.note && <p>{det.note}</p>}</div></details>}
+              <details className="camera-result-details"><summary>Analysis details <Icon name="expand_more" size={20} /></summary><div><p>Requested mode: {foodProviderLabel(det.requestedProvider ?? provider)}</p><p>Result source: {detectionSourceLabel(det.source)}</p><p>{detectionUsageLabel(det.source, foodAIUsage(det.source))}</p><button type="button" onClick={retryAnalysis}>Retry analysis with this photo</button></div></details>
+            </> : <div className="camera-result-edit"><EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} /></div>}
+          </div>
+          {phase === 'result' && <div className="camera-result-actions"><button type="button" onClick={() => setPhase('edit')}><Icon name="edit" size={20} /> Edit</button><button type="button" onClick={confirm}>Save meal <Icon name="check" size={20} /></button></div>}
         </div>
       )}
 
@@ -485,18 +401,9 @@ function detectionUsageLabel(source: Detection['source'], usedThisMonth: number)
   }
 }
 
-function MacroChip({ label, v, color, bar }: { label: string; v: number; color: string; bar: string }) {
+function MacroChip({ label, v }: { label: string; v: number }) {
   return (
-    <div className="flex flex-col items-center justify-center bg-surface p-sm rounded-lg border border-outline-variant">
-      <span className={`font-label-caps text-label-caps uppercase mb-1 ${color}`}>{label}</span>
-      <div className="flex items-baseline gap-1">
-        <span className="font-data-mono text-data-mono text-on-surface">{v}</span>
-        <span className="font-label-caps text-label-caps text-on-surface-variant">g</span>
-      </div>
-      <div className="w-full h-1 bg-surface-variant mt-2 rounded-full overflow-hidden">
-        <div className={`h-full ${bar}`} style={{ width: `${Math.min(100, v)}%` }} />
-      </div>
-    </div>
+    <div className="camera-result-macro"><span>{label}</span><strong>{v}<small>g</small></strong></div>
   )
 }
 
@@ -564,7 +471,7 @@ function EditForm({
         <NumField label="Carbs g" value={det.carbs} onChange={num('carbs')} cls={cls} />
         <NumField label="Fat g" value={det.fat} onChange={num('fat')} cls={cls} />
       </div>
-      <button onClick={onDone} className="py-3 rounded-full bg-primary text-on-primary font-metric-md text-metric-md mt-sm">Review breakdown <Icon name="arrow_forward" size={18} /></button>
+      <button onClick={onDone} className="py-3 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md mt-sm">Review meal <Icon name="arrow_forward" size={18} /></button>
     </div>
   )
 }
