@@ -33,18 +33,18 @@ export function Sparkline({ points, displayValue, unit, height = 180 }: Props) {
     <div className="w-full relative" style={{ height }}>
       <svg className="w-full h-full" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ overflow: 'visible' }}>
         {[25, 75, 125].map((y) => (
-          <line key={y} x1="0" x2={W} y1={y} y2={y} stroke="#474553" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
+          <line key={y} x1="0" x2={W} y1={y} y2={y} stroke="#dfe5ef" strokeWidth="1" strokeDasharray="4 4" opacity="0.4" />
         ))}
-        <path d={path} fill="none" stroke="#c5c0ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={path} fill="none" stroke="#2453ee" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {coords.slice(0, -1).map((c, i) => (
-          <circle key={i} cx={c.x} cy={c.y} r="3" fill="#c5c0ff" opacity="0.5" />
+          <circle key={i} cx={c.x} cy={c.y} r="3" fill="#2453ee" opacity="0.5" />
         ))}
-        <circle cx={last.x} cy={last.y} r="6" fill="#c5c0ff" style={{ filter: 'drop-shadow(0 0 8px rgba(197,192,255,0.5))' }} />
+        <circle cx={last.x} cy={last.y} r="6" fill="#2453ee" />
         <text
           x={last.x - 8}
           y={last.y - 12}
           textAnchor="end"
-          fill="#e5e1e4"
+          fill="#17253a"
           className="font-data-mono"
           style={{ fontSize: 13, fontWeight: 600 }}
         >

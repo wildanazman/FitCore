@@ -37,6 +37,7 @@ export function Train() {
   const { state, profile, weightKg, updateProfile, addSession, removeSession, toggleSession } = useApp()
   const today = todayISO()
   const [showLog, setShowLog] = useState(false)
+  const [view, setView] = useState<'week' | 'setup'>(profile.planStartDate ? 'week' : 'setup')
 
   const meta = planMeta(profile, state.sessions, today)
   const cap = planCapability(profile)
@@ -56,11 +57,14 @@ export function Train() {
   return (
     <motion.div variants={listContainer} className="px-margin-mobile pt-sm space-y-lg">
       <TopBar />
+      <header className="running-heading"><h1>Run with a plan.</h1><p>Your race preparation, separate from everyday activity.</p></header>
+      <nav className="page-switch" aria-label="Running views"><button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>This week</button><button type="button" aria-pressed={view === 'setup'} onClick={() => setView('setup')}>Race & setup</button></nav>
 
-      <RunningPlanCard
+      {view === 'setup' && <RunningPlanCard
         profile={profile}
-        onUpdate={(patch) => updateProfile(patch, true)}
-      />
+        onUpdate={(patch) => { updateProfile(patch, true); setView('week') }}
+      />}
+      <div hidden={view !== 'week'} className="space-y-lg">
 
       <Reveal>
         <section className="rounded-2xl bg-lime text-on-lime p-md relative overflow-hidden ring-1 ring-lime/30">
@@ -151,6 +155,7 @@ export function Train() {
           )}
         </section>
       </Reveal>
+      </div>
     </motion.div>
   )
 }
@@ -238,7 +243,7 @@ function RunningPlanCard({
   return (
     <Reveal>
       <section className="rounded-2xl bg-ink-card ring-1 ring-tile-border overflow-hidden">
-        <div className="p-md border-b border-white/5">
+        <div className="p-md border-b border-tile-border">
           <div className="flex items-start justify-between gap-md">
             <div className="min-w-0">
               <div className="flex items-center gap-sm">
@@ -276,7 +281,7 @@ function RunningPlanCard({
             <Metric label="Plan pace" value={formatPace(cap.targetPace).replace('/km', '')} sub={formatFinishTime(cap.projectedFinishMin)} strong />
           </div>
 
-          <div className="rounded-xl bg-[#101112] ring-1 ring-white/10 p-md">
+          <div className="rounded-xl bg-ink-card ring-1 ring-tile-border p-md">
             <p className="font-body-md text-[13px] text-on-surface">
               Based on your 5K, 10K, longest run, {trainingDays} available days and race runway,
               FitCore recommends <span className="text-lime font-semibold">{halfMarathonGoalLabel(assessment.recommendedGoal)}</span> as the logical goal.
@@ -288,7 +293,7 @@ function RunningPlanCard({
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-md border-t border-white/5 pt-md"
+              className="space-y-md border-t border-tile-border pt-md"
             >
               <div className="grid grid-cols-2 gap-sm">
                 <Field label="Race">
@@ -312,7 +317,7 @@ function RunningPlanCard({
                           key={goal}
                           onClick={() => setHalfGoal(goal)}
                           className={`min-h-12 rounded-xl p-sm text-left ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
-                            halfGoal === goal ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
+                            halfGoal === goal ? 'bg-lime text-on-lime ring-lime' : 'bg-ink-card text-on-surface ring-tile-border'
                           }`}
                         >
                           <span className="block font-metric-md text-[14px]">{halfMarathonGoalLabel(goal)}</span>
@@ -348,7 +353,7 @@ function RunningPlanCard({
                         setPreferredDays((current) => clampPreferredDays(current, d))
                       }}
                       className={`min-h-11 rounded-xl font-metric-md text-[15px] ring-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime ${
-                        trainingDays === d ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
+                        trainingDays === d ? 'bg-lime text-on-lime ring-lime' : 'bg-ink-card text-on-surface-variant ring-tile-border'
                       }`}
                     >
                       {d}
@@ -369,7 +374,7 @@ function RunningPlanCard({
                         key={day.id}
                         onClick={() => setPreferredDays((current) => toggleDay(current, day.id, trainingDays))}
                         className={`min-h-11 rounded-lg font-data-mono text-[12px] ring-1 transition-colors duration-150 ${
-                          active ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface-variant ring-white/10'
+                          active ? 'bg-lime text-on-lime ring-lime' : 'bg-ink-card text-on-surface-variant ring-tile-border'
                         }`}
                       >
                         {day.label}
@@ -390,7 +395,7 @@ function RunningPlanCard({
                       key={option.id}
                       onClick={() => setStartMode(option.id)}
                       className={`min-h-[58px] rounded-xl p-sm text-left ring-1 transition-colors duration-150 ${
-                        startMode === option.id ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'
+                        startMode === option.id ? 'bg-lime text-on-lime ring-lime' : 'bg-ink-card text-on-surface ring-tile-border'
                       }`}
                     >
                       <span className="block font-metric-md text-[13px]">{option.label}</span>
@@ -455,7 +460,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Metric({ label, value, sub, strong }: { label: string; value: string; sub: string; strong?: boolean }) {
   return (
-    <div className={`rounded-xl p-sm ring-1 ${strong ? 'bg-lime text-on-lime ring-lime' : 'bg-[#101112] text-on-surface ring-white/10'}`}>
+    <div className={`rounded-xl p-sm ring-1 ${strong ? 'bg-lime text-on-lime ring-lime' : 'bg-ink-card text-on-surface ring-tile-border'}`}>
       <p className={`font-data-mono text-[12px] ${strong ? 'opacity-75' : 'text-on-surface-variant'}`}>{label}</p>
       <p className="font-metric-md text-[20px] leading-tight mt-1">{value}</p>
       <p className={`font-data-mono text-[12px] ${strong ? 'opacity-75' : 'text-lime'}`}>{sub}</p>
@@ -524,7 +529,7 @@ function ManualActivityForm({ weightKg, onAdd }: { weightKg: number; onAdd: (ses
               }
             }}
             className={`shrink-0 min-h-11 px-md rounded-full font-data-mono text-[12px] ring-1 transition-colors duration-150 ${
-              category === c.id ? 'bg-lime text-on-lime ring-lime' : 'bg-ink text-on-surface-variant ring-white/10'
+              category === c.id ? 'bg-lime text-on-lime ring-lime' : 'bg-ink text-on-surface-variant ring-tile-border'
             }`}
           >
             {c.label}
@@ -541,7 +546,7 @@ function ManualActivityForm({ weightKg, onAdd }: { weightKg: number; onAdd: (ses
               setDistance(a.type === 'run' ? distance || '3' : '')
             }}
             className={`min-h-[74px] rounded-xl ring-1 p-sm text-left transition-colors duration-150 ${
-              activityId === a.id ? 'bg-lime text-on-lime ring-lime' : 'bg-ink ring-white/10 text-on-surface'
+              activityId === a.id ? 'bg-lime text-on-lime ring-lime' : 'bg-ink ring-tile-border text-on-surface'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -564,7 +569,7 @@ function ManualActivityForm({ weightKg, onAdd }: { weightKg: number; onAdd: (ses
           <input type="number" min={0} step="0.1" disabled={activity.type !== 'run'} value={distance} onChange={(e) => setDistance(e.target.value)} className={`${fieldCls} disabled:opacity-40`} />
         </Field>
       </div>
-      <div className="rounded-xl bg-[#101112] ring-1 ring-lime/20 p-md">
+      <div className="rounded-xl bg-ink-card ring-1 ring-lime/20 p-md">
         <div className="flex items-center justify-between">
           <span className="font-data-mono text-[12px] text-on-surface-variant">Estimated burn</span>
           <span className="font-metric-md text-[22px] text-lime">{kcal} kcal</span>
@@ -583,7 +588,7 @@ function SessionCard({ session: s, index, today, onToggle, onDelete }: { session
   const isToday = s.date === today
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03, ...spring }}>
-      <div className={`rounded-2xl p-md flex items-center justify-between gap-sm ${done ? 'bg-ink-card ring-1 ring-tile-border' : 'bg-[#101112] ring-1 ring-white/10'} ${isToday && !done ? 'outline outline-2 outline-lime outline-offset-2' : ''}`}>
+      <div className={`rounded-2xl p-md flex items-center justify-between gap-sm ${done ? 'bg-ink-card ring-1 ring-tile-border' : 'bg-ink-card ring-1 ring-tile-border'} ${isToday && !done ? 'outline outline-2 outline-lime outline-offset-2' : ''}`}>
         <Press as="div" onClick={onToggle} className="flex items-center gap-md flex-1 min-w-0">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${done ? 'bg-secondary/15 text-secondary' : 'bg-lime/15 text-lime'}`}>
             <Icon name={done ? 'check' : s.icon} fill />
@@ -645,4 +650,4 @@ function toggleDay(current: number[], day: number, count: number): number[] {
   return [...clean, day]
 }
 
-const fieldCls = 'w-full min-h-11 bg-[#101112] ring-1 ring-white/10 rounded-xl px-sm py-2 text-on-surface font-data-mono text-[13px] focus:ring-2 focus:ring-lime focus:outline-none'
+const fieldCls = 'w-full min-h-11 bg-ink-card ring-1 ring-tile-border rounded-xl px-sm py-2 text-on-surface font-data-mono text-[13px] focus:ring-2 focus:ring-lime focus:outline-none'

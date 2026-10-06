@@ -19,7 +19,7 @@ export function TopBar({ greeting }: { greeting?: boolean }) {
           <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{profile.name || 'Athlete'}</h1>
         </div>
       ) : (
-        <FitCoreLogo />
+        <FitCoreLogo size={31} />
       )}
       <div className="flex items-center gap-sm">
         {greeting && <Avatar initial={initial} size={48} />}

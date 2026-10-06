@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
+import { useDialogFocus } from '../components/useDialogFocus'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { Icon } from '../components/Icon'
@@ -23,6 +24,7 @@ import type { ChatFoodEstimate } from '../lib/chatFoodImport'
 import './food.css'
 
 export function Food() {
+  const reduced = useReducedMotion()
   const { state, profile, weightKg, addFood, updateFood, removeFood } = useApp()
   const nav = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -67,16 +69,16 @@ export function Food() {
     <motion.div variants={listContainer} className="food-page px-margin-mobile pt-sm space-y-lg">
       <TopBar />
       <header className="food-hero">
-        <div className="food-hero-top"><span>NUTRITION / TODAY</span><span>{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase()}</span></div>
-        <h1>Eat with<br /><em>intention.</em></h1>
-        <p>Every meal moves the number. Capture it, check the estimate, keep going.</p>
-        <button type="button" className="food-capture" onClick={() => nav('/camera')}><span className="food-capture-icon"><Icon name="photo_camera" size={24} /></span><span>CAPTURE A MEAL</span><Icon name="arrow_outward" size={22} /></button>
+        <h1>Food, made simple.</h1>
+        <p>Find a meal, check the portions, and make it count.</p>
+        <button type="button" className="food-hero-search" onClick={() => setSearchOpen(true)}><Icon name="search" size={23} /><span>Search meals, drinks or restaurants</span><Icon name="arrow_forward" size={20} /></button>
+        <div className="food-entry-methods"><button type="button" className="food-capture" onClick={() => nav('/camera')}><span className="food-capture-icon"><Icon name="photo_camera" size={24} /></span><span>Scan a photo</span></button><button type="button" onClick={() => setChatImportOpen(true)}><Icon name="content_paste" size={22} /><span>Paste an estimate</span></button></div>
       </header>
 
       <Reveal>
         <section className="food-score" aria-label="Daily calorie summary">
-          <div className="food-score-top"><span>01 / DAILY ENERGY</span><span>{Math.round(calPct)}% USED</span></div>
-          <div className="food-score-main"><div><span>{fuel.remaining < 0 ? 'OVER TARGET' : 'LEFT TO EAT'}</span><strong>{Math.abs(fuel.remaining).toLocaleString()}</strong><small>KCAL</small></div><div className="food-score-ring" style={{ background: `conic-gradient(#c9f24e ${calPct}%, #373e35 ${calPct}%)` }}><div><Icon name="restaurant" size={26} /></div></div></div>
+          <div className="food-score-top"><span>{Math.round(calPct)}% USED</span></div>
+          <div className="food-score-main"><div><span>{fuel.remaining < 0 ? 'OVER TARGET' : 'LEFT TO EAT'}</span><strong>{Math.abs(fuel.remaining).toLocaleString()}</strong><small>KCAL</small></div><div className="food-score-ring" style={{ background: `conic-gradient(#2453ee ${calPct}%, #dfe5ef ${calPct}%)` }}><div><Icon name="restaurant" size={26} /></div></div></div>
           <div className="food-score-rule" />
           <div className="food-score-bottom"><div><span>EATEN</span><strong>{fuel.consumed.toLocaleString()}</strong></div><div><span>DAILY TARGET</span><strong>{fuel.budget.toLocaleString()}</strong></div></div>
           <div className="food-score-track" role="progressbar" aria-label={`${fuel.consumed} of ${fuel.budget} calories eaten`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(calPct)}><span style={{ width: `${calPct}%` }} /></div>
@@ -91,43 +93,15 @@ export function Food() {
         </Reveal>
       )}
 
-      {/* Macro cards */}
-      <Reveal><section className="food-macro-section"><div className="food-editorial-heading"><span>02 / THE BREAKDOWN</span><h2>Macros, at a glance.</h2></div><div className="food-macros"><MacroCard label="Protein" v={fuel.protein} t={fuel.proteinTarget} /><MacroCard label="Carbs" v={fuel.carbs} t={fuel.carbTarget} /><MacroCard label="Fat" v={fuel.fat} t={fuel.fatTarget} /></div></section></Reveal>
-
-      {/* Quick add */}
-      <Reveal><ProteinIdeas target={fuel.proteinTarget} eaten={fuel.protein} /></Reveal>
-
-      {/* Quick add */}
-      <Reveal>
-        <div>
-          <div className="food-editorial-heading"><span>03 / FAST TRACK · {def.short.toUpperCase()}</span><h2>Quick add.</h2></div>
-          <div className="food-slots" role="group" aria-label="Meal to log">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => <button key={slot} type="button" aria-pressed={selectedSlot === slot} onClick={() => setSelectedSlot(slot)}>{slot}</button>)}</div>
-          <div className="flex gap-sm overflow-x-auto no-scrollbar mt-sm pb-1">
-            {quickFoods.map((q) => (
-              <Press key={q.name} onClick={() => quickAdd(q)} className="shrink-0 flex items-center gap-sm bg-ink-card border border-white/5 rounded-full pl-sm pr-md py-sm">
-                <Icon name="restaurant" size={20} className="text-lime" />
-                <span className="text-left">
-                  <span className="block font-body-md text-[13px] text-on-surface whitespace-nowrap">{q.name}</span>
-                  <span className="block font-data-mono text-[11px] text-on-surface-variant">{q.kcal} kcal · {q.carbs}c</span>
-                </span>
-                <Icon name="add_circle" className="text-lime" size={20} />
-              </Press>
-            ))}
-          </div>
-        </div>
-      </Reveal>
-
       {/* Log */}
       <Reveal>
         <div>
-          <div className="food-editorial-heading"><span>04 / YOUR TIMELINE</span><h2>What you've eaten.</h2></div>
-          <button type="button" className="food-find" onClick={() => setSearchOpen(true)}><Icon name="search" size={21} /><span>Search food or add your own</span><Icon name="arrow_forward" size={20} /></button>
-          <button type="button" className="food-chat-import" onClick={() => setChatImportOpen(true)}><Icon name="content_paste" size={20} /><span>Paste a ChatGPT food estimate</span><Icon name="arrow_forward" size={20} /></button>
+          <div className="food-editorial-heading"><h2>Today’s meals</h2></div>
           <div className="space-y-sm mt-sm">
             {todayFoods.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No meals logged yet. Capture one or find a food above.</p>}
             {todayFoods.map((f, i) => (
-              <motion.div key={f.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04, ...spring }}>
-                <Press as="div" onClick={() => setEditing(f)} className="rounded-[20px] bg-ink-card border border-white/5 p-sm flex items-center justify-between cursor-pointer">
+              <motion.div key={f.id} initial={reduced ? false : { opacity: 0.85, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={reduced ? { duration: 0 } : { delay: i * 0.04, ...spring }}>
+                <Press as="div" onClick={() => setEditing(f)} className="rounded-[20px] bg-ink-card border border-tile-border p-sm flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-md">
                     {f.photo ? <img src={f.photo} alt="" className="w-11 h-11 rounded-xl object-cover" /> : <div className="w-11 h-11 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={22} /></div>}
                     <div>
@@ -146,6 +120,31 @@ export function Food() {
         </div>
       </Reveal>
 
+      {/* Macro cards */}
+      <Reveal><section className="food-macro-section"><div className="food-editorial-heading"><h2>Your nutrition</h2></div><div className="food-macros"><MacroCard label="Protein" v={fuel.protein} t={fuel.proteinTarget} /><MacroCard label="Carbs" v={fuel.carbs} t={fuel.carbTarget} /><MacroCard label="Fat" v={fuel.fat} t={fuel.fatTarget} /></div></section></Reveal>
+
+      {/* Quick add */}
+      <Reveal><ProteinIdeas target={fuel.proteinTarget} eaten={fuel.protein} /></Reveal>
+
+      {/* Quick add */}
+      <Reveal>
+        <div>
+          <div className="food-editorial-heading"><h2>Quick add.</h2></div>
+          <div className="food-slots" role="group" aria-label="Meal to log">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => <button key={slot} type="button" aria-pressed={selectedSlot === slot} onClick={() => setSelectedSlot(slot)}>{slot}</button>)}</div>
+          <div className="flex gap-sm overflow-x-auto no-scrollbar mt-sm pb-1">
+            {quickFoods.map((q) => (
+              <Press key={q.name} onClick={() => quickAdd(q)} className="shrink-0 flex items-center gap-sm bg-ink-card border border-tile-border rounded-full pl-sm pr-md py-sm">
+                <Icon name="restaurant" size={20} className="text-lime" />
+                <span className="text-left">
+                  <span className="block font-body-md text-[13px] text-on-surface whitespace-nowrap">{q.name}</span>
+                  <span className="block font-data-mono text-[11px] text-on-surface-variant">{q.kcal} kcal · {q.carbs}c</span>
+                </span>
+                <Icon name="add_circle" className="text-lime" size={20} />
+              </Press>
+            ))}
+          </div>
+        </div>
+      </Reveal>
       {searchOpen && <SearchSheet initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
       {chatImportOpen && <ChatFoodImport initialSlot={selectedSlot} onClose={() => setChatImportOpen(false)} onSave={addChatEstimate} />}
 
@@ -162,6 +161,8 @@ export function Food() {
 }
 
 function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
+  const reduced = useReducedMotion()
+  const dialogRef = useDialogFocus(onClose)
   const [q, setQ] = useState('')
   const [custom, setCustom] = useState(false)
   const [slot, setSlot] = useState<MealSlot>(initialSlot)
@@ -215,13 +216,13 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
     }
   }
   return createPortal(
-    <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <motion.div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose} initial={reduced ? false : { opacity: 0.85 }} animate={{ opacity: 1 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div
-        className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-white/10 p-margin-mobile pb-xl max-h-[85%] flex flex-col"
-        role="dialog" aria-modal="true" aria-labelledby="food-search-title"
+        className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-tile-border p-margin-mobile pb-xl max-h-[85%] flex flex-col"
+        ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="food-search-title" tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        initial={{ y: 320 }} animate={{ y: 0 }} transition={spring}
+        initial={reduced ? false : { y: 80 }} animate={{ y: 0 }} transition={reduced ? { duration: 0 } : spring}
       >
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
         <div className="flex items-center justify-between gap-sm mb-sm">
@@ -273,7 +274,7 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
               ))}
               {results.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-on-surface-variant uppercase pt-sm">General food references</p>}
               {results.map((f) => (
-                <Press key={f.name} onClick={() => onPick(f, slot)} className="w-full rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between text-left cursor-pointer">
+                <Press key={f.name} onClick={() => onPick(f, slot)} className="w-full rounded-[18px] bg-ink border border-tile-border p-sm flex items-center justify-between text-left cursor-pointer">
                   <div className="flex items-center gap-md">
                     <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
                     <div>
@@ -297,7 +298,7 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
                     </Press>
                   )}
                   {searching && (
-                    <div role="status" className="rounded-[18px] bg-ink border border-white/5 p-md flex items-center gap-md">
+                    <div role="status" className="rounded-[18px] bg-ink border border-tile-border p-md flex items-center gap-md">
                       <span className="w-5 h-5 rounded-full border-2 border-lime/30 border-t-lime animate-spin shrink-0" />
                       <p className="font-body-md text-[13px] text-on-surface-variant">Searching online for “{q.trim()}” — this can take a moment…</p>
                     </div>
@@ -369,7 +370,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
         <input
           autoFocus value={name} onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Mi Sedaap Goreng"
-          className="mt-1 w-full bg-ink border border-white/10 rounded-xl px-md py-2 text-on-surface font-body-md focus:border-lime focus:outline-none"
+          className="mt-1 w-full bg-ink border border-tile-border rounded-xl px-md py-2 text-on-surface font-body-md focus:border-lime focus:outline-none"
         />
       </label>
       <div className="grid grid-cols-2 gap-sm">
@@ -392,7 +393,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
 
 function NumInput({ label, value, onChange, placeholder = '0' }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
-    <label className="block bg-ink border border-white/10 rounded-xl px-md py-2">
+    <label className="block bg-ink border border-tile-border rounded-xl px-md py-2">
       <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">{label}</span>
       <input
         type="number" inputMode="decimal" min={0} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
@@ -436,6 +437,8 @@ function FoodEditSheet({
 }) {
   const [draft, setDraft] = useState(entry)
   const [servings, setServings] = useState(entry.servings)
+  const reduced = useReducedMotion()
+  const dialogRef = useDialogFocus(onClose)
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [lookupMessage, setLookupMessage] = useState<string | null>(null)
 
@@ -466,13 +469,13 @@ function FoodEditSheet({
   }
 
   return createPortal(
-    <motion.div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <motion.div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose} initial={reduced ? false : { opacity: 0.85 }} animate={{ opacity: 1 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div
-        className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-white/10 p-margin-mobile pb-xl"
-        role="dialog" aria-modal="true" aria-label={`Edit ${entry.name}`}
+        className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-tile-border p-margin-mobile pb-xl"
+        ref={dialogRef} role="dialog" aria-modal="true" aria-label={`Edit ${entry.name}`} tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        initial={{ y: 260 }} animate={{ y: 0 }} exit={{ y: 260 }} transition={spring}
+        initial={reduced ? false : { y: 80 }} animate={{ y: 0 }} exit={reduced ? undefined : { y: 80 }} transition={reduced ? { duration: 0 } : spring}
         drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.2}
         onDragEnd={(_, info) => { if (info.offset.y > 120) onClose() }}
       >

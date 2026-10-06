@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-06T00:00:00Z",
+  "title": "Design System: FitCore",
+  "extensions": {
+    "colorMeta": {
+      "cobalt": {
+        "role": "primary",
+        "displayName": "Electric cobalt",
+        "tonalRamp": [
+          "oklch(15% 0.1 264)",
+          "oklch(26% 0.1 264)",
+          "oklch(38% 0.1 264)",
+          "oklch(49% 0.1 264)",
+          "oklch(61% 0.1 264)",
+          "oklch(72% 0.1 264)",
+          "oklch(84% 0.1 264)",
+          "oklch(95% 0.1 264)"
+        ]
+      },
+      "chalk": {
+        "role": "neutral",
+        "displayName": "Chalk ground",
+        "tonalRamp": [
+          "oklch(15% 0.01 264)",
+          "oklch(26% 0.01 264)",
+          "oklch(38% 0.01 264)",
+          "oklch(49% 0.01 264)",
+          "oklch(61% 0.01 264)",
+          "oklch(72% 0.01 264)",
+          "oklch(84% 0.01 264)",
+          "oklch(95% 0.01 264)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Measurement display",
+        "purpose": "Prominent quantities with units."
+      },
+      "headline": {
+        "displayName": "Page headline",
+        "purpose": "Shared task-first page introductions."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Hanken Grotesk with tabular numerals; alias is not a monospace face."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dock",
+        "value": "0 9px 30px #23365526",
+        "purpose": "Separate stable navigation from scrolling content."
+      },
+      {
+        "name": "light-card",
+        "value": "0 5px 20px #263f6410",
+        "purpose": "Restrained shared surface elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control",
+        "value": "160ms ease",
+        "purpose": "Color and border state changes."
+      },
+      {
+        "name": "home-selection",
+        "value": "spring stiffness 380 damping 34",
+        "purpose": "Selected date moves to the chosen day."
+      },
+      {
+        "name": "home-number",
+        "value": "450ms",
+        "purpose": "Update changing totals and macro fills."
+      },
+      {
+        "name": "inline-expansion",
+        "value": "240ms",
+        "purpose": "Reveal daily action detail in place."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0ms / no travel",
+        "purpose": "Home and dock respect prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-shared",
+        "value": "360px"
+      },
+      {
+        "name": "compact-home",
+        "value": "390px"
+      },
+      {
+        "name": "framed-shell",
+        "value": "520px"
+      },
+      {
+        "name": "desktop-home",
+        "value": "850px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Save an explicitly reviewed action.",
+      "html": "<button class=\"ds-control ds-primary\">Save activity</button>",
+      "css": ".ds-primary{min-height:48px;padding:12px;border:0;border-radius:8px;background:var(--app-blue,#2453ee);color:white;font:700 13px \"Hanken Grotesk\",sans-serif;transition:background-color 160ms ease}.ds-primary:hover{background:#1740cc}.ds-primary:active{background:#1740cc}.ds-primary:disabled{background:#e0e6f0;color:#61708a;cursor:not-allowed}.ds-control:focus-visible{outline:2px solid var(--app-blue,#2453ee);outline-offset:3px}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Alternate food-entry action.",
+      "html": "<button class=\"ds-control ds-secondary\">Paste an estimate</button>",
+      "css": ".ds-secondary{min-height:54px;padding:10px;border:1px solid var(--app-line,#dfe5ef);border-radius:12px;background:white;color:var(--app-blue,#2453ee);font:700 12px \"Hanken Grotesk\",sans-serif;transition:background-color 160ms ease}.ds-secondary:hover{background:#edf2ff}.ds-secondary:active{background:#e8eeff}.ds-control:focus-visible{outline:2px solid var(--app-blue,#2453ee);outline-offset:3px}"
+    },
+    {
+      "name": "Numeric field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Visible label and an editable measurement.",
+      "html": "<label class=\"ds-label\">Duration (minutes)<input class=\"ds-control ds-input\" type=\"number\" value=\"30\" min=\"1\"></label>",
+      "css": ".ds-label{display:block;font:700 11px \"Hanken Grotesk\",sans-serif;color:#526079}.ds-input{display:block;margin-top:5px;min-height:46px;padding:10px 11px;border:1px solid #ccd6e7;border-radius:8px;background:white;color:var(--app-ink,#17253a);font:600 13px \"Hanken Grotesk\",sans-serif;caret-color:var(--app-blue,#2453ee)}.ds-input:hover{border-color:#829cf5}.ds-control:focus-visible{outline:2px solid var(--app-blue,#2453ee);outline-offset:3px}"
+    },
+    {
+      "name": "Choice chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pressed category selection.",
+      "html": "<button class=\"ds-control ds-chip\" aria-pressed=\"true\">Walking</button>",
+      "css": ".ds-chip{min-height:44px;padding:7px 12px;border:1px solid transparent;border-radius:8px;background:#f0f3f9;color:#566781;font:700 11px \"Hanken Grotesk\",sans-serif;transition:background-color 160ms ease}.ds-chip[aria-pressed=true]{background:var(--app-blue,#2453ee);color:white}.ds-chip:hover{border-color:#829cf5}.ds-control:focus-visible{outline:2px solid var(--app-blue,#2453ee);outline-offset:3px}"
+    },
+    {
+      "name": "Journal container",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A useful white grouping for daily records.",
+      "html": "<section class=\"ds-card\"><h2>Your day</h2><p>Add a meal to begin your daily log.</p></section>",
+      "css": ".ds-card{padding:21px 20px 17px;background:white;border:1px solid var(--app-line,#dfe5ef);border-radius:16px;font:14px/1.4 \"Hanken Grotesk\",sans-serif;color:var(--app-ink,#17253a)}.ds-card h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}.ds-card p{margin:12px 0 0;font-size:12px;color:var(--app-muted,#627089)}"
+    },
+    {
+      "name": "Labeled navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Visible route labels and selected surface.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><a class=\"ds-control\" href=\"#\" aria-current=\"page\">Home</a><a class=\"ds-control\" href=\"#\">Food</a><a class=\"ds-control\" href=\"#\">Activity</a></nav>",
+      "css": ".ds-nav{display:flex;gap:4px;padding:7px 5px;border-radius:16px;background:white;box-shadow:0 9px 30px #23365526;font-family:\"Hanken Grotesk\",sans-serif}.ds-nav a{display:flex;align-items:center;justify-content:center;flex:1;min-height:52px;border-radius:10px;color:#66768e;text-decoration:none;font-size:10px;font-weight:600;transition:background-color 160ms,color 160ms}.ds-nav a[aria-current=page]{background:#e8eeff;color:var(--app-blue,#2453ee)}.ds-nav a:hover{background:#f0f3fa}.ds-control:focus-visible{outline:2px solid var(--app-blue,#2453ee);outline-offset:3px}"
+    },
+    {
+      "name": "Energy ruler",
+      "kind": "custom",
+      "refersTo": "energy-ruler",
+      "description": "Illustrative measurement treatment; displayed quantities must be live app state.",
+      "html": "<section class=\"ds-energy\" aria-label=\"Energy example\"><p>Energy logged</p><strong>1,200 <small>kcal</small></strong><div class=\"ds-ruler\" role=\"progressbar\" aria-label=\"Example daily intake\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"60\"><span></span></div><p>800 kcal remaining · 2,000 kcal target</p></section>",
+      "css": ".ds-energy{padding:19px 22px 17px;border-radius:16px;background:var(--app-blue,#2453ee);color:white;font:14px/1.4 \"Hanken Grotesk\",sans-serif}.ds-energy p{font-size:12px}.ds-energy strong{font-size:48px;font-weight:800;font-variant-numeric:tabular-nums}.ds-energy small{font-size:14px}.ds-ruler{height:34px;border-radius:5px;background:#ffffff25;overflow:hidden}.ds-ruler span{display:block;width:60%;height:100%;background:#e6fa78;mask-image:repeating-linear-gradient(to right,black 0,black 12px,transparent 12px,transparent 16px)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Daily digital ledger",
+    "overview": "FitCore uses a chalk ground, confident cobalt controls and navy lettering to make a personal day readable. The visual language is athletic and practical: prominent measurements, plain coaching language, flat sections and restrained borders. Hanken Grotesk connects headings, data and controls without introducing a separate decorative voice.\n\nDaily actions come before advanced explanations. A selected day changes the ledger; food, movement and habit records supply the visible state. The visual system must preserve the distinction between recorded values, calculated estimates and unavailable services.",
+    "keyCharacteristics": [
+      "Chalk surfaces with cobalt action and selection.",
+      "Strong numeric hierarchy and labeled navigation.",
+      "Inline daily tasks and progressively revealed detail.",
+      "Motion that follows a change in user state."
+    ],
+    "rules": [
+      {
+        "name": "The Action Color Rule",
+        "body": "Use cobalt for action and selection; communicate status through text as well as color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Measurement Rule",
+        "body": "Give a number hierarchy through size and weight, then state its unit and whether it is estimated.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do lead with the active task and keep advanced calculations expandable.",
+      "Do pair measurements with units, labels and estimate language where needed.",
+      "Do keep navigation labeled, focus visible and selection programmatically exposed.",
+      "Do derive visible totals and dates from the actual selected state.",
+      "Do describe device-local storage and unavailable connections honestly."
+    ],
+    "donts": [
+      "Don't use emojis as interface decoration or controls.",
+      "Don't use citrus as a general button or selection palette.",
+      "Don't reproduce obsolete lime, lilac or ink alias names as a new visual identity.",
+      "Don't imply live wearable sync, push notifications or guaranteed photo-analysis accuracy.",
+      "Don't turn compact uppercase kickers, icon-font glyphs or incidental decorative shapes into new system primitives."
+    ]
+  }
+}

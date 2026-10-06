@@ -15,6 +15,7 @@ export function DietPlan() {
   const nav = useNavigate()
   const plan = personalPlan(profile, weightKg)
   const def = dietDef(profile.dietMode)
+  const [view, setView] = useState<'week' | 'approach' | 'guide'>('week')
   const [now, setNow] = useState(() => new Date())
   const windowNow = def.kind === 'window' ? windowState(profile.eatingWindowStartHour, profile.dietMode, now.getHours() * 60 + now.getMinutes()) : null
   const today = todayISO()
@@ -35,7 +36,9 @@ export function DietPlan() {
   }, [def.kind])
 
   return <div className="diet-page"><TopBar /><main className="diet-content">
-    <header className="diet-heading"><button type="button" onClick={() => nav(-1)} aria-label="Go back"><Icon name="arrow_back" /></button><div><h1>Your diet plan.</h1><p>Pick an approach, shape your week, and track what actually happens.</p></div></header>
+    <header className="diet-heading"><div><h1>A plan that fits you.</h1><p>Shape your week. Your food plan should work around your life.</p></div></header>
+    <nav className="page-switch" aria-label="Diet sections">{([{ id: 'week', label: 'My week' }, { id: 'approach', label: 'Approach' }, { id: 'guide', label: 'Food guide' }] as const).map(item => <button key={item.id} type="button" aria-pressed={view === item.id} onClick={() => setView(item.id)}>{item.label}</button>)}</nav>
+    <div className={`diet-workspace diet-view-${view}`}>
 
     <section className="diet-protocols" aria-label="Choose a diet approach"><div className="diet-section-title"><h2>Choose your approach.</h2><p>Your calorie estimate stays personal. Each approach changes meal timing, food structure and macro limits.</p></div><div className="diet-protocol-list">{DIET_LIST.map((item) => <button type="button" key={item.id} className={item.id === profile.dietMode ? 'active' : ''} aria-label={`${item.label}: ${item.tagline}`} aria-pressed={item.id === profile.dietMode} onClick={() => updateProfile({ dietMode: item.id })}><Icon name={item.icon} size={20} /><strong>{item.label}</strong></button>)}</div></section>
 
@@ -52,6 +55,7 @@ export function DietPlan() {
     {(def.kind === 'window' || profile.dietMode === 'keto' || profile.dietMode === 'egg') && <section className="diet-settings"><div className="diet-section-title"><h2>Fine-tune it.</h2></div>{def.kind === 'window' && <label>Eating window starts<select value={profile.eatingWindowStartHour} onChange={(e) => updateProfile({ eatingWindowStartHour: Number(e.target.value) })}>{Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{formatHour(hour)}</option>)}</select></label>}{(profile.dietMode === 'keto' || profile.dietMode === 'egg') && <label>Daily net carb cap (g)<input type="number" min={5} max={200} value={profile.netCarbCapG} onChange={(e) => updateProfile({ netCarbCapG: Math.max(5, Math.min(200, Number(e.target.value) || 5)) })} /></label>}</section>}
 
     <details className="diet-body-details"><summary>Your body & target calculations</summary><div><span>BMI</span><strong>{plan.bmi.value} · {plan.bmi.category}</strong></div><div><span>BMI-based weight range</span><strong>{toDisplayWeight(plan.ideal.minKg, profile.units).toFixed(0)}–{toDisplayWeight(plan.ideal.maxKg, profile.units).toFixed(0)} {weightUnit(profile.units)}</strong></div><div><span>Carbs / fat targets</span><strong>{plan.macros.carbs}g / {plan.macros.fat}g</strong></div><p>These are estimates, not a diagnosis or a requirement to reach a particular weight.</p></details>
+    </div>
     <p className="diet-disclaimer">General guidance only. Restrictive diets or major calorie changes may not be suitable for everyone; discuss them with a qualified clinician if you have a medical condition.</p>
   </main></div>
 }

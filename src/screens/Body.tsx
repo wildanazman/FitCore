@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useDialogFocus } from '../components/useDialogFocus'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { ProgressBar, SectionLabel } from '../components/ui'
@@ -24,7 +26,7 @@ export function Body() {
   const latest = latestMeasured(state.weights)
   const trend = rollingTrend(state.weights)
 
-  const change = trend.length > 1 ? trend[trend.length - 1].kg - trend[0].kg : 0
+  const change = (latest?.weightKg ?? profile.startWeightKg) - profile.startWeightKg
   const dispChange = toDisplayWeight(Math.abs(change), profile.units)
 
   const measured = latestWithMeasurements(state.weights)
@@ -44,13 +46,18 @@ export function Body() {
   }
 
   return (
-    <div>
+    <div className="body-page">
       <TopBar />
+      <header className="page-heading"><h1>Your body, your pace.</h1><p>Watch the trend, not just a single number.</p></header>
       <div className="px-margin-mobile pt-sm space-y-xl">
-        <nav className="flex gap-sm overflow-x-auto pb-sm no-scrollbar">
+        <button onClick={() => setShowLog(true)} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-[0.98] transition">
+          <Icon name="add" /> Log weigh-in
+        </button>
+        <nav className="page-switch" aria-label="Body views">
           {(['weight', 'photos', 'measurements'] as Tab[]).map((t) => (
             <button
               key={t}
+              aria-pressed={tab === t}
               onClick={() => setTab(t)}
               className={`whitespace-nowrap px-md py-sm rounded-full font-label-caps text-label-caps tracking-wider uppercase transition ${
                 tab === t ? 'bg-lime text-on-lime' : 'bg-transparent border border-outline-variant text-on-surface-variant'
@@ -71,19 +78,17 @@ export function Body() {
                   <span className="font-metric-md text-metric-md opacity-70">{unit}</span>
                 </div>
               </div>
-              <div className="bg-ink-card text-on-surface border border-white/10 rounded-2xl p-md flex flex-col justify-between min-h-[130px]">
-                <span className="font-label-caps text-label-caps uppercase opacity-70">8-Week Change</span>
+              <div className="bg-ink-card text-on-surface border border-tile-border rounded-2xl p-md flex flex-col justify-between min-h-[130px]">
+                <span className="font-label-caps text-label-caps uppercase opacity-70">Change since start</span>
                 <div className="mt-auto flex items-baseline gap-xs">
                   <Icon name={change <= 0 ? 'trending_down' : 'trending_up'} fill size={24} />
-                  <span className="font-display-hero text-display-hero leading-none">{change <= 0 ? '-' : '+'}{dispChange.toFixed(1)}</span>
+                  <span className="font-display-hero text-display-hero leading-none">{dispChange < 0.05 ? '' : change < 0 ? '−' : '+'}{dispChange.toFixed(1)}</span>
                   <span className="font-metric-md text-metric-md opacity-70">{unit}</span>
                 </div>
               </div>
             </div>
 
-            <WeightOutlook profile={profile} weightKg={latest?.weightKg ?? profile.startWeightKg} />
-
-            <section className="bg-ink-card border border-white/5 rounded-[24px] p-md flex flex-col gap-md">
+            <section className="bg-ink-card border border-tile-border rounded-[24px] p-md flex flex-col gap-md">
               <div className="flex justify-between items-center">
                 <SectionLabel>Weight Trend</SectionLabel>
                 <span className="font-data-mono text-[12px] text-on-surface-variant">7-day rolling avg</span>
@@ -96,11 +101,12 @@ export function Body() {
                 </div>
               )}
             </section>
+            <details className="body-scenario"><summary><span>Explore a calorie scenario</span><Icon name="expand_more" size={21} /></summary><WeightOutlook profile={profile} weightKg={latest?.weightKg ?? profile.startWeightKg} /></details>
           </>
         )}
 
         {tab === 'measurements' && (
-          <section className="bg-ink-card border border-white/5 rounded-[24px] p-lg flex flex-col gap-lg">
+          <section className="bg-ink-card border border-tile-border rounded-[24px] p-lg flex flex-col gap-lg">
             <h3 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Composition Estimates</h3>
             {bf == null ? (
               <p className="font-body-md text-body-md text-on-surface-variant">
@@ -139,9 +145,7 @@ export function Body() {
           <p className="font-body-md text-body-md text-on-surface leading-relaxed">{leanMassInsight(profile, state.weights)}</p>
         </div>
 
-        <button onClick={() => setShowLog(true)} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-[0.98] transition">
-          <Icon name="add" /> Log weigh-in
-        </button>
+
       </div>
 
       {showLog && <WeighInSheet onClose={() => setShowLog(false)} onSave={(e) => { addWeight(e); setShowLog(false) }} units={profile.units} />}
@@ -181,12 +185,15 @@ function WeighInSheet({ onClose, onSave, units }: { onClose: () => void; onSave:
   const [neck, setNeck] = useState('')
   const [waist, setWaist] = useState('')
   const [hip, setHip] = useState('')
+  const [error, setError] = useState('')
+  const dialogRef = useDialogFocus(onClose)
   const cls = 'w-full bg-surface border border-outline-variant rounded-lg px-md py-2 text-on-surface font-data-mono focus:border-primary focus:outline-none'
   const unit = weightUnit(units)
 
   function save() {
-    const w = parseFloat(weight)
-    if (!w) return
+    const w = Number(weight)
+    if (!Number.isFinite(w) || w <= 0) { setError('Enter a valid weight greater than zero.'); return }
+    if ([neck, waist, hip].some(value => value !== '' && (!Number.isFinite(Number(value)) || Number(value) <= 0))) { setError('Measurements must be positive numbers, or left empty.'); return }
     const entry: WeightEntry = { id: uid(), date: todayISO(), weightKg: Math.round(fromDisplayWeight(w, units) * 10) / 10 }
     if (neck) entry.neckCm = +neck
     if (waist) entry.waistCm = +waist
@@ -194,16 +201,16 @@ function WeighInSheet({ onClose, onSave, units }: { onClose: () => void; onSave:
     onSave(entry)
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60" />
-      <div className="relative w-full max-w-[480px] bg-ink-card border-t border-white/10 rounded-t-[28px] p-margin-mobile pb-xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="weigh-in-title" tabIndex={-1} className="relative w-full max-w-[480px] bg-ink-card border-t border-tile-border rounded-t-[28px] p-margin-mobile pb-xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
-        <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-lg">Log weigh-in</h2>
+        <div className="flex items-center justify-between mb-lg"><h2 id="weigh-in-title" className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Log weigh-in</h2><button type="button" onClick={onClose} aria-label="Close weigh-in" className="w-11 h-11 grid place-items-center rounded-full text-on-surface-variant"><Icon name="close" /></button></div>
         <div className="flex flex-col gap-md">
           <label className="flex flex-col gap-1">
             <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Weight ({unit})</span>
-            <input type="number" step="0.1" className={cls} value={weight} onChange={(e) => setWeight(e.target.value)} autoFocus />
+            <input type="number" step="0.1" min="0.1" aria-describedby={error ? 'weigh-in-error' : undefined} className={cls} value={weight} onChange={(e) => setWeight(e.target.value)} />
           </label>
           <p className="font-data-mono text-[12px] text-on-surface-variant">Optional — for body-fat estimate (cm):</p>
           <div className="grid grid-cols-3 gap-md">
@@ -211,9 +218,10 @@ function WeighInSheet({ onClose, onSave, units }: { onClose: () => void; onSave:
             <label className="flex flex-col gap-1"><span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Waist</span><input type="number" className={cls} value={waist} onChange={(e) => setWaist(e.target.value)} /></label>
             <label className="flex flex-col gap-1"><span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Hip</span><input type="number" className={cls} value={hip} onChange={(e) => setHip(e.target.value)} /></label>
           </div>
+          {error && <p id="weigh-in-error" role="alert" className="text-error text-sm">{error}</p>}
           <button onClick={save} className="py-3 rounded-full bg-lime text-on-lime font-metric-md text-metric-md mt-sm">Save</button>
         </div>
       </div>
-    </div>
+    </div>, document.body
   )
 }

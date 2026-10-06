@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
 body {
-  background-color: #131315;
-  color: #e5e1e4;
+  background-color: #f4f6fa;
+  color: #17253a;
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Hanken Grotesk', sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100dvh;
@@ -52,61 +52,25 @@ body {
    Ambient radial glows give the ink background a premium depth. */
 .app-shell {
   width: 100%;
-  max-width: 480px;
+  max-width: 640px;
   margin: 0 auto;
   height: 100dvh;
   min-height: 100dvh;
   position: relative;
   overflow: hidden;
-  background-color: #131315;
-  background-image:
-    radial-gradient(52% 36% at 88% -6%, rgba(201, 242, 78, 0.07), transparent 65%),
-    radial-gradient(46% 32% at -8% 18%, rgba(124, 108, 240, 0.09), transparent 62%),
-    radial-gradient(60% 40% at 50% 110%, rgba(240, 184, 219, 0.05), transparent 60%);
+  background-color: #f4f6fa;
+  background-image: none;
 }
 
-/* Premium card treatments */
-.card-elev {
-  box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-.glow-lime {
-  box-shadow:
-    0 18px 44px rgba(201, 242, 78, 0.16),
-    0 4px 14px rgba(0, 0, 0, 0.3);
-}
-.glow-soft {
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-}
-
-.diet-hero {
-  background:
-    linear-gradient(135deg, rgba(201, 242, 78, 0.09), transparent 48%),
-    #20221d;
-  box-shadow:
-    0 8px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.home-brief {
-  background:
-    linear-gradient(135deg, rgba(201, 242, 78, 0.08), transparent 52%),
-    #20221d;
-  box-shadow:
-    0 8px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.home-brief-alert {
-  background:
-    linear-gradient(135deg, rgba(255, 180, 171, 0.09), transparent 52%),
-    #241d1d;
-}
+/* Shared light-surface elevation. */
+.card-elev, .glow-soft { box-shadow: 0 5px 20px #263f6410; }
+.glow-lime { box-shadow: 0 5px 20px #2453ee20; }
+.diet-hero, .home-brief { background: #e8eeff; }
+.home-brief-alert { background: #fff1f0; }
 
 @media (min-width: 520px) {
   body {
-    background-color: #0a0a0b;
+    background-color: #e8edf5;
     padding: 24px 0;
   }
   .app-shell {
@@ -114,8 +78,8 @@ body {
     min-height: 0;
     max-height: calc(100dvh - 48px);
     border-radius: 28px;
-    border: 1px solid #2e2e32;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+    border: 1px solid #dfe5ef;
+    box-shadow: 0 24px 80px rgba(35, 60, 105, 0.10);
   }
 }
 

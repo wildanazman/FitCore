@@ -183,16 +183,14 @@ export function Camera() {
   const breakdownItems = det?.items?.length ? det.items : det ? [{ name: det.name, kcal: det.kcal }] : []
 
   return (
-    <div className="app-shell flex flex-col items-center justify-end relative overflow-hidden">
+    <div className={`app-shell camera-shell camera-${phase} flex flex-col items-center justify-end relative overflow-hidden`}>
       {/* Background */}
       {photo && phase === 'analyzing' ? (
         <div className="absolute inset-0 bg-cover bg-center blur-sm" style={{ backgroundImage: `url(${photo})` }}>
           <div className="absolute inset-0 bg-background/60" />
         </div>
       ) : (
-        <div className="absolute inset-0 bg-surface-container-lowest flex items-center justify-center">
-          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary-container via-surface to-transparent" />
-        </div>
+        <div className="absolute inset-0 bg-[#101b2d]" />
       )}
 
       {/* Top actions */}
@@ -231,9 +229,9 @@ export function Camera() {
             </div>
           )}
           <div className="camera-capture-controls z-20 flex w-full flex-col items-center text-center px-margin-mobile pb-xl gap-lg">
-            <div className="rounded-full border border-lime/40 bg-black/35 px-md py-xs backdrop-blur-md">
+            <div className="camera-status" aria-live="polite">
               <span className="font-label-caps text-label-caps uppercase tracking-widest text-lime">
-                {cameraReady ? 'Live camera' : 'Food capture'}
+                {cameraReady ? 'Live camera is ready' : 'Camera opens only when you tap'}
               </span>
             </div>
             <div>
@@ -303,7 +301,7 @@ export function Camera() {
       )}
 
       {phase === 'result' && error && !det && (
-        <div className="w-full bg-[#26262A] rounded-t-[24px] shadow-[0px_8px_24px_rgba(0,0,0,0.5)] z-20 flex flex-col gap-md pt-lg pb-xl px-margin-mobile">
+        <div className="w-full bg-ink-card rounded-t-[24px] shadow-[0px_8px_24px_rgba(0,0,0,0.5)] z-20 flex flex-col gap-md pt-lg pb-xl px-margin-mobile">
           <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-sm" />
           <div className="flex items-start gap-sm">
             <Icon name="error" size={22} className="text-error shrink-0" />
