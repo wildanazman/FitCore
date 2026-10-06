@@ -148,7 +148,7 @@ export function dayFuel(
   const dayFoods = foods.filter((f) => f.date === date)
   const daySessions = sessions.filter((s) => s.date === date)
   const base = baseCalorieTarget(p, weightKg)
-  const bonus = trainingBonus(base, daySessions)
+  const bonus = p.calorieTargetOverride !== null && p.calorieOverrideIncludesTraining ? 0 : trainingBonus(base, daySessions)
   const budget = base + bonus
   const eaten = sumDay(dayFoods)
   const targets = macroTargets(p, weightKg, budget)

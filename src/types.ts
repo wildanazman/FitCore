@@ -7,7 +7,7 @@ export type Sport = 'running' | 'strength' | 'badminton' | 'pickleball'
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete'
 export type HalfMarathonGoal = 'finish' | 'sub245' | 'sub240' | 'sub235' | 'sub230' | 'sub215' | 'sub200' | 'sub145'
 /** Goal race distance for the running plan. */
-export type RaceType = 'half-marathon' | 'marathon'
+export type RaceType = '5k' | '10k' | 'half-marathon' | 'marathon'
 
 /** Eating protocol / diet mode layered on top of calorie tracking. */
 export type DietMode = 'standard' | 'omad' | '16:8' | 'keto' | 'egg'
@@ -40,6 +40,13 @@ export interface UserProfile {
   planStartDate: string | null
   /** Goal race distance: half or full marathon. */
   raceType: RaceType
+  /** Custom finish-time target, minutes; null means finish without a time target. */
+  runGoalTimeMin: number | null
+  runPlanWeeks: number
+  runBenchmarkDistanceKm: 5 | 10
+  runBenchmarkKnown: boolean
+  /** Personal body-weight target, saved in kg regardless of display units. */
+  targetWeightKg: number | null
   /** How many days per week the runner wants to train (3-7). */
   trainingDaysPerWeek: number
   /** Half-marathon finish concept used to derive target race pace. */
@@ -59,6 +66,8 @@ export interface UserProfile {
   activity: ActivityLevel
   /** Daily calorie target. If null, computed from TDEE + goal. */
   calorieTargetOverride: number | null
+  /** Explicit total-intake scenarios must not receive a second training allowance. */
+  calorieOverrideIncludesTraining: boolean
   /** Protein target in g per kg bodyweight. */
   proteinPerKg: number
   /** Active eating protocol. Shapes macro split, fasting window, and warnings. */

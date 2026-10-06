@@ -86,13 +86,17 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-/** Regenerate the plan after a profile change but preserve completed-state on matching dates+plans. */
+/** Replace only upcoming runs; retain original completed sessions and other activities. */
 function regenerateKeepingProgress(state: AppState, profile: UserProfile): AppState['sessions'] {
   const fresh = generatePlan(profile, currentWeight(state))
   const manual = state.sessions.filter((s) => s.plan === 'manual' || s.manual)
-  const completedKeys = new Set(state.sessions.filter((s) => s.completed).map((s) => `${s.date}|${s.plan}|${s.title}`))
+  const completed = state.sessions.filter((s) => s.completed && !(s.plan === 'manual' || s.manual))
+  const other = state.sessions.filter(s => !s.completed && s.plan !== 'running' && s.plan !== 'manual' && !s.manual)
+  const completedSlots = new Set(completed.map(s => `${s.date}|${s.plan}|${s.type}`))
   return [
-    ...fresh.map((s) => (completedKeys.has(`${s.date}|${s.plan}|${s.title}`) ? { ...s, completed: true } : s)),
+    ...fresh.filter(s => !completedSlots.has(`${s.date}|${s.plan}|${s.type}`)),
+    ...completed,
+    ...other,
     ...manual,
   ].sort((a, b) => a.date.localeCompare(b.date))
 }

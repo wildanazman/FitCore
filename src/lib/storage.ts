@@ -20,6 +20,11 @@ export const DEFAULT_PROFILE: UserProfile = {
   raceDate: null,
   planStartDate: null,
   raceType: 'half-marathon',
+  runGoalTimeMin: null,
+  runPlanWeeks: 14,
+  runBenchmarkDistanceKm: 5,
+  runBenchmarkKnown: false,
+  targetWeightKg: null,
   trainingDaysPerWeek: 4,
   halfMarathonGoal: 'sub230',
   targetFinishMin: null,
@@ -27,9 +32,10 @@ export const DEFAULT_PROFILE: UserProfile = {
   bestRunPaceSecPerKm: 360,
   bestFiveKmPaceSecPerKm: 360,
   bestTenKmPaceSecPerKm: 420,
-  runPreferredDays: [1, 3, 5],
+  runPreferredDays: [0, 1, 3, 5],
   activity: 'high',
   calorieTargetOverride: null,
+  calorieOverrideIncludesTraining: false,
   proteinPerKg: 1.8,
   dietMode: 'standard',
   netCarbCapG: 20,
@@ -60,7 +66,14 @@ export function loadState(): AppState | null {
       : legacyProfile.targetFinishMin
         ? goalFromMinutes(legacyProfile.targetFinishMin)
         : DEFAULT_PROFILE.halfMarathonGoal
+    const hadCustomGoal = Object.prototype.hasOwnProperty.call(parsed.profile, 'runGoalTimeMin')
     parsed.profile = { ...DEFAULT_PROFILE, ...parsed.profile }
+    if (!hadCustomGoal) {
+      const legacyMinutes = { finish: null, sub245: 165, sub240: 160, sub235: 155, sub230: 150, sub215: 135, sub200: 120, sub145: 105 }
+      parsed.profile.runGoalTimeMin = parsed.profile.raceType === 'half-marathon' ? legacyMinutes[migratedGoal] : null
+      parsed.profile.runPlanWeeks = parsed.profile.raceType === 'marathon' ? 18 : 14
+      parsed.profile.runBenchmarkKnown = hadCapability
+    }
     parsed.dietTasks = Array.isArray(parsed.dietTasks) ? parsed.dietTasks : []
     parsed.profile.bestFiveKmPaceSecPerKm = parsed.profile.bestFiveKmPaceSecPerKm || parsed.profile.bestRunPaceSecPerKm || DEFAULT_PROFILE.bestFiveKmPaceSecPerKm
     parsed.profile.bestTenKmPaceSecPerKm = parsed.profile.bestTenKmPaceSecPerKm || Math.round((parsed.profile.bestRunPaceSecPerKm || DEFAULT_PROFILE.bestRunPaceSecPerKm) + 45)
@@ -75,11 +88,10 @@ export function loadState(): AppState | null {
     )
     if (!hadCapability) {
       const manual = parsed.sessions.filter((s) => s.plan === 'manual' || s.manual)
-      const completedKeys = new Set(parsed.sessions.filter((s) => s.completed).map((s) => `${s.date}|${s.plan}|${s.title}`))
-      const fresh = generatePlan(parsed.profile, parsed.profile.startWeightKg).map((s) =>
-        completedKeys.has(`${s.date}|${s.plan}|${s.title}`) ? { ...s, completed: true } : s,
-      )
-      parsed.sessions = [...fresh, ...manual].sort((a, b) => a.date.localeCompare(b.date))
+      const retained = parsed.sessions.filter(s => !(s.manual || s.plan === 'manual') && (s.completed || s.plan !== 'running'))
+      const completedSlots = new Set(retained.filter(s => s.completed).map(s => `${s.date}|${s.plan}|${s.type}`))
+      const fresh = generatePlan(parsed.profile, parsed.profile.startWeightKg).filter(s => !completedSlots.has(`${s.date}|${s.plan}|${s.type}`))
+      parsed.sessions = [...fresh, ...retained, ...manual].sort((a, b) => a.date.localeCompare(b.date))
     }
     return parsed
   } catch {

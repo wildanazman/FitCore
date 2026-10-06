@@ -6,7 +6,7 @@ import { TopBar } from '../components/TopBar'
 import { ProgressBar, SectionLabel } from '../components/ui'
 import { Sparkline } from '../components/Sparkline'
 import { Icon } from '../components/Icon'
-import { WeightOutlook } from '../components/WeightOutlook'
+import { WeightJourney } from '../components/WeightJourney'
 import { todayISO, shortDate, uid } from '../lib/date'
 import { fatMassKg, latestMeasured, latestWithMeasurements, leanMassKg, navyBodyFat, rollingTrend, sortByDate } from '../lib/body'
 import { leanMassInsight } from '../lib/coach'
@@ -48,8 +48,8 @@ export function Body() {
   return (
     <div className="body-page">
       <TopBar />
-      <header className="page-heading"><h1>Your body, your pace.</h1><p>Watch the trend, not just a single number.</p></header>
-      <div className="px-margin-mobile pt-sm space-y-xl">
+      <header className="page-heading"><h1>Your next milestone.</h1><p>Set a weight goal, explore the timeline, and follow your actual progress.</p></header>
+      <div className="body-content px-margin-mobile pt-sm space-y-xl">
         <button onClick={() => setShowLog(true)} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md text-metric-md flex items-center justify-center gap-2 active:scale-[0.98] transition">
           <Icon name="add" /> Log weigh-in
         </button>
@@ -70,7 +70,7 @@ export function Body() {
 
         {tab === 'weight' && (
           <>
-            <div className="grid grid-cols-2 gap-gutter">
+            <div className="body-weight-overview grid grid-cols-2 gap-gutter">
               <div className="bg-lime text-on-lime rounded-2xl p-md flex flex-col justify-between min-h-[130px]">
                 <span className="font-label-caps text-label-caps uppercase opacity-70">Current Weight</span>
                 <div className="mt-auto flex items-baseline gap-xs">
@@ -88,6 +88,7 @@ export function Body() {
               </div>
             </div>
 
+            <WeightJourney />
             <section className="bg-ink-card border border-tile-border rounded-[24px] p-md flex flex-col gap-md">
               <div className="flex justify-between items-center">
                 <SectionLabel>Weight Trend</SectionLabel>
@@ -101,7 +102,6 @@ export function Body() {
                 </div>
               )}
             </section>
-            <details className="body-scenario"><summary><span>Explore a calorie scenario</span><Icon name="expand_more" size={21} /></summary><WeightOutlook profile={profile} weightKg={latest?.weightKg ?? profile.startWeightKg} /></details>
           </>
         )}
 
