@@ -22,6 +22,13 @@ function num(v) {
   return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n >= 0 ? n : null
 }
 
+function briefNote(value) {
+  if (!value) return undefined
+  const note = String(value).trim()
+  if (note.length <= 200) return note
+  return `${note.slice(0, 197).replace(/\s+\S*$/, '')}…`
+}
+
 function normalize(value, source, fallbackName) {
   const kcal = num(value.kcal)
   const protein = num(value.protein)
@@ -37,7 +44,7 @@ function normalize(value, source, fallbackName) {
     carbs: Math.round(carbs),
     fat: Math.round(fat),
     confidence: Math.max(0, Math.min(source === 'gemini' || source === 'claude' ? 0.65 : 1, Number(value.confidence) || 0.6)),
-    note: value.note ? String(value.note).slice(0, 200) : undefined,
+    note: briefNote(value.note),
     source,
   }
 }
