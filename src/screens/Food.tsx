@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useApp } from '../store/AppContext'
@@ -25,9 +25,10 @@ import './food.css'
 export function Food() {
   const { state, profile, weightKg, addFood, updateFood, removeFood } = useApp()
   const nav = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const today = todayISO()
   const [editing, setEditing] = useState<FoodEntry | null>(null)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(searchParams.get('add') === '1')
   const [chatImportOpen, setChatImportOpen] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>(slotForNow())
 
@@ -47,9 +48,14 @@ export function Food() {
     })
   }
 
-  const addLocal = (f: LocalFood) => {
-    quickAdd(f)
+  const closeSearch = () => {
     setSearchOpen(false)
+    if (searchParams.has('add')) setSearchParams((current) => { const next = new URLSearchParams(current); next.delete('add'); return next }, { replace: true })
+  }
+
+  const addLocal = (f: LocalFood, slot: MealSlot) => {
+    addFood({ id: uid(), name: f.name, emoji: f.emoji, date: today, loggedAt: new Date().toISOString(), slot, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: 1, confidence: 1 })
+    closeSearch()
   }
 
   const addChatEstimate = (estimate: ChatFoodEstimate, slot: MealSlot) => {
@@ -140,7 +146,7 @@ export function Food() {
         </div>
       </Reveal>
 
-      {searchOpen && <SearchSheet onClose={() => setSearchOpen(false)} onPick={addLocal} />}
+      {searchOpen && <SearchSheet initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
       {chatImportOpen && <ChatFoodImport initialSlot={selectedSlot} onClose={() => setChatImportOpen(false)} onSave={addChatEstimate} />}
 
       {editing && (
@@ -155,9 +161,10 @@ export function Food() {
   )
 }
 
-function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: LocalFood) => void }) {
+function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
   const [q, setQ] = useState('')
   const [custom, setCustom] = useState(false)
+  const [slot, setSlot] = useState<MealSlot>(initialSlot)
   const [brand, setBrand] = useState<RestaurantBrand | null>(null)
   const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null } | null>(null)
   const [online, setOnline] = useState<LookupResult | null>(null)
@@ -168,7 +175,7 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
 
   const chooseRestaurant = (item: RestaurantFood) => {
     if (hasCompleteMacros(item)) {
-      onPick({ name: `${item.brand} · ${item.name}`, emoji: '', category: 'Basics', serving: item.serving, kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat })
+      onPick({ name: `${item.brand} · ${item.name}`, emoji: '', category: 'Basics', serving: item.serving, kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat }, slot)
       return
     }
     setCustomDefaults({ name: `${item.brand} · ${item.name}`, kcal: item.kcal })
@@ -202,15 +209,17 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
         <div className="flex items-center justify-between gap-sm mb-sm">
           <h2 id="food-search-title" className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{custom ? 'Custom food' : 'Add food'}</h2>
           <div className="flex items-center gap-sm">
-            <button type="button" onClick={() => { setCustomDefaults(null); setCustom((v) => !v) }} className="font-data-mono text-[12px] text-lime flex items-center gap-1">
-              <Icon name={custom ? 'search' : 'edit'} size={16} /> {custom ? 'Search' : 'Enter my own'}
-            </button>
+            {custom && <button type="button" onClick={() => { setCustomDefaults(null); setCustom(false) }} className="font-data-mono text-[12px] text-lime flex items-center gap-1"><Icon name="search" size={16} /> Search</button>}
             <button type="button" onClick={onClose} aria-label="Close food search" className="text-on-surface-variant"><Icon name="close" size={22} /></button>
           </div>
         </div>
 
+        <div className="food-search-slots" role="group" aria-label="Meal to log">
+          {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((option) => <button type="button" key={option} aria-pressed={slot === option} onClick={() => setSlot(option)}>{option}</button>)}
+        </div>
+
         {custom ? (
-          <CustomFoodForm key={customDefaults?.name ?? 'manual'} onSubmit={onPick} defaultName={customDefaults?.name ?? q} defaultKcal={customDefaults?.kcal ?? null} requireMacros={customDefaults !== null} />
+          <CustomFoodForm key={customDefaults?.name ?? 'manual'} onSubmit={(food) => onPick(food, slot)} defaultName={customDefaults?.name ?? q} defaultKcal={customDefaults?.kcal ?? null} requireMacros={customDefaults !== null} />
         ) : (
           <>
             <div className="flex items-center gap-2 bg-ink rounded-full px-md py-2 mb-md">
@@ -230,9 +239,8 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
               {results.length === 0 && restaurantResults.length === 0 && (
                 <div className="text-center py-md">
                   <p className="font-body-md text-body-md text-on-surface-variant mb-md">No match for “{q}”.</p>
-                  <Press onClick={() => setCustom(true)} className="inline-flex items-center gap-2 bg-lime text-on-lime rounded-full px-lg py-2 font-metric-md text-[14px]">
-                    <Icon name="add" size={18} /> Add it myself
-                  </Press>
+                  <p className="font-body-md text-[12px] text-on-surface-variant">Try another name or search online. If it is still missing, enter it manually below.</p>
+                  {q.trim() && <button type="button" className="food-manual-fallback" onClick={() => { setCustomDefaults(null); setCustom(true) }}><Icon name="edit" size={17} /> Enter this food manually</button>}
                 </div>
               )}
               {restaurantResults.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-lime uppercase pt-sm">Malaysia restaurant menu · offline</p>}
@@ -248,7 +256,7 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
               ))}
               {results.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-on-surface-variant uppercase pt-sm">General food references</p>}
               {results.map((f) => (
-                <Press key={f.name} as="div" onClick={() => onPick(f)} className="rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between cursor-pointer">
+                <Press key={f.name} onClick={() => onPick(f, slot)} className="w-full rounded-[18px] bg-ink border border-white/5 p-sm flex items-center justify-between text-left cursor-pointer">
                   <div className="flex items-center gap-md">
                     <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
                     <div>
@@ -281,7 +289,7 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
                     <p className="font-data-mono text-[11px] text-pink-deep text-center py-sm">Couldn’t find it online ({onlineErr}). Try “Enter my own”.</p>
                   )}
                   {online && !searching && (
-                    <Press as="div" onClick={() => onPick(resultToLocalFood(online))} className="rounded-[18px] bg-ink border border-lime/30 p-sm flex items-center justify-between cursor-pointer">
+                    <Press onClick={() => onPick(resultToLocalFood(online), slot)} className="w-full rounded-[18px] bg-ink border border-lime/30 p-sm flex items-center justify-between text-left cursor-pointer">
                       <div className="flex items-center gap-md min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
                         <div className="min-w-0">
@@ -297,6 +305,7 @@ function SearchSheet({ onClose, onPick }: { onClose: () => void; onPick: (f: Loc
                   )}
                 </div>
               )}
+              {q.trim().length > 0 && (results.length > 0 || restaurantResults.length > 0) && <button type="button" className="food-manual-fallback" onClick={() => { setCustomDefaults(null); setCustom(true) }}><Icon name="edit" size={17} /> Still not there? Enter manually</button>}
             </div>
             <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Restaurant values are stored offline. Menu and portions can change; check the linked source.</p>
           </>

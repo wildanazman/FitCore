@@ -1,12 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { todayISO, uid } from '../lib/date'
 import { tdee } from '../lib/nutrition'
 import { ACTIVITIES, ACTIVITY_CATEGORIES, caloriesFromMet, type ActivityCategory, type HomeEquipment } from '../lib/activities'
-import type { MealSlot, PlanSession } from '../types'
+import type { PlanSession } from '../types'
 import './daily-timeline.css'
 
-type LogMode = 'meal' | 'activity' | null
+type LogMode = 'activity' | null
 type AvailableEquipment = 'none' | 'mat' | 'dumbbell' | 'both'
 
 function canUseAtHome(required: HomeEquipment | undefined, available: AvailableEquipment): boolean {
@@ -24,9 +25,9 @@ function equipmentPriority(required: HomeEquipment | undefined, available: Avail
 }
 
 export function DailyTimeline() {
-  const { state, profile, weightKg, addFood, addSession, removeFood, removeSession } = useApp()
+  const { state, profile, weightKg, addSession, removeFood, removeSession } = useApp()
+  const navigate = useNavigate()
   const [mode, setMode] = useState<LogMode>(null)
-  const [meal, setMeal] = useState({ slot: 'lunch' as MealSlot, name: '', kcal: '', protein: '' })
   const [activity, setActivity] = useState({ name: '', minutes: '', kcal: '' })
   const [activityCategory, setActivityCategory] = useState<ActivityCategory | 'all'>('home')
   const [homeEquipment, setHomeEquipment] = useState<AvailableEquipment>('both')
@@ -47,13 +48,6 @@ export function DailyTimeline() {
     .filter((item) => (activityCategory === 'all' || item.category === activityCategory) && (item.category !== 'home' || canUseAtHome(item.equipment, homeEquipment)))
     .sort((a, b) => a.category === 'home' && b.category === 'home' ? equipmentPriority(a.equipment, homeEquipment) - equipmentPriority(b.equipment, homeEquipment) : 0)
 
-  const saveMeal = (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!meal.name.trim() || +meal.kcal <= 0) return
-    addFood({ id: uid(), name: meal.name.trim(), emoji: '', date: today, loggedAt: new Date().toISOString(), slot: meal.slot, kcal: +meal.kcal, protein: Math.max(0, +meal.protein || 0), carbs: 0, fat: 0, servings: 1, confidence: 1 })
-    setMeal({ slot: 'lunch', name: '', kcal: '', protein: '' })
-    setMode(null)
-  }
   const saveActivity = (event: React.FormEvent) => {
     event.preventDefault()
     if (!activity.name.trim() || +activity.minutes <= 0 || +activity.kcal <= 0) return
@@ -73,8 +67,7 @@ export function DailyTimeline() {
 
   return <section className="daily-timeline" aria-labelledby="daily-timeline-title">
     <div className="daily-timeline-heading"><div><h2 id="daily-timeline-title">Today's timeline</h2><p>Food in. Movement out. All in one place.</p></div></div>
-    <div className="daily-log-actions"><button type="button" onClick={() => setMode(mode === 'meal' ? null : 'meal')} aria-expanded={mode === 'meal'}>+ Log meal</button><button type="button" onClick={() => setMode(mode === 'activity' ? null : 'activity')} aria-expanded={mode === 'activity'}>+ Log activity</button></div>
-    {mode === 'meal' && <form className="daily-log-form" onSubmit={saveMeal}><label>Meal<select value={meal.slot} onChange={(e) => setMeal({ ...meal, slot: e.target.value as MealSlot })}><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="dinner">Dinner</option><option value="snack">Snack</option></select></label><label>What did you eat?<input required value={meal.name} onChange={(e) => setMeal({ ...meal, name: e.target.value })} placeholder="e.g. Chicken rice" /></label><div className="daily-log-form-grid"><label>Calories<input required type="number" min="1" inputMode="numeric" value={meal.kcal} onChange={(e) => setMeal({ ...meal, kcal: e.target.value })} placeholder="kcal" /></label><label>Protein (optional)<input type="number" min="0" inputMode="numeric" value={meal.protein} onChange={(e) => setMeal({ ...meal, protein: e.target.value })} placeholder="g" /></label></div><button type="submit">Save meal</button></form>}
+    <div className="daily-log-actions"><button type="button" onClick={() => navigate('/food?add=1')}>+ Log meal</button><button type="button" onClick={() => setMode(mode === 'activity' ? null : 'activity')} aria-expanded={mode === 'activity'}>+ Log activity</button></div>
     {mode === 'activity' && <form className="daily-log-form" onSubmit={saveActivity}>
       <div className="daily-activity-categories" role="group" aria-label="Activity category">{ACTIVITY_CATEGORIES.map((item) => <button key={item.id} type="button" aria-pressed={activityCategory === item.id} onClick={() => { setActivityCategory(item.id); setSelectedActivityId(null); setActivity({ name: '', minutes: '', kcal: '' }) }}>{item.label}</button>)}</div>
       {activityCategory === 'home' && <fieldset className="daily-equipment"><legend>What do you have at home?</legend><div role="group" aria-label="Available home equipment">{([{ id: 'none', label: 'No gear' }, { id: 'mat', label: 'Mat' }, { id: 'dumbbell', label: 'Dumbbells' }, { id: 'both', label: 'Mat + dumbbells' }] as const).map((item) => <button key={item.id} type="button" aria-pressed={homeEquipment === item.id} onClick={() => { setHomeEquipment(item.id); setSelectedActivityId(null); setActivity({ name: '', minutes: '', kcal: '' }) }}>{item.label}</button>)}</div><p className="daily-equipment-tip">{homeEquipment === 'both' ? 'Try a full-body circuit: goblet squat, dumbbell row, floor press and mat core.' : homeEquipment === 'dumbbell' ? 'Try squats, rows, presses and Romanian deadlifts with your dumbbells.' : homeEquipment === 'mat' ? 'Try core work, glute bridges or a Pilates session on your mat.' : 'Start with squats, lunges and a bodyweight circuit.'}</p></fieldset>}

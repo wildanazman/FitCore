@@ -203,19 +203,22 @@ function norm(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-/** Fuzzy-ish search by name, alias, or category. */
+/** Search suggestions, requiring every entered word to match. No nutrition is inferred from a partial match. */
 export function searchLocalFoods(query: string, limit = 20): LocalFood[] {
   const q = norm(query)
   if (!q) return LOCAL_FOODS.slice(0, limit)
   const terms = q.split(' ')
   const scored = LOCAL_FOODS.map((f) => {
+    const names = [f.name, ...(f.aka ?? [])].map(norm)
     const hay = norm([f.name, ...(f.aka ?? []), f.category].join(' '))
-    let score = 0
-    for (const t of terms) if (hay.includes(t)) score += t.length
-    if (hay.startsWith(q)) score += 5
+    if (!terms.every((term) => hay.includes(term))) return { f, score: -1 }
+    let score = terms.reduce((sum, term) => sum + term.length, 0)
+    if (names.some((name) => name === q)) score += 40
+    else if (names.some((name) => name.startsWith(q))) score += 20
+    else if (names.some((name) => name.includes(q))) score += 10
     return { f, score }
   })
-    .filter((x) => x.score > 0)
+    .filter((x) => x.score >= 0)
     .sort((a, b) => b.score - a.score)
   return scored.slice(0, limit).map((x) => x.f)
 }
