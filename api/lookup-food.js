@@ -36,7 +36,7 @@ function normalize(value, source, fallbackName) {
     protein: Math.round(protein),
     carbs: Math.round(carbs),
     fat: Math.round(fat),
-    confidence: Math.max(0, Math.min(1, Number(value.confidence) || 0.6)),
+    confidence: Math.max(0, Math.min(source === 'gemini' || source === 'claude' ? 0.65 : 1, Number(value.confidence) || 0.6)),
     note: value.note ? String(value.note).slice(0, 200) : undefined,
     source,
   }
