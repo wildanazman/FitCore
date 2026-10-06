@@ -67,7 +67,7 @@ export function lookupLocalFood(name: string): LookupResult | null {
 }
 
 /** Search locally first; ask the online lookup only for foods absent from the table. */
-export async function lookupFood(name: string): Promise<LookupResult> {
+export async function lookupFood(name: string, signal?: AbortSignal): Promise<LookupResult> {
   const local = lookupLocalFood(name)
   if (local) return local
   try {
@@ -75,6 +75,7 @@ export async function lookupFood(name: string): Promise<LookupResult> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name }),
+      signal,
     })
     const json = await res.json().catch(() => null)
     if (!res.ok) throw new Error(json?.error || `Lookup failed (${res.status})`)

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
@@ -14,7 +14,7 @@ import { dietDef, dietWarnings, nowMinutes, windowState } from '../lib/diet'
 import { slotForNow } from '../lib/foodAI'
 import { QUICK_FOODS } from '../lib/quickFoods'
 import { searchLocalFoods, type LocalFood } from '../lib/localFoods'
-import { lookupFood, resultToLocalFood, sourceLabel, type LookupResult } from '../lib/foodLookup'
+import { lookupFood, sourceLabel, type LookupResult } from '../lib/foodLookup'
 import { RESTAURANT_BRANDS, hasCompleteMacros, searchRestaurantFoods, type RestaurantBrand, type RestaurantFood } from '../lib/restaurantFoods'
 import type { DietWarning } from '../lib/diet'
 import type { FoodEntry } from '../types'
@@ -166,12 +166,27 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
   const [custom, setCustom] = useState(false)
   const [slot, setSlot] = useState<MealSlot>(initialSlot)
   const [brand, setBrand] = useState<RestaurantBrand | null>(null)
-  const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null } | null>(null)
+  const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string } | null>(null)
   const [online, setOnline] = useState<LookupResult | null>(null)
   const [searching, setSearching] = useState(false)
   const [onlineErr, setOnlineErr] = useState<string | null>(null)
+  const lookupController = useRef<AbortController | null>(null)
   const results = brand ? [] : searchLocalFoods(q, 30)
   const restaurantResults = q.trim() || brand ? searchRestaurantFoods(q, brand, 45) : []
+  const noLocalMatch = q.trim().length >= 3 && results.length === 0 && restaurantResults.length === 0 && brand === null
+
+  useEffect(() => {
+    lookupController.current?.abort()
+    setOnline(null)
+    setOnlineErr(null)
+    setSearching(false)
+    if (!noLocalMatch || custom) return
+    const name = q.trim()
+    const timer = window.setTimeout(() => { void searchOnline(name) }, 850)
+    return () => window.clearTimeout(timer)
+  // Query is the trigger; result counts are derived from it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, brand, custom, noLocalMatch])
 
   const chooseRestaurant = (item: RestaurantFood) => {
     if (hasCompleteMacros(item)) {
@@ -182,18 +197,21 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
     setCustom(true)
   }
 
-  const searchOnline = async () => {
-    const name = q.trim()
-    if (!name || searching) return
+  const searchOnline = async (name = q.trim()) => {
+    if (!name) return
+    lookupController.current?.abort()
+    const controller = new AbortController()
+    lookupController.current = controller
     setSearching(true)
     setOnline(null)
     setOnlineErr(null)
     try {
-      setOnline(await lookupFood(name))
+      const found = await lookupFood(name, controller.signal)
+      if (!controller.signal.aborted) setOnline(found)
     } catch (err) {
-      setOnlineErr(err instanceof Error ? err.message : 'Lookup failed')
+      if (!controller.signal.aborted) setOnlineErr(err instanceof Error ? err.message : 'Lookup failed')
     } finally {
-      setSearching(false)
+      if (!controller.signal.aborted) setSearching(false)
     }
   }
   return createPortal(
@@ -219,7 +237,7 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
         </div>
 
         {custom ? (
-          <CustomFoodForm key={customDefaults?.name ?? 'manual'} onSubmit={(food) => onPick(food, slot)} defaultName={customDefaults?.name ?? q} defaultKcal={customDefaults?.kcal ?? null} requireMacros={customDefaults !== null} />
+          <CustomFoodForm key={customDefaults?.name ?? 'manual'} onSubmit={(food) => onPick(food, slot)} defaults={customDefaults} defaultName={customDefaults?.name ?? q} />
         ) : (
           <>
             <div className="flex items-center gap-2 bg-ink rounded-full px-md py-2 mb-md">
@@ -236,11 +254,10 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
             </div>
             <div className="overflow-y-auto no-scrollbar space-y-sm">
               {!q.trim() && !brand && <p className="font-body-md text-[12px] text-on-surface-variant">Search a meal or choose a restaurant to browse its offline menu.</p>}
-              {results.length === 0 && restaurantResults.length === 0 && (
+              {results.length === 0 && restaurantResults.length === 0 && q.trim() && (
                 <div className="text-center py-md">
-                  <p className="font-body-md text-body-md text-on-surface-variant mb-md">No match for “{q}”.</p>
-                  <p className="font-body-md text-[12px] text-on-surface-variant">Try another name or search online. If it is still missing, enter it manually below.</p>
-                  {q.trim() && <button type="button" className="food-manual-fallback" onClick={() => { setCustomDefaults(null); setCustom(true) }}><Icon name="edit" size={17} /> Enter this food manually</button>}
+                  <p className="font-body-md text-body-md text-on-surface-variant mb-md">Not in the offline list.</p>
+                  <p className="font-body-md text-[12px] text-on-surface-variant">{noLocalMatch ? 'Looking for nutrition information online. Check the estimate before logging.' : 'Type at least 3 characters to search online.'}</p>
                 </div>
               )}
               {restaurantResults.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-lime uppercase pt-sm">Malaysia restaurant menu · offline</p>}
@@ -272,29 +289,29 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
               ))}
 
               {/* Online lookup */}
-              {q.trim().length > 1 && (
+              {q.trim().length >= 3 && brand === null && (
                 <div className="pt-sm">
-                  {!online && !searching && (
-                    <Press onClick={searchOnline} className="w-full rounded-[18px] border border-dashed border-lime/40 bg-lime/5 p-sm flex items-center justify-center gap-2 text-lime">
+                  {!online && !searching && !noLocalMatch && (
+                    <Press onClick={() => { void searchOnline() }} className="w-full rounded-[18px] border border-dashed border-lime/40 bg-lime/5 p-sm flex items-center justify-center gap-2 text-lime">
                       <Icon name="travel_explore" size={18} /> Search online for “{q.trim()}”
                     </Press>
                   )}
                   {searching && (
-                    <div className="rounded-[18px] bg-ink border border-white/5 p-md flex items-center gap-md">
+                    <div role="status" className="rounded-[18px] bg-ink border border-white/5 p-md flex items-center gap-md">
                       <span className="w-5 h-5 rounded-full border-2 border-lime/30 border-t-lime animate-spin shrink-0" />
-                      <p className="font-body-md text-[13px] text-on-surface-variant">Searching nutrition databases online — this can take a moment…</p>
+                      <p className="font-body-md text-[13px] text-on-surface-variant">Searching online for “{q.trim()}” — this can take a moment…</p>
                     </div>
                   )}
                   {onlineErr && !searching && (
-                    <p className="font-data-mono text-[11px] text-pink-deep text-center py-sm">Couldn’t find it online ({onlineErr}). Try “Enter my own”.</p>
+                    <div role="status" className="text-center py-sm"><p className="font-data-mono text-[11px] text-pink-deep">Couldn’t get a reliable online estimate. You can retry or enter nutrition manually.</p><button type="button" className="food-manual-fallback" onClick={() => { void searchOnline() }}>Retry online search</button></div>
                   )}
                   {online && !searching && (
-                    <Press onClick={() => onPick(resultToLocalFood(online), slot)} className="w-full rounded-[18px] bg-ink border border-lime/30 p-sm flex items-center justify-between text-left cursor-pointer">
+                    <Press onClick={() => { setCustomDefaults({ name: online.name, kcal: online.kcal, protein: online.protein, carbs: online.carbs, fat: online.fat, serving: online.serving, note: online.note }); setCustom(true) }} className="w-full rounded-[18px] bg-ink border border-lime/30 p-sm flex items-center justify-between text-left cursor-pointer">
                       <div className="flex items-center gap-md min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
                         <div className="min-w-0">
                           <div className="font-metric-md text-[14px] text-on-surface leading-tight truncate">{online.name}</div>
-                          <div className="font-data-mono text-[11px] text-lime">{online.serving} · {sourceLabel(online.source)}</div>
+                          <div className="font-data-mono text-[11px] text-lime">{online.serving} · {sourceLabel(online.source)} · review estimate</div>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
@@ -303,9 +320,10 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
                       </div>
                     </Press>
                   )}
+                  {online?.note && <p className="font-body-md text-[11px] text-on-surface-variant px-sm pt-1">{online.note}</p>}
                 </div>
               )}
-              {q.trim().length > 0 && (results.length > 0 || restaurantResults.length > 0) && <button type="button" className="food-manual-fallback" onClick={() => { setCustomDefaults(null); setCustom(true) }}><Icon name="edit" size={17} /> Still not there? Enter manually</button>}
+              {q.trim().length > 0 && <button type="button" className="food-manual-fallback" onClick={() => { lookupController.current?.abort(); setCustomDefaults(null); setCustom(true) }}><Icon name="edit" size={17} /> Enter manually</button>}
             </div>
             <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Restaurant values are stored offline. Menu and portions can change; check the linked source.</p>
           </>
@@ -315,12 +333,12 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
   )
 }
 
-function CustomFoodForm({ onSubmit, defaultName, defaultKcal, requireMacros }: { onSubmit: (f: LocalFood) => void; defaultName: string; defaultKcal: number | null; requireMacros: boolean }) {
+function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: LocalFood) => void; defaultName: string; defaults: { name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string } | null }) {
   const [name, setName] = useState(defaultName)
-  const [kcal, setKcal] = useState(defaultKcal === null ? '' : String(defaultKcal))
-  const [protein, setProtein] = useState('')
-  const [carbs, setCarbs] = useState('')
-  const [fat, setFat] = useState('')
+  const [kcal, setKcal] = useState(defaults?.kcal == null ? '' : String(defaults.kcal))
+  const [protein, setProtein] = useState(defaults?.protein == null ? '' : String(defaults.protein))
+  const [carbs, setCarbs] = useState(defaults?.carbs == null ? '' : String(defaults.carbs))
+  const [fat, setFat] = useState(defaults?.fat == null ? '' : String(defaults.fat))
 
   const p = Number(protein) || 0
   const c = Number(carbs) || 0
@@ -328,7 +346,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaultKcal, requireMacros }: {
   // Auto-fill kcal from macros if the user leaves it blank.
   const fromMacros = Math.round(p * 4 + c * 4 + f * 9)
   const kcalNum = Number(kcal) || fromMacros
-  const valid = name.trim().length > 0 && kcalNum > 0 && (!requireMacros || (protein !== '' && carbs !== '' && fat !== ''))
+  const valid = name.trim().length > 0 && kcalNum > 0 && (!defaults || (protein !== '' && carbs !== '' && fat !== ''))
 
   const save = () => {
     if (!valid) return
@@ -336,7 +354,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaultKcal, requireMacros }: {
       name: name.trim(),
       emoji: '',
       category: 'Basics',
-      serving: '1 serving',
+      serving: defaults?.serving ?? '1 serving',
       kcal: kcalNum,
       protein: p,
       carbs: c,
@@ -360,7 +378,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaultKcal, requireMacros }: {
         <NumInput label="Carbs (g)" value={carbs} onChange={setCarbs} />
         <NumInput label="Fat (g)" value={fat} onChange={setFat} />
       </div>
-      {requireMacros && <p className="font-body-md text-[12px] text-on-surface-variant">This restaurant reference has {defaultKcal === null ? 'no verified calories or macros' : 'verified calories but no macros'}. Enter the missing values from a label or your own estimate before logging; zero is only for a true zero.</p>}
+      {defaults && <p className="font-body-md text-[12px] text-on-surface-variant">{defaults.protein == null ? 'Some nutrition values are missing. Enter them from a label or your own estimate; zero is only for a true zero.' : 'Online values are estimates, not a measurement of your portion. Check and adjust before logging.'} {defaults.note}</p>}
       {fromMacros > 0 && !kcal && (
         <p className="font-data-mono text-[11px] text-lime">Calories auto-filled from macros: {fromMacros} kcal (edit above to override).</p>
       )}
