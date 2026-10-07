@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
+import { TopBar } from '../components/TopBar'
 import { baseCalorieTarget, tdee } from '../lib/nutrition'
 import { downloadCSV } from '../lib/csv'
 import { DIET_LIST } from '../lib/diet'
@@ -28,7 +29,8 @@ export function Settings() {
   }
 
   return <div className="settings-page">
-    <header className="settings-header"><button type="button" className="settings-back" onClick={() => navigate('/')} aria-label="Back to home"><Icon name="arrow_back" size={22} /></button><div><h1>Settings</h1><p>Your profile, your pace.</p></div></header>
+    <TopBar />
+    <header className="page-heading"><h1>Settings</h1><p>Your profile, your pace.</p></header>
     <nav className="page-switch settings-categories" aria-label="Settings categories">{([{ id: 'profile', label: 'Profile' }, { id: 'targets', label: 'Targets' }, { id: 'preferences', label: 'Preferences' }, { id: 'data', label: 'Data' }] as const).map(item => <button key={item.id} type="button" aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{item.label}</button>)}</nav>
     <div className="settings-content">
       <div className="settings-identity" aria-label="Your FitCore profile"><div className="settings-avatar" aria-hidden="true">{(profile.name.trim()[0] || 'F').toUpperCase()}</div><div><strong>{profile.name.trim() || 'Your profile'}</strong><span>{profile.goal === 'lose' ? 'Fat loss' : profile.goal === 'gain' ? 'Build strength' : 'Maintain'} · {logs} saved {logs === 1 ? 'item' : 'items'}</span></div><Icon name="person" size={22} /></div>

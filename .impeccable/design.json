@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-06T00:00:00Z",
+  "generatedAt": "2026-10-07T00:00:00Z",
   "title": "Design System: FitCore",
   "extensions": {
     "colorMeta": {
@@ -40,7 +40,23 @@
       },
       "headline": {
         "displayName": "Page headline",
-        "purpose": "Shared task-first page introductions."
+        "purpose": "Shared task-first page introductions and Home greeting; compact through 390px, desktop from 850px."
+      },
+      "headline-compact": {
+        "displayName": "Compact page headline",
+        "purpose": "Shared heading role through 390px."
+      },
+      "headline-desktop": {
+        "displayName": "Desktop page headline",
+        "purpose": "Shared heading role from 850px."
+      },
+      "supporting": {
+        "displayName": "Page supporting copy",
+        "purpose": "Muted introduction copy, 7px beneath the heading, with a 50ch maximum measure."
+      },
+      "supporting-desktop": {
+        "displayName": "Desktop supporting copy",
+        "purpose": "Shared introduction copy from 850px."
       },
       "data": {
         "displayName": "Data",
@@ -96,16 +112,39 @@
         "value": "390px"
       },
       {
+        "name": "compact-headings",
+        "value": "390px"
+      },
+      {
         "name": "framed-shell",
         "value": "520px"
       },
       {
         "name": "desktop-home",
         "value": "850px"
+      },
+      {
+        "name": "desktop-headings",
+        "value": "850px"
       }
     ]
   },
   "components": [
+    {
+      "name": "Shared FitCore header",
+      "kind": "custom",
+      "refersTo": "shared-header",
+      "description": "Home brand, current date and profile affordance reused by standard pages; inset variant follows the page gutters. Profile returns to Home when already in Settings.",
+      "html": "<header class=\"ds-topbar\"><button class=\"ds-brand\" type=\"button\" aria-label=\"FitCore home\"><svg width=\"31\" height=\"31\" viewBox=\"0 0 48 48\" fill=\"none\" aria-hidden=\"true\"><rect width=\"48\" height=\"48\" rx=\"12\" fill=\"#2453ee\"/><path d=\"M15 34V14H33M15 24H28\" stroke=\"white\" stroke-width=\"4.5\" stroke-linecap=\"square\" stroke-linejoin=\"round\"/><circle cx=\"32\" cy=\"33\" r=\"3.5\" fill=\"white\"/></svg><span>fitcore<span>.</span></span></button><div class=\"ds-topbar-right\"><span class=\"ds-date\">7 Oct</span><button class=\"ds-profile\" type=\"button\" aria-label=\"Open profile and settings\">A<span><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8 3 3M5 19l3-3m8-8 3-3\"/></svg></span></button></div></header>",
+      "css": ".ds-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 20px 0;margin-bottom:26px;color:var(--app-ink,#17253a);font-family:\"Hanken Grotesk\",sans-serif}.ds-topbar.ds-inset{padding:0}.ds-topbar button{font:inherit;cursor:pointer;touch-action:manipulation}.ds-topbar button:focus-visible{outline:3px solid var(--app-blue,#2453ee);outline-offset:4px}.ds-brand{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:0;border:0;background:transparent;color:var(--app-ink,#17253a);font-size:25px!important;font-weight:800!important;letter-spacing:-.035em}.ds-brand>span>span{color:var(--app-blue,#2453ee)}.ds-topbar-right{display:flex;align-items:center;gap:16px}.ds-date{font-size:13px;font-weight:600;color:var(--app-muted,#627089)}.ds-profile{position:relative;display:grid;place-items:center;width:44px;height:44px;border:1px solid #d6dfef;border-radius:50%;background:#e5ecfc;color:#24447e;font-size:18px!important;font-weight:800!important}.ds-profile:hover{background:#d9e3fc}.ds-profile:active{background:#d9e3fc}.ds-profile>span{position:absolute;right:-2px;bottom:-1px;display:grid;place-items:center;width:18px;height:18px;background:white;border:2px solid #f4f6fa;border-radius:50%}"
+    },
+    {
+      "name": "Shared page introduction",
+      "kind": "custom",
+      "description": "Responsive Hanken heading and supporting copy; Home and standard pages share the type scale while retaining their route content and gutters.",
+      "html": "<section class=\"ds-page-heading\"><h1>Your achievements.</h1><p>Small wins, getting bigger. A collection built by showing up.</p></section>",
+      "css": ".ds-page-heading{padding:0 20px 24px;font-family:\"Hanken Grotesk\",sans-serif}.ds-page-heading h1{font:800 var(--app-heading-size,30px)/1.12 \"Hanken Grotesk\",sans-serif;letter-spacing:-.03em;margin:0;overflow-wrap:anywhere;color:var(--app-ink,#17253a)}.ds-page-heading p{color:var(--app-muted,#627089);font-size:var(--app-support-size,13px);font-weight:400;line-height:1.4;margin:7px 0 0;max-width:50ch}@media(max-width:390px){.ds-page-heading h1{font-size:28px}}@media(min-width:850px){.ds-page-heading h1{font-size:36px}.ds-page-heading p{font-size:14px}}"
+    },
     {
       "name": "Primary button",
       "kind": "button",

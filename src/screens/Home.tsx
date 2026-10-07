@@ -5,8 +5,10 @@ import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
 import { FitCoreMark } from '../components/FitCoreLogo'
 import { ActivityComposer } from '../components/ActivityComposer'
-import { LogDatePicker } from '../components/LogDatePicker'
-import { addDays, parseISO, shortDate, todayISO, weekday } from '../lib/date'
+import { ShowUpTrail } from '../components/ShowUpTrail'
+import { MilestoneCelebration } from '../components/MilestoneCelebration'
+import { TopBar } from '../components/TopBar'
+import { todayISO } from '../lib/date'
 import { dayFuel, tdee, toDisplayWeight, weightUnit } from '../lib/nutrition'
 import { dietDef, netCarbsOn, nowMinutes, windowState } from '../lib/diet'
 import type { DayFuel } from '../types'
@@ -19,8 +21,20 @@ export function Home() {
   const { state, profile, weightKg, toggleSession, toggleDietTask } = useApp()
   const nav = useNavigate()
   const reducedMotion = useReducedMotion()
-  const today = todayISO()
+  const [today, setToday] = useState(todayISO())
   const [date, setDate] = useState(today)
+  useEffect(() => {
+    const refreshDay = () => {
+      const next = todayISO()
+      if (today !== next) {
+        setDate(selected => selected === today ? next : selected)
+        setToday(next)
+      }
+    }
+    const timer = window.setInterval(refreshDay, 30_000)
+    window.addEventListener('focus', refreshDay)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refreshDay) }
+  }, [today])
   const [activityOpen, setActivityOpen] = useState(false)
   const activityRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -29,7 +43,6 @@ export function Home() {
   const [balanceOpen, setBalanceOpen] = useState(false)
   const [feed, setFeed] = useState<'all' | 'meal' | 'activity'>('all')
   const isToday = date === today
-  const days = Array.from({ length: 7 }, (_, index) => addDays(today, index - 6))
   const dayWeight = [...state.weights].filter((entry) => entry.date <= date).sort((a, b) => b.date.localeCompare(a.date))[0]?.weightKg ?? profile.startWeightKg
   const fuel = dayFuel(profile, dayWeight, date, state.foods, state.sessions)
   const foods = state.foods.filter((entry) => entry.date === date)
@@ -42,7 +55,6 @@ export function Home() {
   const tasks = state.dietTasks.filter((task) => task.date === date)
   const doneTasks = tasks.filter((task) => task.completed).length
   const firstName = (profile.name.trim().split(/\s+/)[0] || 'there').replace(/^./, (char) => char.toUpperCase())
-  const weekDaysLogged = days.filter((day) => state.foods.some((food) => food.date === day) || state.sessions.some((session) => session.date === day && session.completed && session.type !== 'rest')).length
   const diet = dietDef(profile.dietMode)
   const fasting = diet.kind === 'window' && isToday ? windowState(profile.eatingWindowStartHour, profile.dietMode, nowMinutes()) : null
   const carbRemaining = Math.max(0, profile.netCarbCapG - netCarbsOn(state.foods, date))
@@ -57,24 +69,12 @@ export function Home() {
   function chooseDay(day: string) { setDate(day); setActivityOpen(false) }
 
   return <div className="home-page">
-    <header className="home-header">
-      <span className="home-brand"><FitCoreMark size={31} color="#2453ee" ink="#ffffff" /><span>fitcore<span className="home-brand-dot">.</span></span></span>
-      <div className="home-header-right"><span className="home-header-date">{shortDate(today)}</span><button type="button" className="home-profile" onClick={() => nav('/settings')} aria-label="Open profile and settings">{firstName.slice(0, 1)}<span className="home-profile-dot"><Icon name="settings" size={12} /></span></button></div>
-    </header>
+    <MilestoneCelebration />
+    <TopBar inset />
 
     <div className="home-welcome"><div><h1>{greeting()}, {firstName}<span>.</span></h1><p>Small steps. A stronger you.</p></div><span className="home-goal"><Icon name={profile.goal === 'lose' ? 'trending_down' : profile.goal === 'gain' ? 'trending_up' : 'balance'} size={16} />{profile.goal === 'lose' ? 'Cut weight' : profile.goal === 'gain' ? 'Build up' : 'Stay balanced'}</span></div>
 
-    <section className="home-calendar" aria-label="Choose a day from the last seven days">
-      <div className="home-calendar-top"><span>{isToday ? 'Today' : parseISO(date).toLocaleDateString('en-MY', { weekday: 'long' })}<span className="home-calendar-date">{parseISO(date).toLocaleDateString('en-MY', { day: 'numeric', month: 'long' })}</span></span><span>{weekDaysLogged}<span className="home-calendar-muted"> / 7 days logged</span></span></div>
-      <div className="home-days">{days.map((day) => {
-        const logged = state.foods.some((food) => food.date === day) || state.sessions.some((session) => session.date === day && session.completed && session.type !== 'rest')
-        return <button type="button" key={day} className={`home-day ${date === day ? 'is-selected' : ''}`} onClick={() => chooseDay(day)} aria-pressed={date === day} aria-label={`${weekday(day)}, ${shortDate(day)}${day === today ? ', today' : ''}${logged ? ', has logs' : ''}`}>
-          {date === day && <motion.span className="home-day-selection" layoutId="home-day-selection" transition={reducedMotion ? { duration: 0 } : spring} />}
-          <span>{weekday(day).slice(0, 2)}</span><strong>{parseISO(day).getDate()}</strong><i className={logged ? 'has-log' : ''} aria-hidden="true" />
-        </button>
-      })}</div>
-      <details className="home-history-date"><summary>Choose another date</summary><LogDatePicker date={date} onChange={chooseDay} /></details>
-    </section>
+    <ShowUpTrail date={date} today={today} onChooseDay={chooseDay} onActivity={() => { chooseDay(todayISO()); setActivityOpen(true) }} />
 
     <div className="home-dashboard">
       <div className="home-primary-column">

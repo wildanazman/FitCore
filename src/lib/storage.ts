@@ -132,7 +132,7 @@ export function seedForProfile(profile: UserProfile): AppState {
   return {
     profile,
     foods: [],
-    weights: [{ id: uid(), date: todayISO(), weightKg: profile.startWeightKg }],
+    weights: [{ id: uid(), date: todayISO(), weightKg: profile.startWeightKg, source: 'onboarding' }],
     photos: [],
     sessions: generatePlan(profile, profile.startWeightKg),
     dietTasks: [],

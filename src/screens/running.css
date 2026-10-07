@@ -1,6 +1,6 @@
 .run-page { padding:0 20px 125px; color:#17253a; }
 .run-page>header:first-child { margin-inline:-20px; }
-.run-page>.page-heading { padding:24px 0 22px; }
+.run-page>.page-heading { padding:0 0 24px; }
 .run-page h2 { font-size:22px; line-height:1.2; font-weight:800; letter-spacing:-.02em; }
 .run-setup>section+section { margin-top:30px; padding-top:26px; border-top:1px solid #dfe5ef; }
 .run-setup h2 { margin-bottom:14px; }

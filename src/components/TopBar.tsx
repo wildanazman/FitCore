@@ -1,47 +1,21 @@
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 import { useApp } from '../store/AppContext'
-import { FitCoreLogo } from './FitCoreLogo'
-import './fitcore-logo.css'
+import { FitCoreMark } from './FitCoreLogo'
+import { shortDate, todayISO } from '../lib/date'
+import './top-bar.css'
 
-export function TopBar({ greeting }: { greeting?: boolean }) {
+export function TopBar({ inset = false }: { inset?: boolean }) {
   const { profile } = useApp()
   const nav = useNavigate()
-  const initial = (profile.name || 'A').trim().charAt(0).toUpperCase()
-  const hour = new Date().getHours()
-  const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+  const { pathname } = useLocation()
+  const initial = (profile.name.trim() || 'A').charAt(0).toUpperCase()
+  const settings = pathname === '/settings'
 
   return (
-    <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md px-margin-mobile pt-lg pb-sm flex items-center justify-between">
-      {greeting ? (
-        <div>
-          <h2 className="font-body-md text-body-md text-on-surface-variant">Good {part},</h2>
-          <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{profile.name || 'Athlete'}</h1>
-        </div>
-      ) : (
-        <FitCoreLogo size={31} />
-      )}
-      <div className="flex items-center gap-sm">
-        {greeting && <Avatar initial={initial} size={48} />}
-        <button
-          onClick={() => nav('/settings')}
-          aria-label="Settings"
-          className="text-primary p-2 rounded-full hover:bg-surface-container-high active:scale-95 transition"
-        >
-          <Icon name="settings" />
-        </button>
-      </div>
+    <header className={`fitcore-topbar ${inset ? 'is-inset' : ''}`}>
+      <button type="button" className="fitcore-topbar-brand" onClick={() => nav('/')} aria-label="FitCore home"><FitCoreMark size={31} /><span>fitcore<span>.</span></span></button>
+      <div className="fitcore-topbar-right"><span className="fitcore-topbar-date">{shortDate(todayISO())}</span><button type="button" className="fitcore-topbar-profile" onClick={() => nav(settings ? '/' : '/settings')} aria-label={settings ? 'Back to home' : 'Open profile and settings'}>{initial}<span><Icon name={settings ? 'arrow_back' : 'settings'} size={12} /></span></button></div>
     </header>
-  )
-}
-
-function Avatar({ initial, size = 40 }: { initial: string; size?: number }) {
-  return (
-    <div
-      className="rounded-full bg-primary-container text-on-primary-container border border-outline-variant flex items-center justify-center font-metric-md"
-      style={{ width: size, height: size }}
-    >
-      {initial}
-    </div>
   )
 }

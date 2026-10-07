@@ -109,6 +109,8 @@ export interface FoodEntry {
 
 export interface WeightEntry {
   id: string
+  /** An onboarding baseline is not a daily check-in. Older untagged records remain valid. */
+  source?: 'onboarding'
   /** ISO yyyy-mm-dd */
   date: string
   weightKg: number
@@ -188,6 +190,8 @@ export interface PlanSession {
 }
 
 export interface AppState {
+  /** Milestone celebrations dismissed on this device. Missing on older saves. */
+  streakMilestonesSeen?: number[]
   profile: UserProfile
   foods: FoodEntry[]
   weights: WeightEntry[]

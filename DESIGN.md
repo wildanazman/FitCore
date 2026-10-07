@@ -25,10 +25,32 @@ typography:
     letterSpacing: "-0.02em"
   headline:
     fontFamily: "Hanken Grotesk, sans-serif"
-    fontSize: "32px"
+    fontSize: "30px"
     fontWeight: 800
     lineHeight: 1.12
     letterSpacing: "-0.03em"
+  headline-compact:
+    fontFamily: "Hanken Grotesk, sans-serif"
+    fontSize: "28px"
+    fontWeight: 800
+    lineHeight: 1.12
+    letterSpacing: "-0.03em"
+  headline-desktop:
+    fontFamily: "Hanken Grotesk, sans-serif"
+    fontSize: "36px"
+    fontWeight: 800
+    lineHeight: 1.12
+    letterSpacing: "-0.03em"
+  supporting:
+    fontFamily: "Hanken Grotesk, sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.4
+  supporting-desktop:
+    fontFamily: "Hanken Grotesk, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.4
   title:
     fontFamily: "Hanken Grotesk, sans-serif"
     fontSize: "24px"
@@ -92,6 +114,12 @@ components:
     textColor: "{colors.muted}"
     rounded: "{rounded.surface}"
     padding: "7px 5px"
+  shared-header:
+    textColor: "{colors.navy}"
+    padding: "24px 20px 0"
+  shared-header-inset:
+    textColor: "{colors.navy}"
+    padding: "0"
   energy-ruler:
     backgroundColor: "{colors.cobalt}"
     textColor: "{colors.white}"
@@ -132,7 +160,7 @@ Success and error colors communicate feedback with explanatory text. Citrus is t
 
 ## Typography
 
-Hanken Grotesk with a sans-serif fallback serves every text role. The frontmatter captures the reused type scale. Shared page headings use the headline role; Home adapts its greeting from mobile (30px) to desktop (36px). The energy reading increases to (66px) on desktop. Section headings commonly sit between (22px) and the title size. Compact control labels and supporting metadata use (11–14px).
+Hanken Grotesk with a sans-serif fallback serves every text role. The frontmatter captures the reused type scale. Standard page headings and Home's greeting share the headline role, with its compact variant at viewport widths up to (390px) and desktop variant from (850px). Supporting page copy uses the supporting role, switching to its desktop variant at the same wide breakpoint; it sits (7px) beneath the heading. The energy reading increases to (66px) on desktop. Section headings commonly sit between (22px) and the title size. Compact control labels and supporting metadata use (11–14px).
 
 Use tabular numerals for changing quantities, daily totals, dates and measurements. Pair every metric with a visible unit or descriptive label. Keep descriptive page copy near the observed (45–50ch) measure.
 
@@ -142,7 +170,7 @@ Use tabular numerals for changing quantities, daily totals, dates and measuremen
 
 The shell occupies the viewport on mobile and scrolls content inside a stable navigation frame. Standard routes have a maximum width of (640px). At (520px), the surrounding canvas gains vertical padding (24px) and a rounded framed shell. Home expands to (1060px) at (850px), with fuel and actions beside timeline and habits; its column gap is (32px). Other routes retain their focused single-column workspace.
 
-Typical page gutters are (20px); Home uses (22px), rising to (38px) on desktop. Reserve approximately (110–125px) below content for the dock and safe area. Home compacts spacing below (390px); shared headings compact below (360px). Horizontal choice rows may scroll inside their own region without widening the page. Keep form groups and numeric grids readable at narrow widths.
+Typical page gutters are (20px); Home uses (22px), rising to (38px) on desktop. Reserve approximately (110–125px) below content for the dock and safe area. Home compacts spacing at widths up to (390px), matching the shared compact heading breakpoint; some form controls compact below (360px). Horizontal choice rows may scroll inside their own region without widening the page. Keep form groups and numeric grids readable at narrow widths.
 
 Page organization reflects the shipped tasks: Food starts with search, photo scan and pasted estimate, followed by meals and nutrition; Activity switches between finding a workout and today's log; Diet separates My week, Approach and Food guide; Body leads with a weigh-in and trend, with the calorie scenario collapsed below; Settings separates Profile, Targets, Preferences and Data; Running separates This week from Race & setup. These are route-specific structures, not a mandate to copy Home's composition onto every page.
 
@@ -174,6 +202,8 @@ Inputs use visible labels, navy text, white or quiet tinted surfaces, a thin bor
 
 ### Navigation
 
+Standard pages reuse Home's FitCore brand/date/profile header. The brand returns to Home; the profile opens Settings, where it returns to Home instead. The header keeps a (26px) gap before the page introduction, with (44px) minimum brand and profile targets. Home and Achievements use the inset variant inside their existing page gutters; other standard pages use the shared header padding. The mark is an inline vector, the date uses compact semibold Hanken, and the profile initial comes from saved state. Camera capture retains its task-specific toolbar.
+
 The bottom dock combines visible icons with text labels. The active route has cobalt text and a sliding selected tint; Scan is a separate cobalt button. Settings remains reachable from the header. Route-local segmented switches use a muted tray, a white selected surface and pressed-state semantics. Food and Body bottom sheets are portalled modal dialogs: the app becomes inert, focus stays in the dialog, Escape closes it, and closing restores focus to the trigger.
 
 ### Energy ruler and state
@@ -200,4 +230,4 @@ Date and dock selection use springs; Home's date spring is stiffness (380) and d
 - Don't imply live wearable sync, push notifications or guaranteed photo-analysis accuracy.
 - Don't turn compact uppercase kickers, icon-font glyphs or incidental decorative shapes into new system primitives.
 
-Evidence: `tailwind.config.js`, `src/index.css`, `src/theme.css`, `src/screens/home.css`, Home and BottomNav motion, and the Food, Activity, DietPlan, Body, Settings, Train and Camera source structures. The operating direction is recorded in `.impeccable/home-brief.md` as Mode: Operate. Shipping interface drawings are code-led; user-supplied meal and progress photos are content, not generated design assets.
+Evidence: `tailwind.config.js`, `src/index.css`, `src/theme.css`, `src/screens/home.css`, `src/components/TopBar.tsx`, `src/components/top-bar.css`, Home and BottomNav motion, and the Food, Activity, DietPlan, Body, Settings, Train, Achievements and Camera source structures. The operating direction is recorded in `.impeccable/home-brief.md` as Mode: Operate; the approved shared header normalization is recorded in `.impeccable/streak-brief.md`. Shipping interface drawings are code-led; user-supplied meal and progress photos are content, not generated design assets.

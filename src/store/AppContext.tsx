@@ -6,6 +6,7 @@ import { latestMeasured } from '../lib/body'
 import { togglePlannedTask } from '../lib/dietPlanner'
 
 type Action =
+  | { type: 'acknowledgeStreak'; days: number[] }
   | { type: 'onboard'; profile: UserProfile }
   | { type: 'updateProfile'; patch: Partial<UserProfile>; regenerate?: boolean }
   | { type: 'addFood'; food: FoodEntry }
@@ -31,6 +32,8 @@ function currentWeight(state: AppState): number {
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'acknowledgeStreak':
+      return { ...state, streakMilestonesSeen: [...new Set([...(state.streakMilestonesSeen ?? []), ...action.days])] }
     case 'onboard':
       return seedForProfile({ ...action.profile, onboarded: true, planStartDate: action.profile.planStartDate ?? null })
 
@@ -105,6 +108,7 @@ function regenerateKeepingProgress(state: AppState, profile: UserProfile): AppSt
 }
 
 interface Ctx {
+  acknowledgeStreak: (days: number[]) => void
   state: AppState
   profile: UserProfile
   weightKg: number
@@ -140,6 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Ctx>(
     () => ({
+      acknowledgeStreak: days => dispatch({ type: 'acknowledgeStreak', days }),
       state,
       profile: state.profile,
       weightKg: currentWeight(state),

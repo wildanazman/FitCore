@@ -3,6 +3,7 @@ import { useApp } from './store/AppContext'
 import { AppLayout } from './components/AppLayout'
 import { Onboarding } from './screens/Onboarding'
 import { Home } from './screens/Home'
+import { Achievements } from './screens/Achievements'
 import { Food } from './screens/Food'
 import { Camera } from './screens/Camera'
 import { Train } from './screens/Train'
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/camera" element={<Camera />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/achievements" element={<Achievements />} />
         <Route path="/food" element={<Food />} />
         <Route path="/train" element={<Activity />} />
         <Route path="/running" element={<Train />} />
