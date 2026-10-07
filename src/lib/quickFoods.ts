@@ -20,7 +20,6 @@ const EGG_STAPLES: QuickFood[] = [
 const KETO_STAPLES: QuickFood[] = [
   { name: 'Avocado (half)', emoji: '🥑', kcal: 160, protein: 2, carbs: 3, fat: 15 },
   { name: 'Cheddar (30g)', emoji: '🧀', kcal: 120, protein: 7, carbs: 1, fat: 10 },
-  { name: 'Bacon (2 strips)', emoji: '🥓', kcal: 90, protein: 6, carbs: 0, fat: 7 },
   { name: 'Boiled Egg', emoji: '🥚', kcal: 78, protein: 6, carbs: 1, fat: 5 },
 ]
 

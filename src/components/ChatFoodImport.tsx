@@ -4,6 +4,7 @@ import { Icon } from './Icon'
 import { CHAT_FOOD_PROMPT, CHAT_FOOD_LIMITS, parseChatFoodEstimate, type ChatFoodEstimate } from '../lib/chatFoodImport'
 import type { MealSlot } from '../types'
 import './chat-food-import.css'
+import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 
 const EXAMPLE = 'Makanan: Nasi ayam satu pinggan\nAnggaran untuk seluruh hidangan ialah 650 kcal, protein 35g, karbohidrat 80g dan lemak 20g.'
 export function ChatFoodImport({ initialSlot, onClose, onSave }: { initialSlot: MealSlot; onClose: () => void; onSave: (estimate: ChatFoodEstimate, slot: MealSlot) => void }) {
@@ -43,7 +44,7 @@ export function ChatFoodImport({ initialSlot, onClose, onSave }: { initialSlot: 
   function updateNumber(field: 'kcal' | 'protein' | 'carbs' | 'fat', value: string) {
     setEstimate(current => current ? { ...current, [field]: value === '' ? NaN : Number(value), caloriesCalculated: field === 'kcal' ? false : current.caloriesCalculated } : current)
   }
-  const valid = estimate && estimate.name.trim() && (Object.keys(CHAT_FOOD_LIMITS) as Array<keyof typeof CHAT_FOOD_LIMITS>).every(key => Number.isFinite(estimate[key]) && estimate[key] >= 0 && estimate[key] <= CHAT_FOOD_LIMITS[key]) && estimate.kcal > 0
+  const valid = estimate && estimate.name.trim() && !hasExcludedIngredients(estimate.name) && (Object.keys(CHAT_FOOD_LIMITS) as Array<keyof typeof CHAT_FOOD_LIMITS>).every(key => Number.isFinite(estimate[key]) && estimate[key] >= 0 && estimate[key] <= CHAT_FOOD_LIMITS[key]) && estimate.kcal > 0
   return createPortal(<div className="chat-import-overlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <div ref={sheet} className="chat-import-sheet" role="dialog" aria-modal="true" aria-labelledby="chat-import-title">
       <header><div><h2 id="chat-import-title">Turn an answer into a meal.</h2><p>Paste it, check it, log it. No special format needed.</p></div><button type="button" aria-label="Close import" onClick={onClose}><Icon name="close" size={23} /></button></header>
@@ -61,6 +62,7 @@ export function ChatFoodImport({ initialSlot, onClose, onSave }: { initialSlot: 
           {estimate.warning && <p className="chat-import-warning" role="status">{estimate.warning}</p>}
           <div className="chat-import-slots" role="group" aria-label="Meal type">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(option => <button type="button" key={option} aria-pressed={slot === option} onClick={() => setSlot(option)}>{option}</button>)}</div>
           {!valid && <p className="chat-import-note">Add a food name and fill all four nutrition fields to save.</p>}
+          {estimate && hasExcludedIngredients(estimate.name) && <p className="chat-import-error" role="alert">This food is excluded by FitCore’s halal-only food policy.</p>}
           <button type="button" className="chat-import-save" disabled={!valid} onClick={() => onSave(estimate, slot)}>Save to food log <Icon name="check" size={19} /></button>
         </section>}
         <details className="chat-import-help"><summary>Need an answer from ChatGPT?</summary><p>Describe your portion or attach a photo there. Nothing is sent automatically by FitCore.</p><div className="chat-import-prompt"><textarea readOnly aria-label="Suggested ChatGPT prompt" value={CHAT_FOOD_PROMPT} /><button type="button" onClick={copyPrompt}><Icon name="content_copy" size={17} />{copied ? 'Copied' : 'Copy prompt'}</button></div><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">Open ChatGPT <Icon name="arrow_outward" size={16} /></a></details>

@@ -6,6 +6,7 @@
 // Accuracy over speed: this can take a few seconds.
 
 import Anthropic from '@anthropic-ai/sdk'
+import { hasExcludedIngredients } from '../shared/foodSuitability.js'
 
 export const config = { maxDuration: 60 }
 
@@ -30,6 +31,7 @@ function briefNote(value) {
 }
 
 function normalize(value, source, fallbackName) {
+  if (hasExcludedIngredients(value?.name || fallbackName)) throw new Error('Food excluded by the halal-only policy')
   const kcal = num(value.kcal)
   const protein = num(value.protein)
   const carbs = num(value.carbs)
@@ -242,6 +244,7 @@ export default async function handler(req, res) {
 
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name || name.length > 80) return sendJson(res, 400, { error: 'Expected a food name' })
+  if (hasExcludedIngredients(name)) return sendJson(res, 400, { error: 'Food excluded by the halal-only policy' })
   const provider = body.provider === 'anthropic' ? 'anthropic' : 'auto'
 
   const errors = []

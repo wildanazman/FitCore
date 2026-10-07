@@ -1,5 +1,6 @@
 import type { DietMode } from '../types'
 import { LOCAL_FOODS, type LocalFood } from './localFoods'
+export { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 
 // Curated Malaysian choices, NOT halal certification. Source/preparation still matter.
 const NAMES = new Set([
@@ -17,9 +18,6 @@ const NAMES = new Set([
   'Teh Tarik', 'Kopi O', 'Teh O Ais', 'Kelapa (Coconut Water)', 'Ramly Burger Special',
 ])
 export const MALAYSIAN_PLAN_FOODS = LOCAL_FOODS.filter(f => NAMES.has(f.name))
-export function hasExcludedIngredients(name: string) {
-  return /\b(pork|babi|bacon|ham|lard|wine|beer|rum|vodka|whisky|whiskey|brandy|mirin|sake|alcohol|gelatin|gelatine|char siu|bak kut teh)\b/i.test(name)
-}
 export function searchMalaysianPlanFoods(query: string): LocalFood[] {
   const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
   return MALAYSIAN_PLAN_FOODS.filter(f => terms.every(term => [f.name, ...(f.aka ?? [])].join(' ').toLowerCase().includes(term))).slice(0, 10)

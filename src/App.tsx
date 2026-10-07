@@ -11,6 +11,7 @@ import { Activity } from './screens/Activity'
 import { Body } from './screens/Body'
 import { Settings } from './screens/Settings'
 import { DietPlan } from './screens/DietPlan'
+import { EatOut } from './screens/EatOut'
 
 export default function App() {
   const { profile } = useApp()
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/achievements" element={<Achievements />} />
         <Route path="/food" element={<Food />} />
+        <Route path="/eat-out" element={<EatOut />} />
         <Route path="/train" element={<Activity />} />
         <Route path="/running" element={<Train />} />
         <Route path="/body" element={<Body />} />

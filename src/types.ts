@@ -105,6 +105,8 @@ export interface FoodEntry {
   confidence: number
   /** base64 data URL thumbnail if captured via photo */
   photo?: string
+  nutritionSource?: string
+  nutritionSourceUrl?: string
 }
 
 export interface WeightEntry {

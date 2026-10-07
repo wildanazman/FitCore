@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
+import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 import { Icon } from '../components/Icon'
 import { LogDatePicker } from '../components/LogDatePicker'
 import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type FoodAIProvider } from '../lib/foodAI'
@@ -137,6 +138,7 @@ export function Camera() {
 
   function confirm() {
     if (!det) return
+    if (hasExcludedIngredients(det.name)) { setError('This food is excluded by FitCore’s halal-only food policy.'); return }
     const entry: FoodEntry = {
       id: uid(),
       name: det.name,

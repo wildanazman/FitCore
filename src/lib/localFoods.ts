@@ -6,6 +6,7 @@
 // common nutrition sources. Nutrition facts are factual data, not proprietary.
 
 import { MYFCD_FOODS } from './myfcdFoods'
+import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 
 export type FoodCategory =
   | 'Rice'
@@ -33,6 +34,8 @@ export interface LocalFood {
   fat: number
   /** search aliases (romanised / common spellings) */
   aka?: string[]
+  nutritionSource?: string
+  nutritionSourceUrl?: string
 }
 
 const CURATED_LOCAL_FOODS: LocalFood[] = [
@@ -197,7 +200,7 @@ const CURATED_LOCAL_FOODS: LocalFood[] = [
 ]
 
 // Keep curated foods first, then add the official MyFCD per-100 g snapshot.
-export const LOCAL_FOODS: LocalFood[] = [...CURATED_LOCAL_FOODS, ...MYFCD_FOODS]
+export const LOCAL_FOODS: LocalFood[] = [...CURATED_LOCAL_FOODS, ...MYFCD_FOODS].filter(f => !hasExcludedIngredients([f.name, ...(f.aka ?? [])].join(' ')))
 
 function norm(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()

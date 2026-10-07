@@ -3,6 +3,7 @@
 import { matchLocalFoodDetails, type LocalFood } from './localFoods'
 import { hasCompleteMacros, matchRestaurantFood } from './restaurantFoods'
 import { apiUrl } from './apiBase'
+import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 
 export interface LookupResult {
   name: string
@@ -68,6 +69,7 @@ export function lookupLocalFood(name: string): LookupResult | null {
 
 /** Search locally first; ask the online lookup only for foods absent from the table. */
 export async function lookupFood(name: string, signal?: AbortSignal): Promise<LookupResult> {
+  if (hasExcludedIngredients(name)) throw new Error('This food is excluded by FitCore’s halal-only food policy.')
   const local = lookupLocalFood(name)
   if (local) return local
   try {
@@ -79,6 +81,7 @@ export async function lookupFood(name: string, signal?: AbortSignal): Promise<Lo
     })
     const json = await res.json().catch(() => null)
     if (!res.ok) throw new Error(json?.error || `Lookup failed (${res.status})`)
+    if (hasExcludedIngredients(json?.name)) throw new Error('The returned food is excluded by FitCore’s halal-only food policy.')
     return json as LookupResult
   } catch (error) {
     throw error

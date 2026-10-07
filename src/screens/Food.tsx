@@ -8,6 +8,8 @@ import { TopBar } from '../components/TopBar'
 import { Icon } from '../components/Icon'
 import { ProteinIdeas } from '../components/ProteinIdeas'
 import { ChatFoodImport } from '../components/ChatFoodImport'
+import { FoodSources } from '../components/FoodSources'
+import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 import { CountUp, Press, Reveal, listContainer, spring } from '../components/motion'
 import { isLogDate, shortDate, timestampOnDate, todayISO, timeLabel, uid } from '../lib/date'
 import { LogDatePicker } from '../components/LogDatePicker'
@@ -23,6 +25,7 @@ import type { FoodEntry } from '../types'
 import type { MealSlot } from '../types'
 import type { ChatFoodEstimate } from '../lib/chatFoodImport'
 import './food.css'
+import './eat-out.css'
 
 export function Food() {
   const reduced = useReducedMotion()
@@ -58,7 +61,8 @@ export function Food() {
   }
 
   const addLocal = (f: LocalFood, slot: MealSlot) => {
-    addFood({ id: uid(), name: f.name, emoji: f.emoji, date: today, loggedAt: timestampOnDate(today), slot, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: 1, confidence: 1 })
+    if (hasExcludedIngredients(f.name)) return
+    addFood({ id: uid(), name: f.name, emoji: f.emoji, date: today, loggedAt: timestampOnDate(today), slot, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: 1, confidence: f.nutritionSource ? 0.8 : 1, nutritionSource: f.nutritionSource, nutritionSourceUrl: f.nutritionSourceUrl })
     closeSearch()
   }
 
@@ -89,6 +93,7 @@ export function Food() {
         </section>
       </Reveal>
 
+      <button type="button" className="food-eat-out-link" onClick={() => nav(`/eat-out?date=${today}`)}><span>Makan luar · find somewhere good</span><Icon name="arrow_forward" size={20} /></button>
       {/* Diet warnings */}
       {warnings.length > 0 && (
         <Reveal>
@@ -148,7 +153,7 @@ export function Food() {
           </div>
         </div>
       </Reveal>
-      {searchOpen && <SearchSheet date={today} initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
+      {searchOpen && <SearchSheet date={today} initialQuery={searchParams.get('q') ?? ''} initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
       {chatImportOpen && <ChatFoodImport initialSlot={selectedSlot} onClose={() => setChatImportOpen(false)} onSave={addChatEstimate} />}
 
       {editing && (
@@ -163,11 +168,12 @@ export function Food() {
   )
 }
 
-function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
+function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: { date: string; initialQuery?: string; initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
   const reduced = useReducedMotion()
   const dialogRef = useDialogFocus(onClose)
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(initialQuery.slice(0, 120))
   const [custom, setCustom] = useState(false)
+  const [catalog, setCatalog] = useState(false)
   const [slot, setSlot] = useState<MealSlot>(initialSlot)
   const [brand, setBrand] = useState<RestaurantBrand | null>(null)
   const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string } | null>(null)
@@ -185,9 +191,7 @@ function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; ini
     setOnlineErr(null)
     setSearching(false)
     if (!noLocalMatch || custom) return
-    const name = q.trim()
-    const timer = window.setTimeout(() => { void searchOnline(name) }, 850)
-    return () => window.clearTimeout(timer)
+    // Provider searches are deliberate actions, not search-as-you-type requests.
   // Query is the trigger; result counts are derived from it.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, brand, custom, noLocalMatch])
@@ -229,7 +233,7 @@ function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; ini
       >
         <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
         <div className="flex items-center justify-between gap-sm mb-sm">
-          <h2 id="food-search-title" className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{custom ? 'Custom food' : 'Add food'}</h2>
+          <h2 id="food-search-title" className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{custom ? 'Custom food' : catalog ? 'Food databases' : 'Add food'}</h2>
           <div className="flex items-center gap-sm">
             {custom && <button type="button" onClick={() => { setCustomDefaults(null); setCustom(false) }} className="font-data-mono text-[12px] text-lime flex items-center gap-1"><Icon name="search" size={16} /> Search</button>}
             <button type="button" onClick={onClose} aria-label="Close food search" className="text-on-surface-variant"><Icon name="close" size={22} /></button>
@@ -243,7 +247,7 @@ function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; ini
 
         {custom ? (
           <CustomFoodForm key={customDefaults?.name ?? 'manual'} onSubmit={(food) => onPick(food, slot)} defaults={customDefaults} defaultName={customDefaults?.name ?? q} />
-        ) : (
+        ) : catalog ? <FoodSources onPick={food => onPick(food, slot)} onLocalSearch={query => { setQ(query); setCatalog(false) }} /> : (
           <>
             <div className="flex items-center gap-2 bg-ink rounded-full px-md py-2 mb-md">
               <Icon name="search" className="text-on-surface-variant" size={18} />
@@ -253,6 +257,7 @@ function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; ini
                 className="flex-1 bg-transparent text-on-surface font-body-md focus:outline-none placeholder:text-on-surface-variant"
               />
             </div>
+            <button type="button" className="food-manual-fallback" onClick={() => { lookupController.current?.abort(); setCatalog(true) }}><Icon name="database" size={18} /> Free databases & barcode lookup</button>
             <div className="food-brand-filters" role="group" aria-label="Filter restaurant">
               <button type="button" aria-pressed={brand === null} onClick={() => setBrand(null)}>All</button>
               {RESTAURANT_BRANDS.map((name) => <button type="button" key={name} aria-pressed={brand === name} onClick={() => setBrand(name)}>{name}</button>)}
@@ -262,7 +267,7 @@ function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; ini
               {results.length === 0 && restaurantResults.length === 0 && q.trim() && (
                 <div className="text-center py-md">
                   <p className="font-body-md text-body-md text-on-surface-variant mb-md">Not in the offline list.</p>
-                  <p className="font-body-md text-[12px] text-on-surface-variant">{noLocalMatch ? 'Looking for nutrition information online. Check the estimate before logging.' : 'Type at least 3 characters to search online.'}</p>
+                  <p className="font-body-md text-[12px] text-on-surface-variant">{noLocalMatch ? 'Search online or try the free food databases. Review the result before logging.' : 'Type at least 3 characters to search online.'}</p>
                 </div>
               )}
               {restaurantResults.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-lime uppercase pt-sm">Malaysia restaurant menu · offline</p>}
@@ -296,7 +301,7 @@ function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; ini
               {/* Online lookup */}
               {q.trim().length >= 3 && brand === null && (
                 <div className="pt-sm">
-                  {!online && !searching && !noLocalMatch && (
+                  {!online && !searching && (
                     <Press onClick={() => { void searchOnline() }} className="w-full rounded-[18px] border border-dashed border-lime/40 bg-lime/5 p-sm flex items-center justify-center gap-2 text-lime">
                       <Icon name="travel_explore" size={18} /> Search online for “{q.trim()}”
                     </Press>
@@ -351,7 +356,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
   // Auto-fill kcal from macros if the user leaves it blank.
   const fromMacros = Math.round(p * 4 + c * 4 + f * 9)
   const kcalNum = Number(kcal) || fromMacros
-  const valid = name.trim().length > 0 && kcalNum > 0 && (!defaults || (protein !== '' && carbs !== '' && fat !== ''))
+  const valid = name.trim().length > 0 && !hasExcludedIngredients(name) && kcalNum > 0 && (!defaults || (protein !== '' && carbs !== '' && fat !== ''))
 
   const save = () => {
     if (!valid) return
@@ -387,6 +392,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
       {fromMacros > 0 && !kcal && (
         <p className="font-data-mono text-[11px] text-lime">Calories auto-filled from macros: {fromMacros} kcal (edit above to override).</p>
       )}
+      {hasExcludedIngredients(name) && <p role="alert" className="food-source-error">This food is excluded by FitCore’s halal-only food policy.</p>}
       <Press onClick={save} disabled={!valid} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2 disabled:opacity-40">
         <Icon name="check" size={18} /> Log this food
       </Press>

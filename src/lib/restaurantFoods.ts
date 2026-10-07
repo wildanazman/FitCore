@@ -2,6 +2,7 @@
  * Sources are kept per item so a menu change can be audited before an update.
  * KFC and McDonald's publish complete nutrition; MOH's calorie bank is kcal-only.
  */
+import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 export type RestaurantBrand = 'KFC' | "McDonald's" | 'Pizza Hut' | 'Subway' | 'ZUS Coffee' | 'CHAGEE' | 'Marrybrown'
 
 export interface RestaurantFood {
@@ -109,6 +110,7 @@ export function searchRestaurantFoods(query: string, brand: RestaurantBrand | nu
   const q = normalizeRestaurantText(query)
   const terms = q ? q.split(' ') : []
   return RESTAURANT_FOODS
+    .filter(food => !hasExcludedIngredients(food.name))
     .filter((food) => !brand || food.brand === brand)
     .map((food) => {
       const hay = normalizeRestaurantText(`${food.brand} ${food.name}`)
@@ -125,5 +127,5 @@ export function searchRestaurantFoods(query: string, brand: RestaurantBrand | nu
 export function matchRestaurantFood(query: string): RestaurantFood | null {
   const needle = normalizeRestaurantText(query)
   if (!needle) return null
-  return RESTAURANT_FOODS.find((food) => normalizeRestaurantText(`${food.brand} ${food.name}`) === needle) ?? null
+  return RESTAURANT_FOODS.find((food) => !hasExcludedIngredients(food.name) && normalizeRestaurantText(`${food.brand} ${food.name}`) === needle) ?? null
 }
