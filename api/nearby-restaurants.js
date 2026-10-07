@@ -55,10 +55,12 @@ export function rankOSM(elements, center, radiusKm) {
 }
 export function rankGoogle(places, center, radiusKm) {
   const seen = new Set()
+  const foodTypes = new Set(['restaurant', 'fast_food', 'cafe', 'food_court', 'meal_takeaway', 'bakery', 'dessert_shop', 'ice_cream_shop'])
   return places.filter(p => {
     if (!p?.id || seen.has(p.id) || !p.displayName?.text || !coord(p.location?.latitude, p.location?.longitude) || p.businessStatus !== 'OPERATIONAL') return false
     seen.add(p.id)
-    return !hasExcludedIngredients(p.displayName.text) && !p.servesBeer && !p.servesWine && !p.servesCocktails && !p.types?.some(t => ['bar', 'pub', 'wine_bar'].includes(t)) && distanceKm(center, p.location) <= radiusKm
+    const types = Array.isArray(p.types) ? p.types : []
+    return types.some(type => foodTypes.has(type)) && !hasExcludedIngredients(p.displayName.text) && !p.servesBeer && !p.servesWine && !p.servesCocktails && !types.some(t => ['bar', 'pub', 'wine_bar'].includes(t)) && distanceKm(center, p.location) <= radiusKm
   }).sort((a, b) => {
     const score = p => Number.isFinite(p.rating) ? (p.rating * (p.userRatingCount || 0) + 4 * 100) / ((p.userRatingCount || 0) + 100) : 0
     return score(b) - score(a) || distanceKm(center, a.location) - distanceKm(center, b.location)
