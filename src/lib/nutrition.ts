@@ -22,6 +22,17 @@ export function tdee(p: UserProfile, weightKg: number): number {
   return Math.round(bmr(p, weightKg) * ACTIVITY_FACTOR[p.activity])
 }
 
+/** Short-term energy equivalent, not a prediction of scale weight.
+ * Activity is already represented by TDEE's activity factor: do not add
+ * every logged workout again. A diet override is never maintenance.
+ */
+export function intakeBalance(p: UserProfile, weightKg: number, consumed: number) {
+  const maintenance = tdee(p, weightKg)
+  if (p.age < 20 || !Number.isFinite(maintenance) || maintenance <= 0 || !Number.isFinite(consumed) || consumed < 0 || !Number.isFinite(weightKg) || weightKg <= 0) return null
+  const surplus = consumed - maintenance
+  return { maintenance, surplus, weeklyEnergyKg: surplus * 7 / 7700 }
+}
+
 export type BmiCategory = 'Underweight' | 'Healthy' | 'Overweight' | 'Obesity'
 
 export function bmiValue(heightCm: number, weightKg: number): number {

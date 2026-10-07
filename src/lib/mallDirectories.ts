@@ -1,4 +1,5 @@
 import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
+import { isExcludedRestaurant, restaurantNameKey } from '../../shared/restaurantCuration.js'
 
 export type MallDirectoryKey = 'ioi-city-mall' | 'alamanda' | 'the-mines'
 export type MallPlaceCategory = 'meals' | 'cafe-snacks' | 'all'
@@ -32,13 +33,21 @@ export const MALL_DIRECTORIES: MallDirectory[] = [
   { key: 'the-mines', name: 'The Mines', address: 'Mines Resort City, Seri Kembangan', sourceUrl: 'https://the-mines.com.my/stores-locate-to/', names: MINES_NAMES },
 ]
 
-const excludedMallName = (name: string) => hasExcludedIngredients(name) || /restaurant\s*&\s*bar|wine bar|\bpub\b|\bbrewery\b|\bthe barn\b/i.test(name)
+const excludedMallName = (name: string) => hasExcludedIngredients(name) || isExcludedRestaurant(name)
 const cafeSnackName = /\b(coffee|cafe|tea|juice|boba|bubble|gong cha|chagee|tealive|boost|starbucks|tim hortons|luckin|daboba|kenangan|auntea|bask bear|auntie anne|baskin|krispy|donut|bakery|chocolate|godiva|popcorn|yogurt|ice|chendul|churros|cinnabon|royce|dessert|snack|rotiboy|dipndip|perfect ice|cold stone|haagen dazs|tous les jours|juice works|newjuice|mixue)\b/i
 const mallSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-export const isMallCafeSnack = (name: string) => cafeSnackName.test(name)
+const cafeSnackBrands = new Set([
+  'Airi Berry', 'All About Chew', "BERYL'S", 'BING CHUN', 'BISOU BAKE SHOP', 'CHEEZUTO', 'CHEZ CHOUX', 'CHIZU', 'CORNERY', 'Crème De La Crème', 'DIMSUSU', 'DOTNUTS', "DOTTY'S PASTRIES", "DUNKIN'", "DUNKIN' DONUTS", 'FAMILY MART', 'FAMOUS AMOS', 'GULA PETITE', 'HANBING', 'HAPPY POTATO', 'HOKKAIDO BAKED CHEESE TART', 'HOT & ROLL', 'INSIDE SCOOP', 'JOM CHA', "JOYMOM'S", 'KEE NGUYEN', 'KENNY HILLS BAKERS', 'KOI Thé', 'KOONG WOH TONG', 'Korea Cotton Candy', 'LAVENDER', 'LLAO LLAO', 'MAKII MAKII', 'MBG FRUITSHOP', 'MELTKIES', 'MIX STORE', 'Maison La Manne', "Mokky's with Flaaah", 'NADEJE', 'PARIS BAGUETTE', 'POTATO CORNER', 'QCC Baked', 'SIGNATURE MARKET', 'SISTERS CRISPY POPIAH', 'SOYALAH', 'SQUID BOY', 'Salon Du Chocolat', 'THONG CHA PLUS', 'TICCO', 'TRUEDAN', 'The Founders Bakery', 'The Grass', 'YOLE', 'Yonny', 'ZUS Signature', 'ChaTraMue', 'Homebaker @ Clover', 'Mahnaz Food', 'I LOVE YOO!',
+].map(restaurantNameKey))
+export const isMallCafeSnack = (name: string) => cafeSnackName.test(name) || cafeSnackBrands.has(restaurantNameKey(name))
 
 export function mallRestaurants(directory: MallDirectory, category: MallPlaceCategory = 'all', overrides: Record<string, MallPlaceCategoryOverride> = {}) {
-  return [...new Set(directory.names.map(name => name.trim()).filter(name => name && !excludedMallName(name)))].map(name => {
+  const seen = new Set<string>()
+  return directory.names.map(name => name.trim()).filter(name => {
+    const key = restaurantNameKey(name)
+    if (!name || excludedMallName(name) || seen.has(key)) return false
+    seen.add(key); return true
+  }).map(name => {
     const id = `mall:${directory.key}:${mallSlug(name)}`
     const resolvedCategory = overrides[id] ?? (isMallCafeSnack(name) ? 'cafe-snacks' : 'meals')
     return {

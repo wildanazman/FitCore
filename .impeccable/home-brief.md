@@ -15,3 +15,9 @@ FIRST VIEWPORT: Compact brand/settings, personal greeting, seven selectable date
 FORM: Candidate 7, daily digital ledger, seed fa3fb0ff. Code-led under the user's delegated direction. The roll ran degraded without challengers. Signature: the selected date glides between days while the energy ruler and real day data respond. Activity composition expands inline; counts and task state animate; reduced motion removes travel.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
+
+## Home refinement · 2026-10-08
+
+Preserve the ledger identity, macro rings, streak rules, milestone celebration and real logger. Replace the oversized streak card with a compact open check-in region: achievements stay reachable in the heading, dated browsing remains Monday-first, and duplicate logging actions are removed in favor of the two main actions below fuel. Selected-week counts must reflect the viewed week, not the current week.
+
+Use direct task names for nutrition, timeline, checklist and weight rather than repeated motivational headings. A historical date carries through nutrition/logging links and uses the latest weight on or before that date. Empty historical logs offer a dated logging action. Remove the decorative energy emblem and repeated footer slogan; preserve calorie calculations and estimate caveats. First viewport should show the energy reading and both log actions at normal mobile sizes. Verification covers empty/populated/over-target/history states, date navigation, completion, logging handoff, reduced motion and responsive overflow.

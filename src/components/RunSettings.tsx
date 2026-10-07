@@ -1,0 +1,27 @@
+import { RUN_TYPES, plannedRunMinutes, type RunKind, type RunSettings as Settings } from '../lib/runTypes'
+export function RunSettings({ kind, settings: s, age, onChange }: { kind: RunKind; settings: Settings; age: number; onChange: (settings: Settings) => void }) {
+  const type = RUN_TYPES[kind], maf = 180-age+s.mafAdjustment
+  const field=(key: 'warmup'|'cooldown'|'work'|'recovery'|'rounds', label: string, min: number, max: number) => <label className="home-form-label">{label}<input type="number" min={min} max={max} step={key==='rounds'?1:.5} value={Number.isNaN(s[key])?'':s[key]} onChange={e=>onChange({...s,[key]:e.target.value===''?NaN:Number(e.target.value)})} required /></label>
+  return <section className="activity-run-guide" aria-label="Run guidance and settings">
+    <div className="run-guide-intro"><h3>Your run brief.</h3><p>{type.purpose}</p></div>
+    <div className="run-effort"><span>Effort to aim for</span><strong>{type.effort}</strong></div>
+    {kind==='zone2_run' && <div className="run-hr-settings"><label className="home-form-label">Maximum heart rate (bpm)<input type="number" min={80} max={240} value={Number.isNaN(s.maxHr)?'':s.maxHr} onChange={e=>onChange({...s,maxHr:e.target.value===''?NaN:+e.target.value})} required /></label><p className="activity-run-target">Zone 2: {Number.isFinite(s.maxHr)?`${Math.round(s.maxHr*.6)}–${Math.round(s.maxHr*.7)} bpm`:'enter a valid maximum HR'}</p><small>60–70% HRmax · default maximum is estimated from age.</small></div>}
+    {kind==='maf_run' && <div className="run-hr-settings"><label className="home-form-label">MAF formula adjustment<select value={s.mafAdjustment} onChange={e=>onChange({...s,mafAdjustment:+e.target.value})}><option value={-10}>−10 · health / medication</option><option value={-5}>−5 · new / inconsistent training</option><option value={0}>0 · consistent, no listed issues</option><option value={5}>+5 · 2+ years, proven progress</option></select></label><p className="activity-run-target">MAF ceiling: {maf} bpm</p><small>Main aerobic range: {maf-10}–{maf} bpm · 180 − age + adjustment.</small></div>}
+    <div className="activity-run-blocks" aria-label="Session structure">
+      <span>Warm-up<strong>{s.warmup || 0} min</strong><small>Easy jog / walk</small></span>
+      <span>{type.block?`${s.rounds || 0} repeats`:'Main run'}<strong>{s.work || 0} min{type.block?' each':''}</strong><small>{type.block?`${s.recovery || 0} min easy between`:'Follow the effort target'}</small></span>
+      <span>Cool-down<strong>{s.cooldown || 0} min</strong><small>Ease back down</small></span>
+    </div>
+    <p className="activity-run-total">Example session: {Number.isFinite(plannedRunMinutes(kind,s))?plannedRunMinutes(kind,s):'—'} minutes. Log your actual completed duration below.</p>
+    <details className="run-customize"><summary>Customize this session</summary><p>Adjust this example to your fitness. Recovery is between repeats; cool-down follows the final effort.</p><div className="home-activity-values">{field('warmup','Warm-up (min)',0,120)}{field('cooldown','Cool-down (min)',0,120)}{field('work',type.block?'Work per repeat (min)':'Main run (min)',.5,600)}{type.block&&<>{field('recovery','Easy recovery (min)',0,120)}{field('rounds','Repeats',1,50)}</>}</div></details>
+    <details className="run-method"><summary>Why these settings?</summary>
+      <ul><li>{type.rule}</li>
+      {kind==='zone2_run'&&<li>Zone 2 here uses 60–70% of maximum HR in a five-zone %HRmax model. Watches can use different models. Default maximum = 220 − age, not a measured maximum. Use a known value or individual aerobic threshold; do not perform a maximal test just for this field.</li>}
+      {kind==='maf_run'&&<><li>−10: major illness recovery, rehabilitation, regular medication or chronic overtraining. −5: injury, regression, frequent illness, inconsistent training or just starting.</li><li>0: consistently training up to two years without listed problems. +5: more than two years, injury-free and demonstrated MAF-test/competitive progress—not simply feeling fit.</li><li>Under 16, over 65, illness and HR-altering medication require individual guidance. MAF is a training heuristic, not maximum HR or a medical test.</li></>}
+      <li>Average HR alone cannot prove you stayed in a zone. Heat, fatigue and medication affect HR. These examples are not a weekly training plan; recover between hard sessions.</li></ul>
+      <div className="activity-run-sources"><a href={kind==='maf_run'?'https://philmaffetone.com/180-formula/':'https://www.heart.org/en/healthy-living/exercise-and-physical-activity/fitness-basics/target-heart-rates'} target="_blank" rel="noopener noreferrer">{kind==='maf_run'?'Original MAF formula':'Heart-rate guidance'}</a><a href="https://www.nike.com/running/5k-training-plan/" target="_blank" rel="noopener noreferrer">Run workout examples</a></div>
+    </details>
+    <div className="run-actuals"><h4>Record your run.</h4><div className="home-activity-values"><label className="home-form-label">Actual distance (km, optional)<input type="number" step="any" min={.01} max={250} value={s.distanceKm} onChange={e=>onChange({...s,distanceKm:e.target.value})} /></label><label className="home-form-label">Average HR (bpm, optional)<input type="number" min={30} max={240} value={s.averageHr} onChange={e=>onChange({...s,averageHr:e.target.value})} /></label></div></div>
+    <p className="run-safety">Keep effort appropriate to your fitness. Stop for chest pain, dizziness or unusual breathlessness.</p>
+  </section>
+}

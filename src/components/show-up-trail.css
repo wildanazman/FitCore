@@ -1,4 +1,22 @@
 .show-up { margin-bottom: 24px; padding: 17px 18px 0; background: #fff; border: 1px solid var(--home-line); border-radius: 16px; }
+.home-page .show-up { padding:0 0 12px; margin-bottom:20px; background:transparent; border:0; border-bottom:1px solid var(--home-line); border-radius:0; }
+.home-page .show-up-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.home-page .show-up-heading h2 { font-size:16px; text-wrap:initial; }
+.home-page .show-up-heading p { font-size:12px; margin-top:4px; }
+.home-page .show-up-awards { display:flex; align-items:center; justify-content:center; gap:5px; min-width:52px; height:44px; flex:none; color:#1740cc; background:#e8eeff; border:0; border-radius:8px; font-size:12px; font-weight:700; }
+.home-page .show-up-week { margin-top:8px; }
+.home-page .show-up-week button { background:transparent; }
+.home-page .show-up-dates { margin-top:2px; gap:4px; }
+.home-page .show-up-day { min-height:60px; padding:3px 0; gap:3px; flex-direction:column; }
+.home-page .show-up-stamp { width:30px; height:30px; border-radius:8px; }
+.home-page .show-up-stamp strong { font-size:16px; }
+.home-page .show-up-feedback { min-height:30px; font-size:11px; }
+.home-page .show-up-history { margin:0; padding:0; background:transparent; border:0; border-radius:0; }
+.home-page .show-up-history summary { min-height:44px; padding:6px 0; gap:8px; }
+.home-page .show-up-calendar-icon { width:24px; height:24px; background:transparent; }
+.home-page .show-up-history summary>span:nth-child(2) { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; }
+.home-page .show-up-history summary small { margin-top:0; }
+.home-page .show-up-swipe { font-size:10px; padding-top:0; }
 .show-up-heading h2 { display:flex; align-items:center; gap:7px; font-size:19px; line-height:1.2; font-weight:800; letter-spacing:-.02em; text-wrap:balance; }
 .show-up-heading h2>.material-symbols-outlined { color:var(--home-blue); flex:none; }
 .show-up-heading p { margin-top:6px; color:var(--home-muted); font-size:12px; line-height:1.5; }

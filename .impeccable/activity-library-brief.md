@@ -1,0 +1,13 @@
+# Activity library revamp
+
+Mode: Operate. Preserve FitCore's chalk/navy/cobalt and Hanken typography.
+
+Primary path: browse an exercise, then log its completed work. Equipment, category and muscle focus belong to discovery, while sets/reps/load, duration and calorie inputs belong to the separate editor. Never display both large surfaces at once. The shared Home composer retains its compact behavior. User rejected a purely decluttered result and requested an aesthetic, fun athletic look: a navy session panel with full-strength Hanken lettering anchors discovery; kit tiles remain visible, focus chips are tactile choices, exercises have distinct white tiles and the journal/editor carry the same sporting identity. Cobalt actions and the existing citrus measurement accent remain inside the established palette.
+
+Date editing is progressively disclosed; the selected date remains visible and applies to summary, editor and journal. Home equipment is remembered in the existing profile. Search and muscle filters combine with gear availability. Twelve initial exercise rows keep discovery manageable; Show more exposes the rest without a nested scroll viewport. Guide media and detailed estimate assumptions are expandable; they remain available without overwhelming basic logging. Keep custom activity, timed holds, duration, sets, per-weight kg and device-energy override functions.
+
+The Activity journal includes only movement, distinguishes completed/planned sessions, supports completion toggles and inline removal confirmation, and exposes logged set details. Running plans remain a separate footer destination. Keep 44px targets, visible focus, responsive rows, native field validation and existing reduced-motion behavior; no new decorative animation or emoji.
+
+Gym shares the muscle filters with Home but never restricts exercises by owned home equipment; it includes machine, cable, barbell, dumbbell and bodyweight exercises. Run discovery covers easy, recovery, Zone 2, MAF, long, tempo, intervals, fartlek and hills. A compact run brief separates purpose, effort, HR guidance and three session blocks from customizable timing, methodology and actual measurements. MAF adjustment categories retain the original source; Zone 2 explicitly names the five-zone %HRmax model. Configurations are examples, not mandatory prescriptions or proof of adherence. Actual duration/distance/HR are distinct from planned structure; full run settings are retained in the manual log.
+
+Verification: scripts/check-activity-revamp.mjs covers 320px, 469px and desktop, persisted gear, combined filters, selection-to-editor, weights/reps/sets saving, journal state and custom logging. Local only; no push without authorization.

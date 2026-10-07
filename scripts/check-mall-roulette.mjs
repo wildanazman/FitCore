@@ -1,0 +1,57 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { chromium } from '/Users/wildan/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
+import { rankOSM } from '../api/nearby-restaurants.js'
+import { isExcludedRestaurant } from '../shared/restaurantCuration.js'
+assert.equal(isExcludedRestaurant('GO Noodle House IOI City Mall'), true)
+assert.equal(isExcludedRestaurant('DIN by Din Tai Fung'), false)
+const center={latitude:3.15,longitude:101.7}
+assert.equal(rankOSM(Array.from({length:30},(_,id)=>({id,type:'node',lat:3.15,lon:101.7+id*.00001,tags:{name:`Test ${id}`,amenity:'restaurant'}})),center,5).length,30)
+const source=readFileSync(new URL('../src/lib/storage.ts',import.meta.url),'utf8')
+const profile=Function(`return (${source.split('export const DEFAULT_PROFILE: UserProfile = ')[1].split('\n}\n')[0]+'\n}'})`)()
+const browser=await chromium.launch({headless:true,executablePath:'/Users/wildan/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'})
+try {
+ for(const width of [320,469,1200]) {
+  const context=await browser.newContext({viewport:{width,height:895},reducedMotion:width===320?'reduce':'no-preference'})
+  await context.addInitScript(profile=>localStorage.setItem('fitcore.state.v1',JSON.stringify({v:1,profile:{...profile,onboarded:true,name:'Test'},foods:[],sessions:[],weights:[],photos:[],dietTasks:[],streakMilestonesSeen:[]})),profile)
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))
+  await page.goto(process.env.FITCORE_TEST_URL || 'http://127.0.0.1:5182/#/eat-out?date=2026-10-07');await page.waitForLoadState('networkidle')
+  await page.getByRole('tab',{name:'Mall directory'}).click()
+  await page.getByRole('button',{name:/IOI City Mall/}).click()
+  const count=await page.locator('.eat-out-list input:checked').count()
+  assert.ok(count>10);assert.equal(count,await page.locator('.eat-out-list li').count())
+  const names=await page.locator('.eat-out-place-title h3').allTextContents()
+  assert.equal(names.some(name=>/coffee|chagee|tealive|zus signature|dunkin|lla[o ]*lla[o ]*/i.test(name)),false)
+  assert.equal(names.some(isExcludedRestaurant),false)
+  await page.getByLabel('Find a place in this list').fill('chicken')
+  assert.ok(await page.locator('.eat-out-list li').count()<count)
+  assert.equal(await page.getByRole('button',{name:`Spin all ${count} places`}).count(),1)
+  await page.getByLabel('Find a place in this list').fill('no-such-place-123')
+  assert.equal(await page.locator('.eat-out-list li').count(),0)
+  await page.getByRole('button',{name:'Clear search'}).click()
+  await page.getByLabel('Sort by',{exact:true}).selectOption('name')
+  const sorted=await page.locator('.eat-out-place-title h3').allTextContents()
+  assert.deepEqual(sorted,[...names].sort((a,b)=>a.localeCompare(b)))
+  assert.equal(await page.locator('option[value="rating"]').isDisabled(),true)
+  assert.equal(await page.getByText(/halal status unknown/i).count(),0)
+  await page.getByRole('button',{name:'Mute sound'}).click()
+  await page.getByRole('button',{name:/Spin all/}).click()
+  const dialog=page.getByRole('dialog');await dialog.waitFor()
+  const winner=await dialog.locator('h2').innerText();assert.ok(names.includes(winner))
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+  await page.screenshot({path:`/private/tmp/fitcore-roulette-${width}.png`,animations:'disabled'})
+  await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'})
+  await page.getByRole('button',{name:'View your pick'}).click();await dialog.waitFor()
+  await dialog.getByRole('button',{name:'Spin again'}).click();await dialog.waitFor({state:'hidden'});await dialog.waitFor()
+  await dialog.getByRole('button',{name:'Close your pick'}).click()
+  await page.getByRole('button',{name:'Cafés & snacks',exact:true}).click()
+  const cafes=await page.locator('.eat-out-place-title h3').allTextContents();assert.ok(cafes.includes('GIGI COFFEE'));assert.ok(cafes.includes('ZUS Signature'))
+  assert.equal(await page.locator('.eat-out-list input:checked').count(),cafes.length)
+  await page.getByRole('button',{name:'All F&B',exact:true}).click()
+  assert.equal(await page.locator('.eat-out-list input:checked').count(),names.length+cafes.length)
+  assert.equal(await page.locator('.eat-out-place-title h3').allTextContents().then(n=>new Set(n.map(v=>v.toLowerCase())).size),names.length+cafes.length)
+  assert.deepEqual(errors,[])
+  console.log(`PASS ${width}px: ${count} meals included, cafe separation, exclusions, popup/re-spin/Escape/mute, no overflow/errors`)
+  await context.close()
+ }
+} finally {await browser.close()}

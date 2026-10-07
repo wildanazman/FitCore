@@ -7,6 +7,7 @@ import { ProgressBar, SectionLabel } from '../components/ui'
 import { WeightHistory } from '../components/WeightHistory'
 import { Icon } from '../components/Icon'
 import { WeightJourney } from '../components/WeightJourney'
+import { WeightFeedback } from '../components/WeightFeedback'
 import { todayISO, shortDate, uid } from '../lib/date'
 import { fatMassKg, latestMeasured, latestWithMeasurements, leanMassKg, navyBodyFat } from '../lib/body'
 import { leanMassInsight } from '../lib/coach'
@@ -85,6 +86,7 @@ export function Body() {
               </div>
             </div>
 
+            <WeightFeedback />
             <WeightHistory entries={state.weights} units={profile.units} targetKg={profile.targetWeightKg} onLog={() => setShowLog(true)} />
             <WeightJourney />
           </>

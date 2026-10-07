@@ -23,9 +23,18 @@ export interface ActivityDef {
   requires?: EquipmentId[]
   muscles?: MuscleGroup[]
   detail?: string
+  equipmentText?: string
+  load?: boolean
+  demoId?: string
 }
 
 const BASE_ACTIVITIES: ActivityDef[] = [
+  { id: 'maf_run', label: 'MAF run', category: 'run', type: 'run', met: 8.3, icon: 'cardiology', detail: 'Aerobic effort with the MAF heart-rate ceiling' },
+  { id: 'zone2_run', label: 'Zone 2 run', category: 'run', type: 'run', met: 8.3, icon: 'cardiology', detail: 'Steady conversational aerobic running' },
+  { id: 'fartlek_run', label: 'Fartlek', category: 'run', type: 'run', met: 8.3, icon: 'speed', detail: 'Speed play: alternate quicker and easy efforts' },
+  { id: 'recovery_run', label: 'Recovery run', category: 'run', type: 'run', met: 8.3, icon: 'directions_run', detail: 'Short and very easy between harder days' },
+  { id: 'long_run', label: 'Long run', category: 'run', type: 'run', met: 8.3, icon: 'route', detail: 'Conversational time-on-feet endurance' },
+  { id: 'hill_run', label: 'Hill repeats', category: 'run', type: 'run', met: 8.3, icon: 'landscape', detail: 'Controlled uphill efforts with easy recovery' },
   { id: 'easy_run', label: 'Easy run', category: 'run', type: 'run', met: 8.3, icon: 'directions_run' },
   { id: 'tempo_run', label: 'Tempo run', category: 'run', type: 'run', met: 10.5, icon: 'speed' },
   { id: 'interval_run', label: 'Intervals', category: 'run', type: 'run', met: 12.3, icon: 'bolt' },
@@ -129,6 +138,8 @@ const HOME_EXERCISES: ActivityDef[] = [
 ]
 
 const BASE_MUSCLES: Record<string, MuscleGroup[]> = {
+  strength_general: ['full-body'], dumbbell_row: ['full-body'], gym_vigorous: ['full-body'],
+  bench_press: ['chest', 'arms'], squat: ['legs', 'glutes'], deadlift: ['back', 'legs', 'glutes'],
   home_general: ['full-body'], bodyweight: ['full-body'], home_pushups: ['chest', 'arms'],
   home_squats: ['legs', 'glutes'], home_hiit: ['full-body'], home_pilates: ['abs'],
   home_core: ['abs'], home_glute: ['glutes'], home_dumbbell_full: ['full-body'],
@@ -136,7 +147,43 @@ const BASE_MUSCLES: Record<string, MuscleGroup[]> = {
   home_dumbbell_press: ['shoulders', 'arms'], home_dumbbell_rdl: ['legs', 'glutes'],
   home_floor_press: ['chest', 'arms'], home_mat_dumbbell: ['full-body'],
 }
-export const ACTIVITIES: ActivityDef[] = [...BASE_ACTIVITIES.map(item => ({ ...item, muscles: BASE_MUSCLES[item.id] })), ...HOME_EXERCISES]
+function gymExercise(id: string, label: string, muscles: MuscleGroup[], equipmentText: string, detail: string, demoId?: string, load = true): ActivityDef {
+  return { id: `gym_${id}`, label, muscles, equipmentText, detail, demoId, load, category: 'gym', type: 'strength', met: 3.5, icon: 'fitness_center' }
+}
+const GYM_EXERCISES: ActivityDef[] = [
+  gymExercise('incline_press', 'Incline dumbbell press', ['chest', 'shoulders', 'arms'], 'Dumbbells + incline bench', 'Upper-chest pressing movement'),
+  gymExercise('db_bench', 'Dumbbell bench press', ['chest', 'arms'], 'Dumbbells + bench', 'Flat-bench chest press', 'home_db_bench_press'),
+  gymExercise('chest_press', 'Machine chest press', ['chest', 'arms'], 'Chest press machine', 'Seated horizontal press'),
+  gymExercise('pec_deck', 'Pec deck fly', ['chest'], 'Pec deck machine', 'Controlled chest fly'),
+  gymExercise('cable_fly', 'Cable chest fly', ['chest'], 'Cable machine', 'Standing chest fly'),
+  gymExercise('lat_pulldown', 'Lat pulldown', ['back', 'arms'], 'Lat pulldown machine', 'Vertical pulling movement'),
+  gymExercise('seated_row', 'Seated cable row', ['back', 'arms'], 'Cable row machine', 'Seated horizontal pull'),
+  gymExercise('barbell_row', 'Barbell bent-over row', ['back', 'arms'], 'Barbell', 'Hip-hinge horizontal row'),
+  gymExercise('db_row', 'Single-arm dumbbell row', ['back', 'arms'], 'Dumbbell + bench', 'Bench-supported single-arm row', 'home_bench_row'),
+  gymExercise('pullup', 'Pull-up', ['back', 'arms'], 'Pull-up bar · bodyweight', 'Bodyweight vertical pull', undefined, false),
+  gymExercise('leg_press', 'Leg press', ['legs', 'glutes'], 'Leg press machine', 'Controlled leg press'),
+  gymExercise('leg_extension', 'Leg extension', ['legs'], 'Leg extension machine', 'Seated knee extension'),
+  gymExercise('leg_curl', 'Seated leg curl', ['legs'], 'Leg curl machine', 'Controlled hamstring curl'),
+  gymExercise('rdl', 'Barbell Romanian deadlift', ['legs', 'glutes', 'back'], 'Barbell', 'Hip hinge with a controlled range'),
+  gymExercise('bulgarian', 'Dumbbell Bulgarian split squat', ['legs', 'glutes'], 'Dumbbells + bench', 'Rear-foot-elevated split squat', 'home_db_bulgarian'),
+  gymExercise('calf_raise', 'Machine calf raise', ['legs'], 'Calf raise machine', 'Controlled heel raise'),
+  gymExercise('hip_thrust', 'Barbell hip thrust', ['glutes', 'legs'], 'Barbell + bench', 'Bench-supported hip extension'),
+  gymExercise('hip_abduction', 'Hip abduction', ['glutes'], 'Hip abduction machine', 'Controlled outward hip movement'),
+  gymExercise('cable_kickback', 'Cable glute kickback', ['glutes'], 'Cable machine + ankle strap', 'Single-leg hip extension'),
+  gymExercise('shoulder_press', 'Dumbbell shoulder press', ['shoulders', 'arms'], 'Dumbbells', 'Controlled overhead press', 'home_dumbbell_press'),
+  gymExercise('lateral_raise', 'Dumbbell lateral raise', ['shoulders'], 'Dumbbells', 'Controlled side raise', 'home_db_lateral_raise'),
+  gymExercise('rear_delt', 'Rear delt fly', ['shoulders', 'back'], 'Reverse pec deck machine', 'Rear-shoulder fly'),
+  gymExercise('face_pull', 'Cable face pull', ['shoulders', 'back'], 'Cable machine + rope', 'Upper-back and rear-shoulder pull'),
+  gymExercise('biceps_curl', 'Dumbbell biceps curl', ['arms'], 'Dumbbells', 'Standing elbow flexion', 'home_db_curl'),
+  gymExercise('hammer_curl', 'Dumbbell hammer curl', ['arms'], 'Dumbbells', 'Neutral-grip curl', 'home_db_hammer_curl'),
+  gymExercise('triceps_pushdown', 'Cable triceps pushdown', ['arms'], 'Cable machine', 'Controlled elbow extension'),
+  gymExercise('overhead_triceps', 'Overhead triceps extension', ['arms'], 'Dumbbell', 'Controlled overhead extension', 'home_db_triceps'),
+  gymExercise('cable_crunch', 'Cable crunch', ['abs'], 'Cable machine + rope', 'Controlled kneeling crunch'),
+  gymExercise('hanging_raise', 'Hanging knee raise', ['abs'], 'Pull-up bar · bodyweight', 'Controlled knee raise', undefined, false),
+  gymExercise('plank', 'Forearm plank', ['abs'], 'Mat · bodyweight', 'Static core hold', 'home_plank', false),
+  gymExercise('thruster', 'Dumbbell thruster', ['full-body', 'legs', 'shoulders'], 'Dumbbells', 'Squat into overhead press', 'home_db_thruster'),
+]
+export const ACTIVITIES: ActivityDef[] = [...BASE_ACTIVITIES.map(item => ({ ...item, muscles: BASE_MUSCLES[item.id] })), ...HOME_EXERCISES, ...GYM_EXERCISES]
 
 export function requiredEquipment(item: ActivityDef): EquipmentId[] {
   return item.requires ?? []
@@ -145,12 +192,14 @@ export function canUseEquipment(item: ActivityDef, owned: EquipmentId[]): boolea
   return requiredEquipment(item).every(id => owned.includes(id))
 }
 export function equipmentLabel(item: ActivityDef): string {
+  if (item.equipmentText) return item.equipmentText
+  if (item.category === 'gym') return ['bench_press', 'squat', 'deadlift'].includes(item.id) ? 'Barbell' : 'Gym equipment'
   const required = requiredEquipment(item)
   return required.length ? required.map(id => HOME_EQUIPMENT.find(gear => gear.id === id)!.label).join(' + ') : 'Bodyweight · no equipment'
 }
 
 export function activityTracking(item: ActivityDef): 'reps' | 'hold' | 'time' {
-  if (['home_plank', 'home_side_plank', 'home_wall_sit'].includes(item.id)) return 'hold'
+  if (['home_plank', 'home_side_plank', 'home_wall_sit', 'gym_plank'].includes(item.id)) return 'hold'
   if (item.type !== 'strength' || item.category === 'mobility' || ['strength_general', 'dumbbell_row', 'gym_vigorous', 'home_general', 'bodyweight', 'home_pushups', 'home_squats', 'home_pilates', 'home_core', 'home_glute', 'home_dumbbell_full', 'home_mat_dumbbell', 'home_kb_suitcase', 'home_db_farmer'].includes(item.id)) return 'time'
   return 'reps'
 }

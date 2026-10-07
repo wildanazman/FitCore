@@ -44,8 +44,15 @@ export interface UserProfile {
   /** Custom finish-time target, minutes; null means finish without a time target. */
   runGoalTimeMin: number | null
   runPlanWeeks: number
-  runBenchmarkDistanceKm: 5 | 10
+  runBenchmarkDistanceKm: 5 | 10 | 21.1 | 42.2
+  runBenchmarkPaceSec?: number
   runBenchmarkKnown: boolean
+  runWeeklyKm?: number
+  runRecentDaysPerWeek?: number
+  runExperience?: 'new' | 'returning' | 'regular'
+  runBaseOnly?: boolean
+  runWeekFeedback?: { week:number; response:'comfortable'|'hard'|'missed' }[]
+  runCheckpoints?: { fromWeek: number; distanceKm: 5 | 10 | 21.1 | 42.2; paceSec: number }[]
   /** Personal body-weight target, saved in kg regardless of display units. */
   targetWeightKg: number | null
   /** How many days per week the runner wants to train (3-7). */
@@ -152,6 +159,16 @@ export interface DietTask {
 export type SessionType = 'run' | 'strength' | 'sport' | 'rest'
 
 export interface PlanSession {
+  /** Structured workout type; display names must not drive planner logic. */
+  runKind?: 'easy' | 'long' | 'tempo' | 'interval' | 'benchmark' | 'event'
+  runBrief?: { pace: string; steps: { label: string; value: string }[]; note: string }
+  runLog?: {
+    kind: string
+    settings: { warmup: number; cooldown: number; work: number; recovery: number; rounds: number; maxHr: number; mafAdjustment: number; distanceKm: string; averageHr: string }
+    plannedDurationMin: number
+    /** Guidance, not verified adherence to a heart-rate zone. */
+    hrTarget?: { min: number; max: number }
+  }
   strengthLog?: {
     exerciseId?: string
     mode: 'reps' | 'hold'

@@ -1,5 +1,6 @@
 export const config = { maxDuration: 30 }
 import { hasExcludedIngredients } from '../shared/foodSuitability.js'
+import { isExcludedRestaurant } from '../shared/restaurantCuration.js'
 const cache = new Map()
 let nextRequest = 0, inFlight = false
 const googleUsage = new Map()
@@ -51,7 +52,7 @@ export function rankOSM(elements, center, radiusKm) {
       cuisine: clean(t.cuisine).replace(/;/g, ', '), openingHours: clean(t.opening_hours), halalStatus: t['diet:halal'] === 'yes' ? 'Tagged halal in OpenStreetMap—not verified certification' : 'Halal status unknown',
       mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${latitude},${longitude}`)}`,
       osmUrl: `https://www.openstreetmap.org/${p.type}/${p.id}` }]
-  }).sort((a,b) => a._distance - b._distance || a.name.localeCompare(b.name)).slice(0,10).map(({_distance, ...p}) => p)
+  }).filter(p => !isExcludedRestaurant(p.name)).sort((a,b) => a._distance - b._distance || a.name.localeCompare(b.name)).map(({_distance, ...p}) => p)
 }
 export function rankGoogle(places, center, radiusKm) {
   const seen = new Set()
@@ -64,7 +65,7 @@ export function rankGoogle(places, center, radiusKm) {
   }).sort((a, b) => {
     const score = p => Number.isFinite(p.rating) ? (p.rating * (p.userRatingCount || 0) + 4 * 100) / ((p.userRatingCount || 0) + 100) : 0
     return score(b) - score(a) || distanceKm(center, a.location) - distanceKm(center, b.location)
-  }).slice(0, 10).map(p => ({
+  }).filter(p => !isExcludedRestaurant(p.displayName.text)).map(p => ({
     id: `google:${p.id}`, name: p.displayName.text, address: clean(p.formattedAddress), distanceKm: Math.round(distanceKm(center, p.location) * 10) / 10,
     cuisine: '', openingHours: clean(p.currentOpeningHours?.weekdayDescriptions?.join(' · ')), halalStatus: 'Halal status unknown—check the business before eating',
     rating: Number.isFinite(p.rating) ? p.rating : null, reviews: Number.isSafeInteger(p.userRatingCount) ? p.userRatingCount : null,

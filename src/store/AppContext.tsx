@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import type { AppState, DietTask, FoodEntry, PlanSession, ProgressPhoto, UserProfile, WeightEntry } from '../types'
 import { clearState, emptyState, loadState, saveState, seedForProfile } from '../lib/storage'
-import { generatePlan } from '../lib/plan'
+import { generatePlan, scheduledRunKey } from '../lib/plan'
 import { latestMeasured } from '../lib/body'
 import { togglePlannedTask } from '../lib/dietPlanner'
 
@@ -64,8 +64,12 @@ function reducer(state: AppState, action: Action): AppState {
     case 'removePhoto':
       return { ...state, photos: state.photos.filter((p) => p.id !== action.id) }
 
-    case 'addSession':
-      return { ...state, sessions: [...state.sessions, action.session] }
+    case 'addSession': {
+      const retained=action.session.plan==='running'&&!action.session.manual
+        ?state.sessions.filter(s=>s.plan!=='running'||s.date!==action.session.date||s.completed||s.manual)
+        :state.sessions
+      return { ...state, sessions: [...retained, action.session] }
+    }
     case 'removeSession':
       return { ...state, sessions: state.sessions.filter((s) => s.id !== action.id) }
 
@@ -98,9 +102,9 @@ function regenerateKeepingProgress(state: AppState, profile: UserProfile): AppSt
   const manual = state.sessions.filter((s) => s.plan === 'manual' || s.manual)
   const completed = state.sessions.filter((s) => s.completed && !(s.plan === 'manual' || s.manual))
   const other = state.sessions.filter(s => !s.completed && s.plan !== 'running' && s.plan !== 'manual' && !s.manual)
-  const completedSlots = new Set(completed.map(s => `${s.date}|${s.plan}|${s.type}`))
+  const completedRuns = new Set(completed.filter(s=>s.plan==='running').map(scheduledRunKey))
   return [
-    ...fresh.filter(s => !completedSlots.has(`${s.date}|${s.plan}|${s.type}`)),
+    ...fresh.filter(s => !completedRuns.has(scheduledRunKey(s))),
     ...completed,
     ...other,
     ...manual,

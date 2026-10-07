@@ -9,6 +9,7 @@ import { Icon } from '../components/Icon'
 import { ProteinIdeas } from '../components/ProteinIdeas'
 import { ChatFoodImport } from '../components/ChatFoodImport'
 import { FoodSources } from '../components/FoodSources'
+import { MaintenanceInsight } from '../components/MaintenanceInsight'
 import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 import { CountUp, Press, Reveal, listContainer, spring } from '../components/motion'
 import { isLogDate, shortDate, timestampOnDate, todayISO, timeLabel, uid } from '../lib/date'
@@ -29,7 +30,7 @@ import './eat-out.css'
 
 export function Food() {
   const reduced = useReducedMotion()
-  const { state, profile, weightKg, addFood, updateFood, removeFood } = useApp()
+  const { state, profile, addFood, updateFood, removeFood } = useApp()
   const nav = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedDate = searchParams.get('date') ?? ''
@@ -39,7 +40,8 @@ export function Food() {
   const [chatImportOpen, setChatImportOpen] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<MealSlot>(slotForNow())
 
-  const fuel = dayFuel(profile, weightKg, today, state.foods, state.sessions)
+  const dayWeight = [...state.weights].filter(entry => entry.date <= today).sort((a, b) => b.date.localeCompare(a.date))[0]?.weightKg ?? profile.startWeightKg
+  const fuel = dayFuel(profile, dayWeight, today, state.foods, state.sessions)
   const todayFoods = state.foods.filter((f) => f.date === today).sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
   const calPct = fuel.budget ? Math.min(100, (fuel.consumed / fuel.budget) * 100) : 0
 
@@ -90,6 +92,7 @@ export function Food() {
           <div className="food-score-bottom"><div><span>EATEN</span><strong>{fuel.consumed.toLocaleString()}</strong></div><div><span>DAILY TARGET</span><strong>{fuel.budget.toLocaleString()}</strong></div></div>
           <div className="food-score-track" role="progressbar" aria-label={`${fuel.consumed} of ${fuel.budget} calories eaten`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(calPct)}><span style={{ width: `${calPct}%` }} /></div>
           {fuel.trainingBonus > 0 && <p className="food-score-note">+{fuel.trainingBonus} kcal activity allowance included</p>}
+          <MaintenanceInsight profile={profile} weightKg={dayWeight} consumed={fuel.consumed} target={fuel.budget} hasLogs={todayFoods.length > 0} />
         </section>
       </Reveal>
 
