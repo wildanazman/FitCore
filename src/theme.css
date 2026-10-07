@@ -1,5 +1,8 @@
 /* Shared FitCore workspace: chalk, cobalt, clear task hierarchy. */
 :root { --app-bg:#f4f6fa; --app-ink:#17253a; --app-muted:#627089; --app-blue:#2453ee; --app-line:#dfe5ef; --home-blue:#2453ee; --home-blue-dark:#1740cc; --home-ink:#17253a; --home-muted:#627089; }
+:root { --app-heading-size:30px; --app-support-size:13px; }
+@media(max-width:390px) { :root { --app-heading-size:28px; } }
+@media(min-width:850px) { :root { --app-heading-size:36px; --app-support-size:14px; } }
 ::selection { background:#d4ddff; color:#17253a; }
 input, textarea { caret-color:var(--app-blue); }
 input, select, textarea { color-scheme:light; }
@@ -15,7 +18,7 @@ button { transition:background-color .16s ease, border-color .16s ease; }
 .home-dock nav a>.material-symbols-outlined,.home-dock nav a>span { z-index:1; }
 .dock-selection { position:absolute; inset:0; border-radius:12px; background:#e8eeff; z-index:0; }
 .page-heading { padding:24px 20px 20px; }
-.page-heading h1,.diet-heading h1,.activity-page>header h1,.settings-header h1 { font:800 32px/1.12 'Hanken Grotesk',sans-serif; letter-spacing:-.03em; margin:0; }
+.page-heading h1,.diet-heading h1,.settings-header h1 { font:800 32px/1.12 'Hanken Grotesk',sans-serif; letter-spacing:-.03em; margin:0; }
 .page-heading p { color:var(--app-muted); font-size:13px; margin-top:8px; max-width:50ch; }
 .page-switch { display:flex; gap:4px; padding:4px; background:#e8edf5; border-radius:12px; margin-bottom:22px; }
 .page-switch>button { flex:1; min-height:44px; border:0; border-radius:9px; color:#627089; background:transparent; font:700 13px 'Hanken Grotesk',sans-serif; text-transform:none; letter-spacing:0; padding:8px; }
@@ -63,17 +66,9 @@ button { transition:background-color .16s ease, border-color .16s ease; }
 .settings-switch>span { background:#fff; }
 .settings-more summary { font-size:20px; }
 .settings-footer { padding-bottom:20px; }
-.activity-page { padding:0 20px 120px; }
-.activity-page>header:first-child { margin-inline:-20px; }
-.activity-page>.page-heading { padding:24px 0 20px; }
-.activity-summary { display:flex; gap:24px; padding:18px 0 23px; border-bottom:1px solid #dfe5ef; margin-bottom:24px; }
-.activity-summary div { display:flex; flex-direction:column; gap:3px; }
-.activity-summary strong { font-size:25px; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-.activity-summary span { font-size:12px; color:#627089; }
 .activity-saved { padding:12px; color:#145e54; background:#def4ed; border-radius:10px; margin-bottom:16px; font-size:13px; }
 .activity-page .home-activity-form { padding:0; border:0; }
 .activity-page .daily-timeline { padding:0; }
-.activity-running-link { margin-top:24px; border-radius:12px; }
 .running-heading { padding:20px 4px 4px; }
 .running-heading h1 { font-size:32px; font-weight:800; line-height:1.12; letter-spacing:-.03em; }
 .running-heading p { font-size:13px; color:#627089; margin-top:8px; }

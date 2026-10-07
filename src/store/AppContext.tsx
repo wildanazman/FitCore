@@ -3,7 +3,7 @@ import type { AppState, DietTask, FoodEntry, PlanSession, ProgressPhoto, UserPro
 import { clearState, emptyState, loadState, saveState, seedForProfile } from '../lib/storage'
 import { generatePlan } from '../lib/plan'
 import { latestMeasured } from '../lib/body'
-import { todayISO } from '../lib/date'
+import { togglePlannedTask } from '../lib/dietPlanner'
 
 type Action =
   | { type: 'onboard'; profile: UserProfile }
@@ -19,6 +19,7 @@ type Action =
   | { type: 'removeSession'; id: string }
   | { type: 'toggleSession'; id: string }
   | { type: 'addDietTask'; task: DietTask }
+  | { type: 'updateDietTask'; id: string; patch: Partial<DietTask> }
   | { type: 'toggleDietTask'; id: string }
   | { type: 'removeDietTask'; id: string }
   | { type: 'refresh' }
@@ -46,7 +47,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'updateFood':
       return { ...state, foods: state.foods.map((f) => (f.id === action.id ? { ...f, ...action.patch } : f)) }
     case 'removeFood':
-      return { ...state, foods: state.foods.filter((f) => f.id !== action.id) }
+      return { ...state, foods: state.foods.filter((f) => f.id !== action.id), dietTasks: state.dietTasks.map(t => t.foodEntryId === action.id ? { ...t, completed: false, completedAt: undefined, foodEntryId: undefined } : t) }
 
     case 'addWeight': {
       const weights = [...state.weights.filter((w) => w.date !== action.entry.date), action.entry]
@@ -74,7 +75,9 @@ function reducer(state: AppState, action: Action): AppState {
     case 'addDietTask':
       return { ...state, dietTasks: [...state.dietTasks, action.task] }
     case 'toggleDietTask':
-      return { ...state, dietTasks: state.dietTasks.map((task) => task.id === action.id ? { ...task, completed: !task.completed, completedAt: task.completed ? undefined : todayISO() } : task) }
+      return togglePlannedTask(state, action.id)
+    case 'updateDietTask':
+      return { ...state, dietTasks: state.dietTasks.map(t => t.id === action.id && !t.completed ? { ...t, ...action.patch, id: t.id } : t) }
     case 'removeDietTask':
       return { ...state, dietTasks: state.dietTasks.filter((task) => task.id !== action.id) }
 
@@ -118,6 +121,7 @@ interface Ctx {
   removeSession: (id: string) => void
   toggleSession: (id: string) => void
   addDietTask: (task: DietTask) => void
+  updateDietTask: (id: string, patch: Partial<DietTask>) => void
   toggleDietTask: (id: string) => void
   removeDietTask: (id: string) => void
   refresh: () => void
@@ -152,6 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       removeSession: (id) => dispatch({ type: 'removeSession', id }),
       toggleSession: (id) => dispatch({ type: 'toggleSession', id }),
       addDietTask: (task) => dispatch({ type: 'addDietTask', task }),
+      updateDietTask: (id, patch) => dispatch({ type: 'updateDietTask', id, patch }),
       toggleDietTask: (id) => dispatch({ type: 'toggleDietTask', id }),
       removeDietTask: (id) => dispatch({ type: 'removeDietTask', id }),
       refresh: () => dispatch({ type: 'refresh' }),

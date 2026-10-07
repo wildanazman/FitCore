@@ -40,9 +40,13 @@
 .home-profile:hover { background: #d9e3fc; }
 .home-profile-dot { display: grid; place-items: center; position: absolute; right: -2px; bottom: -1px; width: 18px; height: 18px; background: white; border: 2px solid var(--home-bg); border-radius: 50%; }
 .home-welcome { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 25px; }
-.home-welcome h1 { font-size: 30px; font-weight: 800; line-height: 1.12; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.home-welcome h1 { font-size: var(--app-heading-size); font-weight: 800; line-height: 1.12; letter-spacing: -.03em; overflow-wrap: anywhere; }
 .home-welcome h1>span { color: var(--home-blue); }
-.home-welcome p { margin-top: 7px; color: var(--home-muted); font-size: 13px; }
+.home-welcome p { margin-top: 7px; color: var(--home-muted); font-size: var(--app-support-size); }
+.home-history-date { margin-top:10px; }
+.home-history-date summary { width:fit-content; min-height:44px; display:flex; align-items:center; cursor:pointer; color:var(--home-blue); font-size:13px; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+.home-history-date summary:focus-visible { outline:3px solid var(--home-blue); outline-offset:3px; }
+.home-history-date .log-date-picker { margin:8px 0 0; }
 .home-goal { display: inline-flex; align-items: center; flex: none; gap: 5px; margin-top: 4px; border: 1px solid var(--home-line); border-radius: 20px; padding: 6px 9px; font-size: 10px; font-weight: 700; color: #53647d; background: #fff; }
 .home-calendar { margin-bottom: 23px; }
 .home-calendar-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
@@ -248,8 +252,6 @@
   .app-shell.app-shell-home { max-width: 1060px; border-radius: 22px; box-shadow: 0 18px 60px #23365514; }
   .home-page { padding: 30px 38px 120px; }
   .home-header { margin-bottom: 26px; }
-  .home-welcome h1 { font-size: 36px; }
-  .home-welcome p { font-size: 14px; }
   .home-goal { font-size: 12px; padding: 8px 13px; }
   .home-calendar { max-width: 100%; margin-bottom: 28px; }
   .home-calendar-top { margin-bottom: 10px; }
@@ -273,7 +275,6 @@
 }
 @media(max-width: 390px) {
   .home-page { padding: 19px 17px 112px; }
-  .home-welcome h1 { font-size: 28px; }
   .home-goal { font-size: 9px; gap: 3px; padding: 6px; }
   .home-energy { padding: 18px; }
   .home-energy-reading>span:first-child { font-size: 51px; }

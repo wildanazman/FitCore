@@ -1,3 +1,4 @@
+import { MealFoodList } from '../components/MealFoodList'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
@@ -48,7 +49,7 @@ export function DietPlan() {
 
     <WeeklyDietPlan mode={profile.dietMode} startHour={profile.eatingWindowStartHour} />
 
-    <section className="diet-sample"><div className="diet-section-title"><h2>A day you could follow.</h2><p>Example portions scaled to about {plan.target.toLocaleString()} kcal. Adjust food and servings to suit you.</p></div><div className="diet-meal-list">{plan.scaledDay.map((meal, i) => <div className="diet-meal" key={`${meal.name}-${i}`}><div className="diet-meal-time">{String(i + 1).padStart(2, '0')}</div><div><h3>{meal.name}</h3><p>{meal.items}</p><small>{meal.protein}g protein · {meal.carbs}g carbs · {meal.fat}g fat</small></div><strong>{meal.kcal}<span> kcal</span></strong></div>)}</div><div className="diet-sample-total"><span>EXAMPLE TOTAL</span><strong>{plan.scaledTotal.kcal.toLocaleString()} kcal</strong></div></section>
+    <section className="diet-sample"><div className="diet-section-title"><h2>A Malaysian day you could follow.</h2><p>Familiar lauk and practical portions. This example is {Math.round(plan.scaledTotal.kcal).toLocaleString()} kcal; your target is {plan.target.toLocaleString()} kcal. Adjust servings to close any gap. Choose halal-certified ingredients and vendors.</p></div><div className="diet-meal-list">{plan.scaledDay.map((meal, i) => <div className="diet-meal" key={`${meal.name}-${i}`}><div className="diet-meal-time">{String(i + 1).padStart(2, '0')}</div><div><h3>{meal.name}</h3><MealFoodList items={meal.items} /><small>{Math.round(meal.protein)}g protein · {Math.round(meal.carbs)}g carbs · {Math.round(meal.fat)}g fat</small></div><strong>{Math.round(meal.kcal)}<span> kcal</span></strong></div>)}</div><div className="diet-sample-total"><span>EXAMPLE TOTAL</span><strong>{Math.round(plan.scaledTotal.kcal).toLocaleString()} kcal</strong></div></section>
 
     <section className="diet-knowledge"><div className="diet-section-title"><h2>Know the plan.</h2><p>The useful details, without turning your day into a rulebook.</p></div><details><summary>How it works</summary><ul>{plan.guide.howItWorks.map((item) => <li key={item}>{item}</li>)}</ul></details><details><summary>Foods to lean on</summary><ul>{plan.guide.eat.map((item) => <li key={item}>{item}</li>)}</ul></details><details><summary>Foods to limit</summary><ul>{plan.guide.avoid.map((item) => <li key={item}>{item}</li>)}</ul></details><details><summary>Practical tips & cautions</summary><ul>{[...plan.guide.tips, ...plan.guide.cautions].map((item) => <li key={item}>{item}</li>)}</ul></details></section>
 

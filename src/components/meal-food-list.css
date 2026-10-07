@@ -1,0 +1,4 @@
+.meal-food-points{display:grid;gap:8px;list-style:disc;margin:10px 0 12px;padding-left:18px;color:#17253a;font:600 13px/1.45 'Hanken Grotesk',sans-serif}
+.meal-food-points li{padding-left:3px}
+.meal-food-points li::marker{color:#2453ee}
+.meal-food-points li>small{display:block;margin-top:1px;color:#526079;font-size:12px;font-weight:400}

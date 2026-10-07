@@ -12,6 +12,19 @@ export function parseISO(iso: string): Date {
   return new Date(y, m - 1, d)
 }
 
+/** Only real local calendar dates up to today can receive completed logs. */
+export function isLogDate(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) && iso >= '1900-01-01' && iso <= todayISO() && todayISO(parseISO(iso)) === iso
+}
+
+/** Keep the displayed local time on the selected day (not UTC midnight). */
+export function timestampOnDate(iso: string): string {
+  const now = new Date()
+  const date = parseISO(iso)
+  date.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds())
+  return date.toISOString()
+}
+
 export function addDays(iso: string, n: number): string {
   const d = parseISO(iso)
   d.setDate(d.getDate() + n)

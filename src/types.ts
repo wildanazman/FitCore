@@ -25,6 +25,7 @@ export interface Wearables {
 }
 
 export interface UserProfile {
+  homeEquipment?: ('mat' | 'dumbbell' | 'bench' | 'kettlebell')[]
   name: string
   sex: Sex
   age: number
@@ -129,11 +130,40 @@ export interface DietTask {
   title: string
   completed: boolean
   completedAt?: string
+  meal?: {
+    slot: MealSlot
+    time: string
+    serving: string
+    servings: number
+    /** Nutrition per reference serving, not the multiplied meal total. */
+    kcal: number
+    protein: number
+    carbs: number
+    fat: number
+    note?: string
+  }
+  foodEntryId?: string
 }
 
 export type SessionType = 'run' | 'strength' | 'sport' | 'rest'
 
 export interface PlanSession {
+  strengthLog?: {
+    exerciseId?: string
+    mode: 'reps' | 'hold'
+    /** Weight of ONE dumbbell/kettlebell, not both combined. */
+    implementCount: 1 | 2
+    sets: { reps: number; weightKg: number; holdSeconds?: number }[]
+    volumeKg: number
+    calorieEstimate?: {
+      method: 'entered' | 'sets-tempo'
+      bodyWeightKg: number
+      tempoSeconds: number
+      restSeconds: number
+      sides: 1 | 2
+      effort: 'moderate' | 'hard'
+    }
+  }
   id: string
   /** ISO yyyy-mm-dd */
   date: string

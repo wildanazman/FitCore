@@ -9,7 +9,8 @@ import { Icon } from '../components/Icon'
 import { ProteinIdeas } from '../components/ProteinIdeas'
 import { ChatFoodImport } from '../components/ChatFoodImport'
 import { CountUp, Press, Reveal, listContainer, spring } from '../components/motion'
-import { todayISO, timeLabel, uid } from '../lib/date'
+import { isLogDate, shortDate, timestampOnDate, todayISO, timeLabel, uid } from '../lib/date'
+import { LogDatePicker } from '../components/LogDatePicker'
 import { dayFuel } from '../lib/nutrition'
 import { dietDef, dietWarnings, nowMinutes, windowState } from '../lib/diet'
 import { slotForNow } from '../lib/foodAI'
@@ -28,7 +29,8 @@ export function Food() {
   const { state, profile, weightKg, addFood, updateFood, removeFood } = useApp()
   const nav = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const today = todayISO()
+  const requestedDate = searchParams.get('date') ?? ''
+  const today = isLogDate(requestedDate) ? requestedDate : todayISO()
   const [editing, setEditing] = useState<FoodEntry | null>(null)
   const [searchOpen, setSearchOpen] = useState(searchParams.get('add') === '1')
   const [chatImportOpen, setChatImportOpen] = useState(false)
@@ -39,13 +41,13 @@ export function Food() {
   const calPct = fuel.budget ? Math.min(100, (fuel.consumed / fuel.budget) * 100) : 0
 
   const def = dietDef(profile.dietMode)
-  const win = def.kind === 'window' ? windowState(profile.eatingWindowStartHour, profile.dietMode, nowMinutes()) : undefined
+  const win = def.kind === 'window' && today === todayISO() ? windowState(profile.eatingWindowStartHour, profile.dietMode, nowMinutes()) : undefined
   const warnings = dietWarnings(profile.dietMode, { foods: state.foods, date: today, netCarbCapG: profile.netCarbCapG, window: win })
   const quickFoods = QUICK_FOODS[profile.dietMode] ?? []
 
   const quickAdd = (q: { name: string; emoji: string; kcal: number; protein: number; carbs: number; fat: number }) => {
     addFood({
-      id: uid(), name: q.name, emoji: q.emoji, date: today, loggedAt: new Date().toISOString(),
+      id: uid(), name: q.name, emoji: q.emoji, date: today, loggedAt: timestampOnDate(today),
       slot: selectedSlot, kcal: q.kcal, protein: q.protein, carbs: q.carbs, fat: q.fat, servings: 1, confidence: 1,
     })
   }
@@ -56,12 +58,12 @@ export function Food() {
   }
 
   const addLocal = (f: LocalFood, slot: MealSlot) => {
-    addFood({ id: uid(), name: f.name, emoji: f.emoji, date: today, loggedAt: new Date().toISOString(), slot, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: 1, confidence: 1 })
+    addFood({ id: uid(), name: f.name, emoji: f.emoji, date: today, loggedAt: timestampOnDate(today), slot, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: 1, confidence: 1 })
     closeSearch()
   }
 
   const addChatEstimate = (estimate: ChatFoodEstimate, slot: MealSlot) => {
-    addFood({ id: uid(), name: estimate.name.trim(), emoji: '', date: today, loggedAt: new Date().toISOString(), slot, kcal: estimate.kcal, protein: estimate.protein, carbs: estimate.carbs, fat: estimate.fat, servings: 1, confidence: 0.5 })
+    addFood({ id: uid(), name: estimate.name.trim(), emoji: '', date: today, loggedAt: timestampOnDate(today), slot, kcal: estimate.kcal, protein: estimate.protein, carbs: estimate.carbs, fat: estimate.fat, servings: 1, confidence: 0.5 })
     setChatImportOpen(false)
   }
 
@@ -71,8 +73,9 @@ export function Food() {
       <header className="food-hero">
         <h1>Food, made simple.</h1>
         <p>Find a meal, check the portions, and make it count.</p>
+        <LogDatePicker date={today} onChange={(date) => setSearchParams((current) => { const next = new URLSearchParams(current); next.set('date', date); return next }, { replace: true })} />
         <button type="button" className="food-hero-search" onClick={() => setSearchOpen(true)}><Icon name="search" size={23} /><span>Search meals, drinks or restaurants</span><Icon name="arrow_forward" size={20} /></button>
-        <div className="food-entry-methods"><button type="button" className="food-capture" onClick={() => nav('/camera')}><span className="food-capture-icon"><Icon name="photo_camera" size={24} /></span><span>Scan a photo</span></button><button type="button" onClick={() => setChatImportOpen(true)}><Icon name="content_paste" size={22} /><span>Paste an estimate</span></button></div>
+        <div className="food-entry-methods"><button type="button" className="food-capture" onClick={() => nav(`/camera?date=${today}`)}><span className="food-capture-icon"><Icon name="photo_camera" size={24} /></span><span>Scan a photo</span></button><button type="button" onClick={() => setChatImportOpen(true)}><Icon name="content_paste" size={22} /><span>Paste an estimate</span></button></div>
       </header>
 
       <Reveal>
@@ -96,7 +99,7 @@ export function Food() {
       {/* Log */}
       <Reveal>
         <div>
-          <div className="food-editorial-heading"><h2>Today’s meals</h2></div>
+          <div className="food-editorial-heading"><h2>{today === todayISO() ? 'Today’s meals' : `${shortDate(today)} meals`}</h2></div>
           <div className="space-y-sm mt-sm">
             {todayFoods.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No meals logged yet. Capture one or find a food above.</p>}
             {todayFoods.map((f, i) => (
@@ -145,7 +148,7 @@ export function Food() {
           </div>
         </div>
       </Reveal>
-      {searchOpen && <SearchSheet initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
+      {searchOpen && <SearchSheet date={today} initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
       {chatImportOpen && <ChatFoodImport initialSlot={selectedSlot} onClose={() => setChatImportOpen(false)} onSave={addChatEstimate} />}
 
       {editing && (
@@ -160,7 +163,7 @@ export function Food() {
   )
 }
 
-function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
+function SearchSheet({ date, initialSlot, onClose, onPick }: { date: string; initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
   const reduced = useReducedMotion()
   const dialogRef = useDialogFocus(onClose)
   const [q, setQ] = useState('')
@@ -233,6 +236,7 @@ function SearchSheet({ initialSlot, onClose, onPick }: { initialSlot: MealSlot; 
           </div>
         </div>
 
+        <p className="home-form-note">Logging for {date === todayISO() ? 'today' : new Date(`${date}T12:00:00`).toLocaleDateString('en-MY', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
         <div className="food-search-slots" role="group" aria-label="Meal to log">
           {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((option) => <button type="button" key={option} aria-pressed={slot === option} onClick={() => setSlot(option)}>{option}</button>)}
         </div>

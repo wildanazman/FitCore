@@ -1,260 +1,137 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { LayoutGroup, motion, useReducedMotion, useSpring, useTransform } from 'framer-motion'
 import { useApp } from '../store/AppContext'
 import { DEFAULT_PROFILE } from '../lib/storage'
-import type { Goal, Sport, UserProfile } from '../types'
-import { Icon } from '../components/Icon'
+import { autoCaloriePlan } from '../lib/nutrition'
+import type { Goal, UserProfile } from '../types'
 import { FitCoreLogo } from '../components/FitCoreLogo'
 import '../components/fitcore-logo.css'
-import { ProteinIdeas } from '../components/ProteinIdeas'
-import { autoCaloriePlan } from '../lib/nutrition'
-import { DIET_LIST } from '../lib/diet'
 import './onboarding.css'
 
-const STEPS = ['Name', 'Baseline', 'Daily rhythm', 'Goal', 'Sports', 'Targets', 'Diet'] as const
-
-const ACTIVITIES: { id: UserProfile['activity']; label: string; detail: string; icon: string }[] = [
-  { id: 'sedentary', label: 'Mostly seated', detail: 'Desk work and little walking', icon: 'horizontal_rule' },
-  { id: 'light', label: 'Some movement', detail: 'Walking through the day', icon: 'directions_run' },
-  { id: 'moderate', label: 'On my feet', detail: 'A job that keeps me moving', icon: 'trending_up' },
-  { id: 'high', label: 'Very active', detail: 'Physical work or frequent training', icon: 'directions_run' },
-  { id: 'athlete', label: 'Training hard', detail: 'Demanding sessions most days', icon: 'fitness_center' },
-]
+// Inline pictograms remain usable when an external icon font is unavailable.
+function Icon({ name, size = 24 }: { name: string; size?: number }) {
+  const paths: Record<string, string> = {
+    trending_down: 'M3 6l6 6 4-4 8 10M15 18h6v-6',
+    trending_up: 'M3 18l6-6 4 4 8-10M15 6h6v6',
+    horizontal_rule: 'M4 12h16', fitness_center: 'M5 5l14 14M3 7l4-4M2 10l8-8M14 22l8-8M17 21l4-4',
+    arrow_forward: 'M4 12h16M14 6l6 6-6 6', arrow_back: 'M20 12H4M10 6l-6 6 6 6',
+    check_circle: 'M9 12l2 2 4-4M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
+    circle: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0', radio_button_unchecked: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0',
+    remove: 'M5 12h14', add: 'M5 12h14M12 5v14',
+    chair: 'M6 12V4h12v8M4 12h16v5H4zM6 17v4M18 17v4',
+    directions_walk: 'M14 3h.01M12 7l-3 5-4 1M12 7l4 5 4 1M12 7l-1 8 5 6M11 15l-5 6',
+    steps: 'M5 17h4v-4h5V9h5V5h3M3 21h18', sports: 'M12 3l3 6 6 3-6 3-3 6-3-6-6-3 6-3z',
+    restaurant: 'M5 3v7M9 3v7M3 3v5a4 4 0 0 0 8 0V3M7 12v9M20 3c-4 3-5 7-5 10h5M20 3v18',
+    monitor_weight: 'M4 3h16v18H4zM8 7h8M12 7l2 3', edit: 'M14 5l5 5M3 21l5-1L21 7l-5-5L3 15z',
+  }
+  return <svg className="first-day-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>
+}
 
 const GOALS: { id: Goal; label: string; detail: string; icon: string }[] = [
-  { id: 'lose', label: 'Lose fat', detail: 'A measured calorie deficit', icon: 'trending_down' },
-  { id: 'maintain', label: 'Maintain', detail: 'Hold weight, build consistency', icon: 'horizontal_rule' },
-  { id: 'gain', label: 'Build muscle', detail: 'A steady calorie surplus', icon: 'trending_up' },
+  { id: 'lose', label: 'Lose fat', detail: 'Find a deficit that fits your day.', icon: 'trending_down' },
+  { id: 'maintain', label: 'Maintain', detail: 'Eat well. Stay consistent.', icon: 'horizontal_rule' },
+  { id: 'gain', label: 'Gain weight', detail: 'Start with a calorie surplus.', icon: 'trending_up' },
 ]
-
-const SPORTS: { id: Sport; label: string; icon: string }[] = [
-  { id: 'running', label: 'Running', icon: 'directions_run' },
-  { id: 'strength', label: 'Strength', icon: 'fitness_center' },
-  { id: 'badminton', label: 'Badminton', icon: 'sports_tennis' },
-  { id: 'pickleball', label: 'Pickleball', icon: 'sports_tennis' },
+const ACTIVITIES: { id: UserProfile['activity']; label: string; detail: string; icon: string }[] = [
+  { id: 'sedentary', label: 'Mostly at a desk', detail: 'Seated work, little walking.', icon: 'chair' },
+  { id: 'light', label: 'A little of both', detail: 'Seated work with some daily walking.', icon: 'directions_walk' },
+  { id: 'moderate', label: 'On my feet', detail: 'Moving around for much of the day.', icon: 'steps' },
+  { id: 'high', label: 'A physical day', detail: 'Physical work or frequent training.', icon: 'fitness_center' },
+  { id: 'athlete', label: 'Training is my routine', detail: 'Demanding sessions most days.', icon: 'sports' },
 ]
+const METRICS = {
+  1: { key: 'age', title: 'How old are you?', description: 'Personal calorie estimates here are for adults.', unit: 'years', min: 18, max: 120, seed: 30, step: 1 },
+  3: { key: 'heightCm', title: 'How tall are you?', description: 'Move the ruler, or tap the number and type.', unit: 'cm', min: 60, max: 260, seed: 170, step: 1 },
+  4: { key: 'startWeightKg', title: 'Your starting weight?', description: 'A starting point, not a judgement. You can update it later.', unit: 'kg', min: 20, max: 500, seed: 70, step: .1 },
+} as const
+const CHAPTERS = ['Direction', 'You', 'Your day', 'Strategy', 'Ready']
+const chapterFor = (step: number) => step === 0 ? 0 : step <= 4 ? 1 : step === 5 ? 2 : step === 6 ? 3 : 4
 
 export function Onboarding() {
   const { onboard } = useApp()
+  const reduced = useReducedMotion()
   const [step, setStep] = useState(0)
-  const [profile, setProfile] = useState<UserProfile>({
-    ...DEFAULT_PROFILE,
-    age: 0,
-    heightCm: 0,
-    startWeightKg: 0,
-    activity: 'light',
-    sports: [],
-  })
-  const contentRef = useRef<HTMLElement>(null)
-
-  useEffect(() => {
-    contentRef.current?.scrollTo({ top: 0 })
-  }, [step])
-
-  const update = (patch: Partial<UserProfile>) => setProfile((current) => ({ ...current, ...patch }))
-  const toggleSport = (sport: Sport) => {
-    setProfile((current) => ({
-      ...current,
-      sports: current.sports.includes(sport)
-        ? current.sports.filter((item) => item !== sport)
-        : [...current.sports, sport],
-    }))
+  const [direction, setDirection] = useState(1)
+  const [goalChosen, setGoalChosen] = useState(false)
+  const [sexChosen, setSexChosen] = useState(false)
+  const [activityChosen, setActivityChosen] = useState(false)
+  const [buildMuscle, setBuildMuscle] = useState(false)
+  const [measurementTouched, setMeasurementTouched] = useState<Partial<Record<'age' | 'heightCm' | 'startWeightKg', boolean>>>({})
+  const [profile, setProfile] = useState<UserProfile>({ ...DEFAULT_PROFILE, age: 0, heightCm: 0, startWeightKg: 0, sports: [], activity: 'light', dietMode: 'standard', calorieTargetOverride: null })
+  const main = useRef<HTMLElement>(null)
+  const transitionUntil = useRef(0)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const update = (patch: Partial<UserProfile>) => setProfile(current => ({ ...current, ...patch }))
+  const metric = METRICS[step as keyof typeof METRICS]
+  const untouched = !!metric && !measurementTouched[metric.key]
+  const candidate = metric ? (untouched ? metric.seed : profile[metric.key]) : null
+  const validMetric = metric && candidate !== null && Number.isFinite(candidate) && candidate >= metric.min && candidate <= metric.max && (metric.key !== 'age' || Number.isInteger(candidate))
+  const validBody = Number.isInteger(profile.age) && profile.age >= 18 && profile.age <= 120 && Number.isFinite(profile.heightCm) && profile.heightCm >= 60 && profile.heightCm <= 260 && Number.isFinite(profile.startWeightKg) && profile.startWeightKg >= 20 && profile.startWeightKg <= 500 && sexChosen
+  const plan = validBody ? autoCaloriePlan(profile, profile.startWeightKg) : null
+  const goal = GOALS.find(g => g.id === profile.goal)!
+  const activity = ACTIVITIES.find(a => a.id === profile.activity)!
+  const ready = step === 0 ? goalChosen : metric ? validMetric : step === 2 ? sexChosen : step === 5 ? activityChosen : validBody
+  const chapter = chapterFor(step)
+  useEffect(() => { main.current?.scrollTo({ top: 0 }) }, [step])
+  function go(next: number) { if (Date.now() < transitionUntil.current) return; transitionUntil.current = Date.now() + (reduced ? 180 : 520); setDirection(next > step ? 1 : -1); setStep(next) }
+  function next() {
+    if (!ready || Date.now() < transitionUntil.current) return
+    if (metric) { update({ [metric.key]: candidate }); setMeasurementTouched(current => ({ ...current, [metric.key]: true })) }
+    if (step === 7 && plan) {
+      onboard({ ...profile, name: profile.name.trim() || 'You', weightLossPace: plan.pace, sports: buildMuscle ? ['strength'] : [], dietMode: 'standard' })
+    } else go(step + 1)
   }
-
-  const plan = autoCaloriePlan(profile, profile.startWeightKg)
-  const validBody = profile.age >= 18 && profile.heightCm > 0 && profile.startWeightKg > 0
-  const canContinue = step === 0 ? profile.name.trim().length > 0 : step === 1 ? validBody : true
-  const next = () => {
-    if (!canContinue) return
-    if (step === STEPS.length - 1) onboard(profile)
-    else setStep((current) => current + 1)
-  }
-
-  return (
-    <div className="onboarding">
-      <header className="onboarding-header">
-        <div className="onboarding-header-top">
-          <FitCoreLogo size={36} />
-          <span className="onboarding-progress-text" aria-live="polite">{String(step + 1).padStart(2, '0')} / {String(STEPS.length).padStart(2, '0')}</span>
-        </div>
-        <div className="onboarding-progress-track" role="progressbar" aria-label="Setup progress" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS.length}>
-          <div style={{ transform: `scaleX(${(step + 1) / STEPS.length})` }} />
-        </div>
-      </header>
-
-      <main ref={contentRef} className="onboarding-content">
-        <div key={step} className="onboarding-step">
-          {step === 0 && (
-            <StepIntro title={<>First things first.<br /><em>What’s your name?</em></>} description="We’ll put your name on the plan we build together.">
-              <Field label="Your name" htmlFor="onboarding-name">
-                <input id="onboarding-name" className="onboarding-input onboarding-name-input" autoComplete="given-name" autoFocus value={profile.name} onChange={(event) => update({ name: event.target.value })} onKeyDown={(event) => { if (event.key === 'Enter' && profile.name.trim()) next() }} placeholder="Your name" />
-              </Field>
-              <div className="onboarding-intro-ticket" aria-live="polite">
-                <span>FITCORE STARTING LINE</span>
-                <strong>{profile.name.trim() || 'Your name here'}</strong>
-                <span className="onboarding-ticket-arrow" aria-hidden="true">↗</span>
-              </div>
-              <p className="onboarding-note">About two minutes. Your details stay on this device.</p>
-            </StepIntro>
-          )}
-
-          {step === 1 && (
-            <StepIntro title={<>Build your<br /><em>baseline.</em></>} description={`A few numbers shape your daily target, ${profile.name.trim() || 'athlete'}.`}>
-              <fieldset className="onboarding-fieldset">
-                <legend>Sex for calorie estimate</legend>
-                <div className="onboarding-segmented">
-                  {([{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }] as const).map(({ value, label }) => (
-                    <button key={value} type="button" aria-pressed={profile.sex === value} onClick={() => update({ sex: value })}>{label}</button>
-                  ))}
-                </div>
-              </fieldset>
-              <div className="onboarding-measurements">
-                <Field label="Age" htmlFor="onboarding-age">
-                  <div className="onboarding-input-unit"><input id="onboarding-age" type="number" inputMode="numeric" min={18} className="onboarding-input" value={profile.age || ''} onChange={(event) => update({ age: +event.target.value })} placeholder="32" /><span>years</span></div>
-                </Field>
-                <Field label="Height" htmlFor="onboarding-height">
-                  <div className="onboarding-input-unit"><input id="onboarding-height" type="number" inputMode="decimal" min={1} className="onboarding-input" value={profile.heightCm || ''} onChange={(event) => update({ heightCm: +event.target.value })} placeholder="170" /><span>cm</span></div>
-                </Field>
-                <Field label="Weight" htmlFor="onboarding-weight">
-                  <div className="onboarding-input-unit"><input id="onboarding-weight" type="number" inputMode="decimal" min={1} step="0.1" className="onboarding-input" value={profile.startWeightKg || ''} onChange={(event) => update({ startWeightKg: +event.target.value })} placeholder="70" /><span>kg</span></div>
-                </Field>
-              </div>
-              <div className="onboarding-live-readout" aria-live="polite">
-                <span className="onboarding-readout-mark" aria-hidden="true">01</span>
-                <div><span>Baseline check</span><strong>{validBody ? `BMI ${plan.bmi.toFixed(1)} · ${plan.category}` : 'Add your measurements to see a preview'}</strong></div>
-              </div>
-            </StepIntro>
-          )}
-
-          {step === 2 && (
-            <StepIntro title={<>What does your<br /><em>day feel like?</em></>} description="Think about work and everyday movement. We'll use this to estimate your energy needs.">
-              <div className="onboarding-live-readout onboarding-live-readout-lime" aria-live="polite">
-                <span className="onboarding-readout-mark" aria-hidden="true">02</span>
-                <div><span>Estimated maintenance</span><strong>{plan.maintenance.toLocaleString()} kcal / day</strong></div>
-              </div>
-              <div className="onboarding-choices" role="group" aria-label="Daily activity level">
-                {ACTIVITIES.map((activity) => (
-                  <Choice key={activity.id} active={profile.activity === activity.id} icon={activity.icon} title={activity.label} detail={activity.detail} onClick={() => update({ activity: activity.id })} />
-                ))}
-              </div>
-            </StepIntro>
-          )}
-
-          {step === 3 && (
-            <StepIntro title={<>What are you<br /><em>working toward?</em></>} description="Choose your direction. Your daily calorie target will follow it.">
-              <div className="onboarding-live-readout onboarding-live-readout-lime" aria-live="polite">
-                <span className="onboarding-readout-mark" aria-hidden="true">03</span>
-                <div><span>Daily target with this goal</span><strong>{plan.target.toLocaleString()} kcal</strong></div>
-              </div>
-              <div className="onboarding-choices" role="group" aria-label="Fitness goal">
-                {GOALS.map((goal) => (
-                  <Choice key={goal.id} active={profile.goal === goal.id} icon={goal.icon} title={goal.label} detail={goal.detail} onClick={() => update({ goal: goal.id })} />
-                ))}
-              </div>
-              {profile.goal === 'lose' && (
-                <section className="onboarding-pace" aria-labelledby="onboarding-pace-title">
-                  <div className="onboarding-section-heading">
-                    <h2 id="onboarding-pace-title">Choose your pace</h2>
-                    <span>BMI {plan.bmi.toFixed(1)}</span>
-                  </div>
-                  <div className="onboarding-pace-options">
-                    <button type="button" aria-pressed={profile.weightLossPace === 'steady'} onClick={() => update({ weightLossPace: 'steady' })}>
-                      <strong>Steady</strong><span>Made for consistency</span>
-                    </button>
-                    <button type="button" aria-pressed={profile.weightLossPace === 'faster' && plan.aggressiveAllowed} disabled={!plan.aggressiveAllowed} onClick={() => update({ weightLossPace: 'faster' })}>
-                      <strong>Faster</strong><span>{plan.aggressiveAllowed ? 'A larger measured deficit' : 'Available from BMI 25'}</span>
-                    </button>
-                  </div>
-                  {plan.bmi < 18.5 && <p className="onboarding-note">Your BMI is below the usual healthy range. FitCore will use maintenance calories.</p>}
-                </section>
-              )}
-            </StepIntro>
-          )}
-
-          {step === 4 && (
-            <StepIntro title={<>Move your<br /><em>own way.</em></>} description="Optional. Pick activities you enjoy, or skip if you're here to focus on food and weight.">
-              <div className="onboarding-sport-grid" role="group" aria-label="Sports you train">
-                {SPORTS.map((sport) => {
-                  const active = profile.sports.includes(sport.id)
-                  return (
-                    <button key={sport.id} type="button" className="onboarding-sport" aria-pressed={active} onClick={() => toggleSport(sport.id)}>
-                      <Icon name={sport.icon} size={27} />
-                      <span>{sport.label}</span>
-                      <Icon name={active ? 'check_circle' : 'add_circle'} size={22} className="onboarding-sport-state" />
-                    </button>
-                  )
-                })}
-              </div>
-              <p className="onboarding-note" aria-live="polite">{profile.sports.length ? `${profile.sports.length} ${profile.sports.length === 1 ? 'activity' : 'activities'} in your mix` : 'No training plan needed. You can log activity any time.'}</p>
-            </StepIntro>
-          )}
-
-          {step === 5 && (
-            <StepIntro title={<>Your starting<br /><em>number.</em></>} description="An estimate based on your body stats, daily activity and goal.">
-              <div className="onboarding-target">
-                <div className="onboarding-target-main">
-                  <span>Daily calorie target</span>
-                  <p>{plan.target.toLocaleString()}<small>kcal</small></p>
-                  <strong>{profile.goal === 'lose' ? `${plan.pace === 'faster' ? 'Faster' : 'Steady'} fat loss` : profile.goal === 'gain' ? 'Build muscle' : 'Maintain weight'}</strong>
-                </div>
-                <div className="onboarding-target-details">
-                  <div><span>Maintenance estimate</span><strong>{plan.maintenance.toLocaleString()} kcal</strong></div>
-                  <div><span>BMI <small>(screening only)</small></span><strong>{plan.bmi.toFixed(1)} · {plan.category}</strong></div>
-                </div>
-              </div>
-              {profile.goal === 'lose' && <p className="onboarding-note">Estimated change: about {plan.estimatedWeeklyKg} kg per week. Your needs can differ; adjust your plan as you log progress.</p>}
-              <ProteinIdeas target={Math.round(profile.proteinPerKg * profile.startWeightKg)} />
-              {profile.goal === 'lose' && plan.bmi < 18.5 && <p className="onboarding-note onboarding-note-warning">BMI is below the usual healthy range, so the target stays at maintenance.</p>}
-            </StepIntro>
-          )}
-
-          {step === 6 && (
-            <StepIntro title={<>How do you<br /><em>prefer to eat?</em></>} description="A balanced plan works for most people. Choose a specific protocol only if it suits you.">
-              <div className="onboarding-choices" role="group" aria-label="Eating protocol">
-                {DIET_LIST.map((diet) => (
-                  <Choice key={diet.id} active={profile.dietMode === diet.id} icon={diet.icon} title={diet.label} detail={diet.tagline} onClick={() => update({ dietMode: diet.id })} />
-                ))}
-              </div>
-              {profile.dietMode === 'keto' && (
-                <Field label="Daily net carb cap" htmlFor="onboarding-carb">
-                  <div className="onboarding-input-unit"><input id="onboarding-carb" type="number" inputMode="numeric" min={1} className="onboarding-input" value={profile.netCarbCapG} onChange={(event) => update({ netCarbCapG: +event.target.value })} /><span>g/day</span></div>
-                </Field>
-              )}
-              {(profile.dietMode === 'omad' || profile.dietMode === '16:8') && (
-                <Field label="Eating window starts" htmlFor="onboarding-window">
-                  <div className="onboarding-input-unit"><input id="onboarding-window" type="number" inputMode="numeric" min={0} max={23} className="onboarding-input" value={profile.eatingWindowStartHour} onChange={(event) => update({ eatingWindowStartHour: Math.max(0, Math.min(23, +event.target.value)) })} /><span>hour</span></div>
-                </Field>
-              )}
-            </StepIntro>
-          )}
-        </div>
-      </main>
-
-      <footer className="onboarding-footer">
-        {step > 0 && <button className="onboarding-back" type="button" onClick={() => setStep((current) => current - 1)} aria-label="Go back"><Icon name="arrow_back" size={22} /></button>}
-        <button className="onboarding-next" type="button" disabled={!canContinue} onClick={next}>
-          <span>{step === STEPS.length - 1 ? 'Open FitCore' : 'Continue'}</span>
-          <Icon name="arrow_forward" size={23} />
-        </button>
-      </footer>
-    </div>
-  )
+  const title = step === 0 ? 'What brings you here?' : metric?.title ?? (step === 2 ? 'A detail for your estimate.' : step === 5 ? 'What does your day look like?' : step === 6 ? (profile.goal === 'lose' ? 'Find your own pace.' : 'Fuel your direction.') : 'This is your first day.')
+  const description = step === 0 ? 'Let’s build a day around you. Start with your direction.' : metric?.description ?? (step === 2 ? 'The current calorie equation uses sex. This is only for the estimate.' : step === 5 ? 'Include your everyday movement and usual training—not your busiest day.' : step === 6 ? 'Try a strategy. See how your daily fuel changes.' : 'A starting plan, not a perfect-day checklist. Make it yours as you go.')
+  return <LayoutGroup id="first-day"><div className="onboarding first-day-onboarding">
+    <header className="first-day-header"><div className="first-day-brand"><FitCoreLogo size={32} />{step > 0 && <motion.span layoutId="chosen-direction" className="first-day-goal-chip" transition={{ duration: reduced ? 0 : .3 }}><Icon name={goal.icon} size={16} />{goal.label}</motion.span>}</div>
+      <div className="first-day-progress" role="progressbar" aria-label="Setup progress" aria-valuenow={step + 1} aria-valuemin={0} aria-valuemax={8}>{CHAPTERS.map((label, i) => <div key={label} className={i <= chapter ? 'is-reached' : ''}><span>{label}</span><i><motion.b animate={{ scaleX: i < chapter ? 1 : i > chapter ? 0 : step === 7 ? 1 : (step === 0 ? 1 : step <= 4 ? step / 4 : 1) }} transition={{ duration: reduced ? 0 : .3 }} /></i></div>)}</div>
+    </header>
+    <main className="first-day-content" ref={main}>
+        {/* Mount the new step immediately. Navigation must never wait for an exit callback. */}
+        <motion.section key={step} initial={reduced ? false : { opacity: 1, x: direction * 16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: reduced ? 0 : .24, ease: [.16, 1, .3, 1] }} onAnimationComplete={() => titleRef.current?.focus({ preventScroll: true })} className="first-day-step">
+          <div className="first-day-intro"><h1 ref={titleRef} tabIndex={-1}>{title}</h1><p>{description}</p></div>
+          {step === 0 && <div className="first-day-goals" role="group" aria-label="Your direction">{GOALS.map((g, i) => <motion.button key={g.id} type="button" layout aria-pressed={goalChosen && profile.goal === g.id} className={goalChosen && profile.goal === g.id ? 'selected' : ''} onClick={() => { update({ goal: g.id, weightLossPace: 'steady' }); setGoalChosen(true) }} whileTap={reduced ? undefined : { scale: .985 }}>
+            <span className="first-day-goal-icon"><Icon name={g.icon} size={i === 0 ? 32 : 27} /></span><span className="first-day-goal-copy">{goalChosen && profile.goal === g.id ? <motion.strong layoutId="chosen-direction">{g.label}</motion.strong> : <strong>{g.label}</strong>}<small>{g.detail}</small></span><Icon name={goalChosen && profile.goal === g.id ? 'check_circle' : 'arrow_forward'} size={24} />
+          </motion.button>)}<button type="button" className="first-day-muscle" aria-pressed={buildMuscle} onClick={() => setBuildMuscle(current => !current)}><Icon name={buildMuscle ? 'check_circle' : 'radio_button_unchecked'} size={23} /><span><strong>Build muscle too</strong><small>Combine it with any weight goal. No surplus required just to select it.</small></span></button><p className="first-day-note">Food and weight are enough. No running plan required.</p></div>}
+          {metric && <Measurement key={metric.key} config={metric} value={profile[metric.key]} untouched={untouched} onChange={value => { update({ [metric.key]: value }); setMeasurementTouched(current => ({ ...current, [metric.key]: true })) }} onNext={next} valid={!!validMetric} />}
+          {step === 2 && <><div className="first-day-sex" role="group" aria-label="Sex for calorie estimate">{(['male', 'female'] as const).map(sex => <motion.button type="button" key={sex} aria-pressed={sexChosen && profile.sex === sex} onClick={() => { update({ sex }); setSexChosen(true) }} whileTap={reduced ? undefined : { scale: .98 }}><Icon name={sexChosen && profile.sex === sex ? 'check_circle' : 'circle'} size={24} />{sex === 'male' ? 'Male' : 'Female'}</motion.button>)}</div><p className="first-day-note">This equation offers these two inputs. Your needs can differ; targets remain editable.</p></>}
+          {step === 5 && plan && <><div className="first-day-energy"><span>Your estimated maintenance</span><strong><AnimatedNumber value={plan.maintenance} /> <small>kcal / day</small></strong><p>Changes as you choose your everyday rhythm.</p></div><div className="first-day-routines" role="group" aria-label="Daily activity level">{ACTIVITIES.map(a => <motion.button type="button" key={a.id} aria-pressed={activityChosen && profile.activity === a.id} onClick={() => { update({ activity: a.id }); setActivityChosen(true) }} whileTap={reduced ? undefined : { scale: .99 }}><Icon name={a.icon} size={23} /><span><strong>{a.label}</strong><small>{a.detail}</small></span><Icon name={activityChosen && profile.activity === a.id ? 'check_circle' : 'radio_button_unchecked'} size={21} /></motion.button>)}</div><p className="first-day-note">This includes your usual activity. We won’t add the same exercise twice to this estimate.</p></>}
+          {step === 6 && plan && <><div className="first-day-energy strategy-energy"><span>Your starting daily target</span><strong><AnimatedNumber value={plan.target} /> <small>kcal</small></strong><p>{profile.goal === 'lose' ? plan.deficitKcal ? `${plan.deficitKcal} kcal below estimated maintenance` : 'Maintenance—no weight-loss deficit applied' : profile.goal === 'gain' ? 'A starting surplus above estimated maintenance' : 'Around your estimated maintenance'}</p></div>
+            {profile.goal === 'lose' ? <div className="first-day-strategies" role="group" aria-label="Weight-loss strategy">{(['steady', 'faster'] as const).map(pace => { const p = autoCaloriePlan({ ...profile, weightLossPace: pace }, profile.startWeightKg); const disabled = pace === 'faster' && (!plan.aggressiveAllowed || plan.deficitKcal === 0); return <motion.button key={pace} type="button" disabled={disabled} aria-pressed={plan.pace === pace} onClick={() => update({ weightLossPace: pace })} whileTap={reduced ? undefined : { scale: .985 }}><div><strong>{pace === 'steady' ? 'Steady' : 'Faster'}</strong><Icon name={plan.pace === pace ? 'check_circle' : 'radio_button_unchecked'} size={22} /></div><span>{p.target.toLocaleString()} <small>kcal / day</small></span><p>{pace === 'steady' ? 'A smaller deficit, built for consistency.' : disabled ? 'Not offered for your current BMI / target.' : 'A larger deficit. Review how you feel and progress.'}</p></motion.button> })}</div> : <div className="first-day-strategy-note"><Icon name={goal.icon} size={28} /><div><strong>{goal.label}</strong><p>No weight-loss pace to choose. Your target follows this goal.</p></div></div>}
+            <p className="first-day-note">{plan.bmi < 18.5 && profile.goal === 'lose' ? 'Your BMI is below the usual healthy range. The estimate stays at maintenance; discuss a suitable goal with qualified support.' : 'These are estimates, not a promise of weight change. You can adjust them as you log progress.'}</p>
+          </>}
+          {step === 7 && plan && <><label className="first-day-name">What should we call you? <span>Optional</span><input autoComplete="given-name" maxLength={50} value={profile.name} onChange={e => update({ name: e.target.value })} placeholder="Your name" /></label>
+            <motion.div className="first-day-preview" initial={reduced ? false : { clipPath: 'inset(0 0 100% 0 round 16px)' }} animate={{ clipPath: 'inset(0 0 0% 0 round 16px)' }} transition={{ duration: .45, ease: [.16, 1, .3, 1] }}>
+              <h2>{profile.name.trim() ? `Your day, ${profile.name.trim()}.` : 'Your day starts here.'}</h2><div className="first-day-preview-energy"><div><span>Daily calorie target</span><strong><AnimatedNumber value={plan.target} /><small> kcal</small></strong></div><div><span>Protein target</span><strong>{Math.round(profile.proteinPerKg * profile.startWeightKg)}<small> g</small></strong></div></div>
+              <div className="first-day-fuel-track"><span>{buildMuscle ? `${goal.label} + build muscle` : 'Personalised starting fuel'}</span><Icon name={goal.icon} size={20} /></div>
+              <div className="first-day-preview-rows">{[{ icon: 'restaurant', title: 'Find your first meal', detail: 'Search Malaysian foods or paste an estimate.' }, { icon: 'monitor_weight', title: 'Your weight baseline', detail: `${profile.startWeightKg.toFixed(1)} kg · follow the trend, not one day.` }, { icon: 'fitness_center', title: buildMuscle ? 'Make room for strength' : 'Move your own way', detail: buildMuscle ? 'Explore home or gym exercises in Activity. No workout is logged yet.' : 'Activity is optional. Log it when you do it.' }].map((row, i) => <motion.div key={row.title} initial={reduced ? false : { opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: reduced ? 0 : .15 + i * .07, duration: .22 }}><Icon name={row.icon} size={23} /><div><strong>{row.title}</strong><p>{row.detail}</p></div></motion.div>)}</div>
+            </motion.div><div className="first-day-review"><button type="button" onClick={() => go(1)}>Review measurements <Icon name="arrow_back" size={17} /></button><button type="button" onClick={() => go(5)}>{activity.label} <Icon name="edit" size={17} /></button></div><p className="first-day-note">Preview only—no meals or completed workouts have been logged. Start balanced; customise diet protocols and sports later in Settings, Diet or Activity. Your details stay on this device.</p>
+          </>}
+        </motion.section>
+    </main>
+    <footer className="first-day-footer">{step > 0 && <button type="button" aria-label="Go back" className="first-day-back" onClick={() => go(step - 1)}><Icon name="arrow_back" size={22} /></button>}<button type="button" className="first-day-next" disabled={!ready} onClick={next}><span>{step === 7 ? 'Open FitCore' : step === 0 ? 'Build my day' : step === 6 ? 'See my day' : metric && candidate !== null && Number.isFinite(candidate) ? `Use ${candidate} ${metric.unit}` : 'Continue'}</span><Icon name="arrow_forward" size={22} /></button></footer>
+  </div></LayoutGroup>
 }
 
-function StepIntro({ title, description, children }: { title: ReactNode; description: string; children: ReactNode }) {
-  return <>
-    <div className="onboarding-intro"><h1>{title}</h1><p>{description}</p></div>
-    <div className="onboarding-step-body">{children}</div>
-  </>
+function AnimatedNumber({ value }: { value: number }) {
+  const reduced = useReducedMotion()
+  const spring = useSpring(value, { stiffness: 180, damping: 28 })
+  const text = useTransform(spring, n => Math.round(n).toLocaleString())
+  useEffect(() => { if (reduced) spring.jump(value); else spring.set(value) }, [value, reduced, spring])
+  return <><span className="sr-only">{value.toLocaleString()}</span><motion.span aria-hidden="true">{text}</motion.span></>
 }
 
-function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: ReactNode }) {
-  return <div className="onboarding-field"><label htmlFor={htmlFor}>{label}</label>{children}{hint && <p>{hint}</p>}</div>
-}
-
-function Choice({ active, icon, title, detail, onClick }: { active: boolean; icon: string; title: string; detail: string; onClick: () => void }) {
-  return <button type="button" className="onboarding-choice" aria-pressed={active} onClick={onClick}>
-    <span className="onboarding-choice-icon"><Icon name={icon} size={22} /></span>
-    <span className="onboarding-choice-copy"><strong>{title}</strong><small>{detail}</small></span>
-    <Icon name={active ? 'check_circle' : 'arrow_forward'} size={22} className="onboarding-choice-state" />
-  </button>
+function Measurement({ config, value, untouched, onChange, onNext, valid }: { config: typeof METRICS[keyof typeof METRICS]; value: number; untouched: boolean; onChange: (n: number) => void; onNext: () => void; valid: boolean }) {
+  const current = untouched ? config.seed : value
+  const center = Number.isFinite(current) ? Math.round(current) : config.seed
+  const rangeValue = Number.isFinite(current) ? Math.max(config.min, Math.min(config.max, current)) : config.seed
+  return <div className="first-day-measure">
+    <label className="first-day-measure-number"><span className="sr-only">{config.key === 'age' ? 'Age' : config.key === 'heightCm' ? 'Height' : 'Weight'}</span><input type="number" inputMode={config.step === 1 ? 'numeric' : 'decimal'} min={config.min} max={config.max} step={config.step} value={untouched || !Number.isFinite(value) ? '' : value} placeholder={String(config.seed)} onChange={e => onChange(e.target.value === '' ? NaN : Number(e.target.value))} onKeyDown={e => { if (e.key === 'Enter' && valid) onNext() }} /><small>{config.unit}</small></label>
+    <div className="first-day-ruler" aria-hidden="true">{Array.from({ length: 21 }, (_, i) => { const n = center + i - 10; return <div key={i} className={i === 10 ? 'center' : i % 5 === 0 ? 'major' : ''}><i />{i % 5 === 0 && <span>{n >= config.min && n <= config.max ? n : ''}</span>}</div> })}<b /></div>
+    <label className="first-day-range"><span>Drag to adjust {config.unit}</span><input type="range" min={config.min} max={config.max} step={config.step} value={rangeValue} aria-label={`Adjust ${config.key === 'age' ? 'age' : config.key === 'heightCm' ? 'height' : 'weight'} ruler`} onChange={e => onChange(Number(e.target.value))} /></label>
+    <div className="first-day-adjust"><button type="button" aria-label={`Decrease ${config.unit}`} disabled={!Number.isFinite(current) || current <= config.min} onClick={() => onChange(Math.round((current - config.step) * 10) / 10)}><Icon name="remove" size={22} /></button><span>{config.step === .1 ? '0.1 kg at a time' : `1 ${config.unit === 'years' ? 'year' : config.unit} at a time`}</span><button type="button" aria-label={`Increase ${config.unit}`} disabled={!Number.isFinite(current) || current >= config.max} onClick={() => onChange(Math.round((current + config.step) * 10) / 10)}><Icon name="add" size={22} /></button></div>
+    {!valid && <p className="first-day-error" role="alert">Enter {config.min}–{config.max} {config.unit}{config.key === 'age' ? ' as a whole number' : ''} to continue.</p>}
+    {untouched && <p className="first-day-note">The ruler starts at {config.seed} {config.unit}. Adjust it or confirm this value below; it isn’t saved yet.</p>}
+  </div>
 }

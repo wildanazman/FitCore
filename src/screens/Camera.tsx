@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
+import { LogDatePicker } from '../components/LogDatePicker'
 import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type FoodAIProvider } from '../lib/foodAI'
 import { lookupFood, sourceLabel } from '../lib/foodLookup'
-import { todayISO, uid } from '../lib/date'
+import { isLogDate, timestampOnDate, todayISO, uid } from '../lib/date'
 import type { FoodEntry, MealSlot } from '../types'
 import './camera.css'
 
@@ -13,6 +14,9 @@ type Phase = 'capture' | 'analyzing' | 'result' | 'edit'
 export function Camera() {
   const { profile, addFood } = useApp()
   const nav = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedDate = searchParams.get('date') ?? ''
+  const logDate = isLogDate(requestedDate) ? requestedDate : todayISO()
   const galleryRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -137,8 +141,8 @@ export function Camera() {
       id: uid(),
       name: det.name,
       emoji: '',
-      date: todayISO(),
-      loggedAt: new Date().toISOString(),
+      date: logDate,
+      loggedAt: timestampOnDate(logDate),
       slot: mealSlot,
       kcal: det.kcal,
       protein: det.protein,
@@ -149,7 +153,7 @@ export function Camera() {
       photo: photo ?? undefined,
     }
     addFood(entry)
-    nav('/food')
+    nav(`/food?date=${logDate}`)
   }
 
   async function updateDetectionFromName(name: string) {
@@ -285,7 +289,8 @@ export function Camera() {
       {(phase === 'result' || phase === 'edit') && det && (
         <div className="camera-result-screen">
           <div className="camera-result-scroll">
-            <header className="camera-result-header"><button type="button" onClick={() => phase === 'edit' ? setPhase('result') : nav('/food')} aria-label={phase === 'edit' ? 'Back to result' : 'Close result'}><Icon name="arrow_back" size={22} /></button><span>{phase === 'edit' ? 'EDIT ESTIMATE' : 'REVIEW YOUR MEAL'}</span><button type="button" onClick={retryCapture} aria-label="Take another photo"><Icon name="refresh" size={22} /></button></header>
+            <header className="camera-result-header"><button type="button" onClick={() => phase === 'edit' ? setPhase('result') : nav(`/food?date=${logDate}`)} aria-label={phase === 'edit' ? 'Back to result' : 'Close result'}><Icon name="arrow_back" size={22} /></button><span>{phase === 'edit' ? 'EDIT ESTIMATE' : 'REVIEW YOUR MEAL'}</span><button type="button" onClick={retryCapture} aria-label="Take another photo"><Icon name="refresh" size={22} /></button></header>
+            <LogDatePicker date={logDate} onChange={(date) => setSearchParams({ date }, { replace: true })} />
             {phase === 'result' ? <>
               <div className="camera-result-hero"><div className="camera-result-photo">{photo && <img src={photo} alt="Meal being reviewed" />}</div><div className="camera-result-intro"><h1>{det.name}</h1><div className="camera-result-energy"><strong>{Math.round(det.kcal * servings).toLocaleString()}</strong><span>kcal estimated</span></div><p><Icon name={confidenceHigh ? 'verified' : 'info'} size={17} /> {confidenceHigh ? 'High confidence' : 'Review portion and ingredients'} · {Math.round(det.confidence * 100)}%</p></div></div>
               {error && <p className="camera-result-alert">{error}</p>}
@@ -313,7 +318,7 @@ export function Camera() {
           </div>
           <div className="flex gap-md mt-sm">
             <button onClick={retryAnalysis} className="flex-1 py-3 rounded-xl border border-outline-variant text-on-surface font-metric-md text-metric-md">Retry same photo</button>
-            <button onClick={() => nav('/food')} className="flex-1 py-3 rounded-xl border border-lime text-lime font-metric-md text-metric-md">Search food list</button>
+            <button onClick={() => nav(`/food?date=${logDate}`)} className="flex-1 py-3 rounded-xl border border-lime text-lime font-metric-md text-metric-md">Search food list</button>
           </div>
         </div>
       )}

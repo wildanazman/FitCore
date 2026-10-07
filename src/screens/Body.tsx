@@ -4,11 +4,11 @@ import { useDialogFocus } from '../components/useDialogFocus'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
 import { ProgressBar, SectionLabel } from '../components/ui'
-import { Sparkline } from '../components/Sparkline'
+import { WeightHistory } from '../components/WeightHistory'
 import { Icon } from '../components/Icon'
 import { WeightJourney } from '../components/WeightJourney'
 import { todayISO, shortDate, uid } from '../lib/date'
-import { fatMassKg, latestMeasured, latestWithMeasurements, leanMassKg, navyBodyFat, rollingTrend, sortByDate } from '../lib/body'
+import { fatMassKg, latestMeasured, latestWithMeasurements, leanMassKg, navyBodyFat } from '../lib/body'
 import { leanMassInsight } from '../lib/coach'
 import { fromDisplayWeight, toDisplayWeight, weightUnit } from '../lib/nutrition'
 import type { ProgressPhoto, WeightEntry } from '../types'
@@ -22,9 +22,7 @@ export function Body() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const unit = weightUnit(profile.units)
-  const sorted = sortByDate(state.weights)
   const latest = latestMeasured(state.weights)
-  const trend = rollingTrend(state.weights)
 
   const change = (latest?.weightKg ?? profile.startWeightKg) - profile.startWeightKg
   const dispChange = toDisplayWeight(Math.abs(change), profile.units)
@@ -34,7 +32,6 @@ export function Body() {
   const lean = bf != null && latest ? leanMassKg(latest.weightKg, bf) : null
   const fat = bf != null && latest ? fatMassKg(latest.weightKg, bf) : null
 
-  const trendDisp = trend.map((p) => ({ date: p.date, kg: toDisplayWeight(p.kg, profile.units) }))
   const latestDisp = toDisplayWeight(latest?.weightKg ?? profile.startWeightKg, profile.units)
 
   function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
@@ -88,20 +85,8 @@ export function Body() {
               </div>
             </div>
 
+            <WeightHistory entries={state.weights} units={profile.units} targetKg={profile.targetWeightKg} onLog={() => setShowLog(true)} />
             <WeightJourney />
-            <section className="bg-ink-card border border-tile-border rounded-[24px] p-md flex flex-col gap-md">
-              <div className="flex justify-between items-center">
-                <SectionLabel>Weight Trend</SectionLabel>
-                <span className="font-data-mono text-[12px] text-on-surface-variant">7-day rolling avg</span>
-              </div>
-              <Sparkline points={trendDisp} displayValue={latestDisp} unit={unit} />
-              {sorted.length > 1 && (
-                <div className="flex justify-between font-data-mono text-[12px] text-on-surface-variant">
-                  <span>{shortDate(sorted[0].date)}</span>
-                  <span>{shortDate(sorted[sorted.length - 1].date)}</span>
-                </div>
-              )}
-            </section>
           </>
         )}
 

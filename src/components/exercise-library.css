@@ -1,0 +1,58 @@
+.exercise-equipment,.exercise-muscles { min-width:0; border:0; padding:0; margin:18px 0; }
+.exercise-equipment legend,.exercise-muscles legend { font-size:15px; font-weight:700; color:var(--app-ink); margin-bottom:8px; }
+.exercise-equipment p,.exercise-equipment small { display:block; color:var(--app-muted); font-size:13px; line-height:1.4; margin:0 0 10px; }
+.exercise-equipment small { margin:9px 0 0; }
+.exercise-equipment>div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.exercise-equipment label { display:flex; align-items:center; gap:10px; min-height:48px; padding:10px 12px; border:1px solid var(--app-line); border-radius:10px; background:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+.exercise-equipment label:has(:checked) { background:#e8eeff; border-color:var(--app-blue); color:var(--app-blue); }
+.exercise-equipment input { width:18px; height:18px; accent-color:var(--app-blue); flex:none; }
+.exercise-equipment label:has(:focus-visible) { outline:2px solid var(--app-blue); outline-offset:3px; }
+.exercise-muscles>div { display:flex; flex-wrap:wrap; gap:6px; }
+.exercise-muscles button { min-height:44px; padding:8px 12px; font:600 13px 'Hanken Grotesk',sans-serif; background:#fff; color:var(--app-muted); border:1px solid var(--app-line); border-radius:10px; }
+.exercise-muscles button[aria-pressed=true] { color:#fff; background:var(--app-blue); border-color:var(--app-blue); }
+.exercise-muscles button:hover,.exercise-equipment label:hover { border-color:var(--app-blue); }
+.exercise-results-heading { display:flex; justify-content:space-between; gap:8px; font-size:13px; margin:16px 0 10px; }
+.exercise-results-heading span { color:var(--app-muted); text-align:right; }
+.home-activity-options.exercise-results { max-height:340px; margin-bottom:16px; }
+.exercise-results button { border-radius:10px; }
+.home-activity-options.exercise-results strong { font-size:14px; }
+.home-activity-options.exercise-results small { font-size:12px; line-height:1.4; }
+.exercise-results .exercise-requirements { color:var(--app-blue); margin-top:5px; }
+.exercise-results button:hover { border-color:var(--app-blue); }
+.exercise-tracking { display:flex; gap:6px; margin:18px 0; }
+.exercise-tracking button,.exercise-demo-controls button,.strength-add-set { min-height:44px; padding:8px 10px; border:1px solid var(--app-line); border-radius:10px; background:#fff; color:var(--app-muted); font:600 13px 'Hanken Grotesk',sans-serif; }
+.exercise-tracking button { flex:1; }
+.exercise-tracking button[aria-pressed=true],.exercise-demo-controls button[aria-pressed=true] { background:#e8eeff; border-color:var(--app-blue); color:var(--app-blue); }
+.strength-sets { min-width:0; border:0; padding:0; margin:18px 0; }
+.strength-sets legend { font-size:18px; font-weight:700; margin-bottom:12px; }
+.strength-sets select { display:block; width:100%; min-height:44px; margin-top:6px; border:1px solid var(--app-line); border-radius:10px; background:#fff; padding:10px; color:var(--app-ink); font:inherit; }
+.strength-set-head,.strength-set-row { display:grid; grid-template-columns:28px minmax(0,1fr) 60px; gap:8px; align-items:center; }
+.strength-set-head.has-weight,.strength-set-row.has-weight { grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 60px; }
+.strength-set-head { font-size:12px; color:var(--app-muted); margin-bottom:8px; }
+.strength-set-row { margin-bottom:8px; }
+.strength-set-row input { min-width:0; width:100%; min-height:46px; border:1px solid var(--app-line); border-radius:10px; padding:8px; background:#fff; color:var(--app-ink); font:600 15px 'Hanken Grotesk',sans-serif; }
+.strength-set-row button { min-height:44px; color:var(--app-muted); font-size:12px; background:none; }
+.strength-set-row button:disabled,.strength-add-set:disabled,.exercise-demo-controls button:disabled { opacity:.5; cursor:not-allowed; }
+.strength-volume { font-size:14px; font-weight:600; margin:12px 0; font-variant-numeric:tabular-nums; }
+.exercise-energy-option { display:flex; align-items:center; gap:10px; min-height:44px; font-size:14px; font-weight:600; }
+.exercise-energy-option input { width:18px; height:18px; accent-color:var(--app-blue); }
+.exercise-demo { margin:20px 0; }
+.exercise-demo-heading { display:flex; justify-content:space-between; gap:10px; align-items:baseline; margin-bottom:12px; }
+.exercise-demo-heading h3 { font-size:18px; font-weight:700; }
+.exercise-demo-heading span { color:var(--app-muted); font-size:12px; }
+.exercise-demo-images { position:relative; width:100%; aspect-ratio:4/3; max-height:min(560px,65svh); background:#fff; border-radius:12px; overflow:hidden; }
+.exercise-demo-images video,.exercise-demo-images img { position:absolute; inset:0; display:block; width:100%; height:100%; min-width:0; min-height:0; max-width:100%; max-height:100%; object-fit:contain; object-position:center; }
+.exercise-demo-images img { visibility:hidden; }
+.exercise-demo-images img.is-visible { visibility:visible; }
+.exercise-demo-controls { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+.exercise-demo-controls button { display:flex; align-items:center; gap:4px; }
+.exercise-demo-controls a { display:flex; align-items:center; min-height:44px; padding:8px 10px; color:var(--app-blue); font-size:13px; font-weight:600; text-decoration:underline; text-underline-offset:3px; }
+.exercise-demo summary { display:flex; align-items:center; min-height:44px; cursor:pointer; color:var(--app-blue); font-size:14px; text-decoration:underline; text-underline-offset:3px; }
+.exercise-demo ol { padding-left:20px; font-size:14px; line-height:1.5; }
+.exercise-demo li { margin:10px 0; }
+.exercise-demo .exercise-demo-source { font-size:12px; line-height:1.5; color:var(--app-muted); margin-top:10px; }
+.exercise-demo-source a { color:var(--app-blue); text-decoration:underline; text-underline-offset:3px; }
+.strength-energy { border:0; padding:0; margin:20px 0; min-width:0; }
+.strength-energy legend { font-size:18px; font-weight:700; }
+.strength-energy .home-activity-values { margin-top:12px; }
+.strength-energy select { width:100%; min-width:0; min-height:44px; padding:10px 8px; border:1px solid var(--app-line); border-radius:10px; background:#fff; color:var(--app-ink); font:inherit; font-size:13px; }

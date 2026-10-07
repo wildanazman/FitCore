@@ -3,6 +3,7 @@
 
 import type { DietMode, UserProfile } from '../types'
 import { baseCalorieTarget, bmiValue, macroTargets, tdee } from './nutrition'
+import { malaysianSampleDay } from './malaysianDietMeals'
 
 export interface BmiInfo {
   value: number
@@ -115,7 +116,7 @@ export const DIET_GUIDE: Record<DietMode, DietGuide> = {
       'Split roughly 30% protein / 40% carbs / 30% fat.',
       'Time carbs around training for performance and recovery.',
     ],
-    eat: ['Lean protein (chicken, fish, eggs, tofu)', 'Vegetables and fruit', 'Whole grains, oats, rice, potatoes', 'Nuts, olive oil, avocado'],
+    eat: ['Ayam panggang, ikan bakar, telur, tauhu or tempe', 'Sayur campur, ulam, betik and pisang', 'Nasi putih, capati, tosai or oats in measured portions', 'Use halal ingredients; include cooking oil and sambal in the estimate'],
     avoid: ['Sugary drinks and liquid calories', 'Ultra-processed snacks', 'Frequent refined-sugar treats'],
     tips: ['Anchor every meal with 30–40g protein', 'Walk 8–10k steps daily', 'Weigh in weekly, not daily'],
     cautions: ['No major restrictions — the sustainable default.'],
@@ -133,7 +134,7 @@ export const DIET_GUIDE: Record<DietMode, DietGuide> = {
       'During the fast: water, black coffee, plain tea, electrolytes only.',
       'Make the meal big and balanced — under-eating is the main OMAD failure.',
     ],
-    eat: ['High-protein centre (meat, fish, eggs)', 'Plenty of vegetables for fibre and volume', 'Healthy fats to hit calories', 'Slow carbs (rice, potato, oats)'],
+    eat: ['Halal ayam or ikan with eggs, tauhu or tempe', 'Sayur campur and ulam alongside your lauk', 'Count oil, kuah and sambal as part of the meal', 'Nasi, capati, fruit or oats to round out your target'],
     avoid: ['Anything caloric during the fast', 'A small "light" meal that misses your target', 'Sugary drinks that break the fast'],
     tips: ['Front-load protein, eat slowly over the hour', 'Salt + potassium + magnesium during the fast', 'On hard training days, train near the window'],
     cautions: ['Not for pregnancy, type-1 diabetes, or a history of disordered eating.', 'Ease in via 16:8 first.', 'Discuss with a doctor if you take blood-sugar or blood-pressure medication.'],
@@ -148,7 +149,7 @@ export const DIET_GUIDE: Record<DietMode, DietGuide> = {
       'Fast the other 16 hours on water, black coffee, and tea.',
       'Two to three meals in-window; hit protein and calorie targets normally.',
     ],
-    eat: ['Balanced meals as in Standard', 'Protein at every in-window meal', 'Fibre-rich veg and fruit', 'Whole-food carbs around training'],
+    eat: ['Nasi + ayam or ikan + sayur for the first meal', 'Eggs, tauhu or tempe as protein additions', 'Betik, pisang and vegetables within the eating window', 'Measured nasi or capati portions; timing does not erase calories'],
     avoid: ['Calorie drinks during the fast', 'Cramming junk just because it "fits"', 'Skipping protein at the first meal'],
     tips: ['Align the window with training and social meals', 'Break the fast with protein + fibre, not sugar', 'Black coffee helps ride out the morning fast'],
     cautions: ['Mild early hunger that fades in a week.', 'Pull the window earlier if evening eating hurts sleep.'],
@@ -165,7 +166,7 @@ export const DIET_GUIDE: Record<DietMode, DietGuide> = {
       'Moderate protein, high fat, near-zero sugar and starch.',
       'Expect a 3–7 day "keto flu" adaptation — push electrolytes.',
     ],
-    eat: ['Meat, poultry, fish, eggs', 'Avocado, olive oil, butter', 'Cheese and full-fat dairy', 'Leafy greens, broccoli, cauliflower', 'Nuts and seeds'],
+    eat: ['Halal ayam, ikan and telur as the meal centre', 'Ulam and leafy vegetables without sweet sauces', 'Count santan, oil, cheese and nuts rather than treating them as unlimited', 'Check kuah, sambal and packaged ingredients for sugar and halal suitability'],
     avoid: ['Bread, rice, pasta, oats', 'Sugar, soda, most fruit', 'Potatoes and starchy veg', 'Beans and legumes (carb-heavy)'],
     tips: ['Sodium, potassium, magnesium daily to beat keto flu', 'Track net carbs strictly — they add up fast', 'Ramp fat up as carbs come down to hold energy'],
     cautions: ['Endurance top-end pace can dip for weeks.', 'Talk to a doctor if on diabetes or blood-pressure meds.', 'Not ideal right before a race that needs carb-loading.'],
@@ -182,7 +183,7 @@ export const DIET_GUIDE: Record<DietMode, DietGuide> = {
       'Keep carbs low, protein high, moderate fat.',
       'Run it short-term (days to ~2 weeks), then return to a balanced plan.',
     ],
-    eat: ['Eggs (boiled, scrambled, omelette)', 'Lean meat and fish', 'Low-carb veg (spinach, peppers, courgette)', 'A little healthy fat (avocado, olive oil)'],
+    eat: ['Telur rebus, telur separuh masak or telur dadar', 'Halal ayam and ikan for variety', 'Ulam and sayur alongside eggs; not eggs alone', 'Count oil and sauces; choose halal ingredients'],
     avoid: ['Bread, rice, pasta, sugar', 'High-carb sides and fruit', 'Processed snacks'],
     tips: ['Vary egg prep to avoid boredom', 'Add veg for fibre and micronutrients', 'Hydrate well and add salt'],
     cautions: ['Nutritionally narrow — short-term only.', 'Watch cholesterol if your doctor has flagged it.', 'Not a long-term or performance diet.'],
@@ -212,17 +213,8 @@ export function personalPlan(profile: UserProfile, weightKg: number): PersonalPl
   const target = baseCalorieTarget(profile, weightKg)
   const m = macroTargets(profile, weightKg, target)
   const guide = DIET_GUIDE[profile.dietMode]
-  const templateKcal = guide.sampleDay.reduce((s, meal) => s + meal.kcal, 0)
-  const scale = templateKcal > 0 ? target / templateKcal : 1
-  // Low-carb protocols pin carbs — scaling energy must not inflate them past the cap.
-  const lowCarb = profile.dietMode === 'keto' || profile.dietMode === 'egg'
-  const scaledDay = guide.sampleDay.map((meal) => ({
-    ...meal,
-    kcal: Math.round(meal.kcal * scale),
-    protein: Math.round(meal.protein * scale),
-    carbs: lowCarb ? meal.carbs : Math.round(meal.carbs * scale),
-    fat: Math.round(meal.fat * scale),
-  }))
+  // Practical Malaysian portions rather than arbitrary fractional eggs or scaled oil.
+  const scaledDay = malaysianSampleDay(profile.dietMode, target)
   const scaledTotal = scaledDay.reduce(
     (a, meal) => ({
       kcal: a.kcal + meal.kcal,

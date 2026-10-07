@@ -5,6 +5,7 @@ import { useApp } from '../store/AppContext'
 import { Icon } from '../components/Icon'
 import { FitCoreMark } from '../components/FitCoreLogo'
 import { ActivityComposer } from '../components/ActivityComposer'
+import { LogDatePicker } from '../components/LogDatePicker'
 import { addDays, parseISO, shortDate, todayISO, weekday } from '../lib/date'
 import { dayFuel, tdee, toDisplayWeight, weightUnit } from '../lib/nutrition'
 import { dietDef, netCarbsOn, nowMinutes, windowState } from '../lib/diet'
@@ -49,7 +50,7 @@ export function Home() {
   const weightLabel = weightUnit(profile.units)
   const entries = [
     ...foods.map((food) => ({ id: food.id, kind: 'meal' as const, title: food.name, detail: food.slot, at: food.loggedAt, kcal: Math.round(food.kcal * food.servings), photo: food.photo, session: null })),
-    ...sessions.map((session) => ({ id: session.id, kind: 'activity' as const, title: session.title, detail: `${session.durationMin} min${session.completed ? ' · completed' : ' · planned'}`, at: session.loggedAt ?? `${session.date}T23:59:59`, kcal: Math.round(session.kcal), photo: undefined, session })),
+    ...sessions.map((session) => ({ id: session.id, kind: 'activity' as const, title: session.title, detail: session.strengthLog ? session.detail : `${session.durationMin} min${session.completed ? ' · completed' : ' · planned'}`, at: session.loggedAt ?? `${session.date}T23:59:59`, kcal: Math.round(session.kcal), photo: undefined, session })),
   ].filter((entry) => feed === 'all' || entry.kind === feed).sort((a, b) => b.at.localeCompare(a.at))
   const transition = { duration: reducedMotion ? 0 : 0.24, ease }
 
@@ -72,17 +73,18 @@ export function Home() {
           <span>{weekday(day).slice(0, 2)}</span><strong>{parseISO(day).getDate()}</strong><i className={logged ? 'has-log' : ''} aria-hidden="true" />
         </button>
       })}</div>
+      <details className="home-history-date"><summary>Choose another date</summary><LogDatePicker date={date} onChange={chooseDay} /></details>
     </section>
 
     <div className="home-dashboard">
       <div className="home-primary-column">
-        <EnergyBoard fuel={fuel} onOpenFood={() => nav('/food')} />
-        {isToday ? <div className="home-quick-actions">
-          <motion.button type="button" className="home-log-meal" onClick={() => nav('/food?add=1')} whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="restaurant" size={23} /></span><span><strong>Log a meal</strong><small>Search, scan or add</small></span><Icon name="add" size={21} /></motion.button>
+        <EnergyBoard fuel={fuel} onOpenFood={() => nav(`/food?date=${date}`)} />
+        <div className="home-quick-actions">
+          <motion.button type="button" className="home-log-meal" onClick={() => nav(`/food?add=1&date=${date}`)} whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="restaurant" size={23} /></span><span><strong>Log a meal</strong><small>Search, scan or add</small></span><Icon name="add" size={21} /></motion.button>
           <motion.button type="button" className={`home-log-activity ${activityOpen ? 'is-open' : ''}`} onClick={() => setActivityOpen((open) => !open)} aria-expanded={activityOpen} aria-controls="home-activity-composer" whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="exercise" size={23} /></span><span><strong>Log activity</strong><small>Every move counts</small></span><Icon name={activityOpen ? 'close' : 'add'} size={21} /></motion.button>
-        </div> : <button type="button" className="home-return-today" onClick={() => chooseDay(today)}><Icon name="history" size={20} /><span>Viewing {shortDate(date)}. Return to today to log.</span><Icon name="arrow_forward" size={18} /></button>}
+        </div>
 
-        <AnimatePresence initial={false}>{activityOpen && isToday && <motion.div ref={activityRef} id="home-activity-composer" className="home-composer" initial={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} transition={transition}><div className="home-composer-title"><h2>Add your movement</h2><button type="button" onClick={() => setActivityOpen(false)} aria-label="Close activity form"><Icon name="close" size={20} /></button></div><ActivityComposer onSaved={() => setActivityOpen(false)} /></motion.div>}</AnimatePresence>
+        <AnimatePresence initial={false}>{activityOpen && <motion.div ref={activityRef} id="home-activity-composer" className="home-composer" initial={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} transition={transition}><div className="home-composer-title"><h2>Add your movement</h2><button type="button" onClick={() => setActivityOpen(false)} aria-label="Close activity form"><Icon name="close" size={20} /></button></div><ActivityComposer date={date} onSaved={() => setActivityOpen(false)} /></motion.div>}</AnimatePresence>
 
         <section className="home-nutrition" aria-labelledby="home-nutrition-title">
           <div className="home-section-heading"><h2 id="home-nutrition-title">A little of everything.</h2><button type="button" onClick={() => nav('/food')} aria-label="View nutrition details"><Icon name="arrow_outward" size={20} /></button></div>
@@ -104,7 +106,7 @@ export function Home() {
             {entries.length ? entries.map((entry) => <div className={`home-entry home-entry-${entry.kind}`} key={`${entry.kind}-${entry.id}`}>
               <span className="home-entry-symbol">{entry.photo ? <img src={entry.photo} alt="" /> : <Icon name={entry.kind === 'meal' ? 'restaurant' : entry.session?.icon ?? 'exercise'} size={22} />}</span>
               <div className="home-entry-copy"><strong>{entry.title}</strong><span>{entry.detail}{entry.kind === 'meal' || entry.session?.loggedAt ? ` · ${time(entry.at)}` : ''}</span></div>
-              {entry.session && !entry.session.manual ? <motion.button type="button" className="home-session-check" aria-label={`${entry.session.completed ? 'Mark incomplete' : 'Mark complete'}: ${entry.title}`} aria-pressed={entry.session.completed} onClick={() => toggleSession(entry.id)} whileTap={reducedMotion ? undefined : { scale: 0.9 }}><Icon name={entry.session.completed ? 'check_circle' : 'radio_button_unchecked'} size={25} fill={entry.session.completed} /></motion.button> : <span className="home-entry-energy"><strong>{entry.kind === 'meal' ? '+' : '−'}{entry.kcal}</strong><small>kcal</small></span>}
+              {entry.session && !entry.session.manual ? <motion.button type="button" className="home-session-check" aria-label={`${entry.session.completed ? 'Mark incomplete' : 'Mark complete'}: ${entry.title}`} aria-pressed={entry.session.completed} onClick={() => toggleSession(entry.id)} whileTap={reducedMotion ? undefined : { scale: 0.9 }}><Icon name={entry.session.completed ? 'check_circle' : 'radio_button_unchecked'} size={25} fill={entry.session.completed} /></motion.button> : <span className="home-entry-energy"><strong>{entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? '—' : `${entry.kind === 'meal' ? '+' : '−'}${entry.kcal}`}</strong><small>{entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? 'not estimated' : 'kcal'}</small></span>}
             </div>) : <div className="home-journal-empty"><span className="home-empty-symbol"><Icon name={feed === 'activity' ? 'exercise' : 'restaurant'} size={28} /></span><h3>{feed === 'activity' ? 'Make room for movement.' : feed === 'meal' ? 'Your next meal starts here.' : 'A fresh page for your day.'}</h3><p>{isToday ? feed === 'activity' ? 'A walk, a workout, a little stretch. Log what you do.' : 'Log a meal or activity and watch your day come together.' : 'There are no entries for this day.'}</p>{isToday && <button type="button" onClick={() => feed === 'activity' ? setActivityOpen(true) : nav('/food?add=1')}>{feed === 'activity' ? 'Add an activity' : 'Find your first meal'}<Icon name="arrow_forward" size={17} /></button>}</div>}
           </motion.div></AnimatePresence></div>
           {completed.length > 0 && <div className="home-movement-total"><Icon name="local_fire_department" size={19} /><span>{burned.toLocaleString()} kcal from {completed.length} completed activit{completed.length === 1 ? 'y' : 'ies'}</span></div>}
