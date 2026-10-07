@@ -1,6 +1,6 @@
 // Development-only server adapter. Credentials never enter client bundles.
 export function localFoodApis(env) {
-  for (const key of ['GOOGLE_PLACES_API_KEY', 'USDA_FDC_API_KEY', 'THEMEALDB_API_KEY']) if (env[key] && !process.env[key]) process.env[key] = env[key]
+  for (const key of ['GOOGLE_PLACES_API_KEY', 'GOOGLE_PLACES_MONTHLY_REQUEST_LIMIT', 'GOOGLE_PLACES_DAILY_REQUEST_LIMIT', 'OVERPASS_API_URL', 'PHOTON_API_URL', 'USDA_FDC_API_KEY', 'THEMEALDB_API_KEY']) if (env[key] && !process.env[key]) process.env[key] = env[key]
   return { name: 'fitcore-local-food-apis', configureServer(server) {
     for (const name of ['food-catalog', 'nearby-restaurants']) server.middlewares.use(`/api/${name}`, async (req,res) => {
       try {

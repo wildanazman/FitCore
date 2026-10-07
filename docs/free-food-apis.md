@@ -20,7 +20,7 @@ Vite runs new `/api/food-catalog` and `/api/nearby-restaurants` functions locall
 
 - `USDA_FDC_API_KEY`: obtain a free key from https://fdc.nal.usda.gov/api-guide/. Without it, DEMO_KEY has 30 requests/hour and 50/day per provider docs.
 - `THEMEALDB_API_KEY`: licensed key for production. Local `NODE_ENV=development` alone permits test key 1. No public release/app-store license is implied.
-- `GOOGLE_PLACES_API_KEY`: optional restaurant finder; not supplied by these seven APIs and not replaced by a free brewery/cocktail database.
+- Restaurant finder prefers Google Places when a server-only key is configured, with conservative request gates, and falls back to free OpenStreetMap/Overpass and Photon. See [restaurant setup](eat-out-setup.md) for billing, usage limits and attribution.
 
 No new credentials are put in browser storage or `VITE_` variables. Restart Vite after local key changes; deploying to Vercel requires corresponding server env configuration and a separately authorized push/deploy.
 

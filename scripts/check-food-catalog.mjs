@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {normalizeProduct,normalizeUSDA,normalizeRecipe} from '../api/food-catalog.js'
 import {hasExcludedIngredients} from '../shared/foodSuitability.js'
-import {rankPlaces} from '../api/nearby-restaurants.js'
+import {rankOSM} from '../api/nearby-restaurants.js'
 const nutrients={'energy-kcal_100g':100,proteins_100g:10,carbohydrates_100g:6,fat_100g:4}
 const product={code:'12345678',product_name:'Synthetic test yogurt',nutriments:nutrients,ingredients_text:'Milk',allergens_tags:['en:milk']}
 assert.equal(normalizeProduct(product).kcal,100)
@@ -14,8 +14,8 @@ const usda={fdcId:123,description:'Synthetic test oats',dataType:'Foundation',fo
 assert.equal(normalizeUSDA(usda).basis,'100 g');assert.equal(normalizeUSDA({...usda,foodNutrients:[]}),null)
 assert.equal(normalizeRecipe({idMeal:'1',strMeal:'Test chicken',strIngredient1:'Wine'}),null)
 assert.equal(normalizeRecipe({idMeal:'1',strMeal:'Test rice',strIngredient1:'Rice'}).ingredients.length,1)
-const center={latitude:3,longitude:101},base={displayName:{text:'Chinese vegetarian restaurant'},location:center,businessStatus:'OPERATIONAL',rating:4.5,userRatingCount:200,currentOpeningHours:{openNow:true}}
-assert.deepEqual(rankPlaces([{...base,id:'yes'},{...base,id:'wine',servesWine:true},{...base,id:'pork',displayName:{text:'Pork restaurant'}},{...base,id:'bar',types:['bar']}],center,{radiusKm:5,minRating:4,minReviews:20,openNow:true,price:'any'}).map(p=>p.id),['yes'])
+const center={latitude:3,longitude:101},base={type:'node',lat:3,lon:101,tags:{name:'Chinese vegetarian restaurant',amenity:'restaurant'}}
+assert.deepEqual(rankOSM([{...base,id:1},{...base,id:2,tags:{...base.tags,alcohol:'yes'}},{...base,id:3,tags:{...base.tags,name:'Pork restaurant'}},{...base,id:4,tags:{...base.tags,amenity:'bar'}}],center,5).map(p=>p.id),['osm:node:1'])
 console.log('PASS normalization: missing is not zero, ingredient and multilingual prohibited filters, recipe-only data, Chinese cuisine retained, known alcohol/pork/bar restaurants excluded.')
 const {chromium}=await import('/Users/wildan/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs')
 const browser=await chromium.launch({headless:true,executablePath:'/Users/wildan/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'})

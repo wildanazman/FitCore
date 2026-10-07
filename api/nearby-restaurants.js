@@ -1,64 +1,126 @@
 export const config = { maxDuration: 30 }
 import { hasExcludedIngredients } from '../shared/foodSuitability.js'
-const send = (res, status, body) => {
-  res.statusCode = status
-  res.setHeader('Content-Type', 'application/json')
-  res.setHeader('Cache-Control', 'no-store')
-  res.end(JSON.stringify(body))
+const cache = new Map()
+let nextRequest = 0, inFlight = false
+const googleUsage = new Map()
+const headers = { 'User-Agent': 'FitCore/1.0 (https://fit-core-five.vercel.app; user-triggered restaurant finder)' }
+const clean = (v, max = 200) => typeof v === 'string' ? v.trim().slice(0, max) : ''
+const coord = (lat, lon) => Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180
+const send = (res, status, body) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store'); res.end(JSON.stringify(body)) }
+// Keep the mask to identity, location and rating data. Asking for contact/atmosphere
+// fields can move a request into a more expensive Places SKU.
+const googleFields = 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.googleMapsUri,places.businessStatus,places.types'
+const googleLimit = () => Math.max(1, Math.min(1000, Number(process.env.GOOGLE_PLACES_MONTHLY_REQUEST_LIMIT || 250)))
+const googleDailyLimit = () => Math.max(1, Math.min(100, Number(process.env.GOOGLE_PLACES_DAILY_REQUEST_LIMIT || 10)))
+function reserveGoogleRequests(amount) {
+  const now = new Date(), month = `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}`, day = now.toISOString().slice(0, 10)
+  const state = googleUsage.get(month) || { month: 0, day, dayCount: 0 }
+  if (state.day !== day) { state.day = day; state.dayCount = 0 }
+  if (state.month + amount > googleLimit() || state.dayCount + amount > googleDailyLimit()) return false
+  state.month += amount; state.dayCount += amount; googleUsage.set(month, state)
+  for (const key of googleUsage.keys()) if (key !== month) googleUsage.delete(key)
+  return true
 }
-const fields = 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.googleMapsUri,places.currentOpeningHours,places.priceLevel,places.businessStatus,places.attributions,places.types,places.servesBeer,places.servesWine,places.servesCocktails'
-async function google(key, method, body, mask) {
+async function googlePlaces(key, method, body, fieldMask) {
   const response = await fetch(`https://places.googleapis.com/v1/places:${method}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': mask },
-    body: JSON.stringify(body), signal: AbortSignal.timeout(9000),
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': fieldMask },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(9000),
   })
-  if (!response.ok) throw new Error('provider')
+  if (!response.ok) throw new Error('Google Places request failed')
   return response.json()
 }
 export function distanceKm(a, b) {
   const rad = n => n * Math.PI / 180
-  const dLat = rad(b.latitude - a.latitude), dLng = rad(b.longitude - a.longitude)
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2
+  const h = Math.sin(rad(b.latitude - a.latitude) / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(rad(b.longitude - a.longitude) / 2) ** 2
   return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, h)))
 }
-export function rankPlaces(places, center, options) {
+export function rankOSM(elements, center, radiusKm) {
+  const seen = new Set()
+  return elements.flatMap(p => {
+    const t = p.tags || {}, name = clean(t.name || t['name:en']), latitude = p.lat ?? p.center?.lat, longitude = p.lon ?? p.center?.lon
+    if (!['node', 'way', 'relation'].includes(p.type) || !Number.isSafeInteger(p.id) || !name || !coord(latitude, longitude) || !['restaurant','fast_food','cafe','food_court'].includes(t.amenity)) return []
+    if (hasExcludedIngredients(`${name} ${t.cuisine || ''} ${t.description || ''}`) || ['yes','only'].includes(t['diet:pork']) || ['yes','only','served','draught','bottled'].includes(t.alcohol) || ['drink:alcohol','drink:beer','drink:wine','drink:spirits'].some(k=>['yes','only'].includes(t[k])) || t['diet:halal'] === 'no' || t.disused === 'yes' || t.abandoned === 'yes') return []
+    const distance = distanceKm(center, { latitude, longitude })
+    const duplicate = `${name.toLowerCase()}:${latitude.toFixed(4)}:${longitude.toFixed(4)}`
+    if (distance > radiusKm || seen.has(duplicate)) return []
+    seen.add(duplicate)
+    const address = [t['addr:housenumber'], t['addr:street'], t['addr:suburb'], t['addr:city'], t['addr:postcode']].map(v => clean(v,100)).filter(Boolean).join(', ')
+    return [{ id: `osm:${p.type}:${p.id}`, name, address: address || 'Address not recorded', distanceKm: Math.round(distance * 10) / 10, _distance: distance,
+      cuisine: clean(t.cuisine).replace(/;/g, ', '), openingHours: clean(t.opening_hours), halalStatus: t['diet:halal'] === 'yes' ? 'Tagged halal in OpenStreetMap—not verified certification' : 'Halal status unknown',
+      mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${latitude},${longitude}`)}`,
+      osmUrl: `https://www.openstreetmap.org/${p.type}/${p.id}` }]
+  }).sort((a,b) => a._distance - b._distance || a.name.localeCompare(b.name)).slice(0,10).map(({_distance, ...p}) => p)
+}
+export function rankGoogle(places, center, radiusKm) {
   const seen = new Set()
   return places.filter(p => {
-    if (!p.id || seen.has(p.id) || !p.displayName?.text || !p.location) return false
+    if (!p?.id || seen.has(p.id) || !p.displayName?.text || !coord(p.location?.latitude, p.location?.longitude) || p.businessStatus !== 'OPERATIONAL') return false
     seen.add(p.id)
-    return !hasExcludedIngredients(p.displayName.text) && !p.servesBeer && !p.servesWine && !p.servesCocktails && !p.types?.some(t=>['bar','pub','wine_bar'].includes(t)) && p.businessStatus === 'OPERATIONAL' && Number.isFinite(p.rating) && p.rating >= options.minRating && p.userRatingCount >= options.minReviews &&
-      distanceKm(center, p.location) <= options.radiusKm && (!options.openNow || p.currentOpeningHours?.openNow === true) &&
-      (options.price === 'any' || ['PRICE_LEVEL_FREE', 'PRICE_LEVEL_INEXPENSIVE', 'PRICE_LEVEL_MODERATE'].includes(p.priceLevel))
+    return !hasExcludedIngredients(p.displayName.text) && !p.servesBeer && !p.servesWine && !p.servesCocktails && !p.types?.some(t => ['bar', 'pub', 'wine_bar'].includes(t)) && distanceKm(center, p.location) <= radiusKm
   }).sort((a, b) => {
-    // Weighted rating tempers tiny review samples; no cross-provider blended score.
-    const score = p => (p.rating * p.userRatingCount + 4 * 100) / (p.userRatingCount + 100)
+    const score = p => Number.isFinite(p.rating) ? (p.rating * (p.userRatingCount || 0) + 4 * 100) / ((p.userRatingCount || 0) + 100) : 0
     return score(b) - score(a) || distanceKm(center, a.location) - distanceKm(center, b.location)
   }).slice(0, 10).map(p => ({
-    id: p.id, name: p.displayName.text, address: p.formattedAddress ?? '', rating: p.rating, reviews: p.userRatingCount,
-    distanceKm: Math.round(distanceKm(center, p.location) * 10) / 10, openNow: p.currentOpeningHours?.openNow ?? null,
-    priceLevel: p.priceLevel ?? null, mapsUrl: p.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.displayName.text)}&query_place_id=${encodeURIComponent(p.id)}`,
-    attributions: p.attributions ?? [],
+    id: `google:${p.id}`, name: p.displayName.text, address: clean(p.formattedAddress), distanceKm: Math.round(distanceKm(center, p.location) * 10) / 10,
+    cuisine: '', openingHours: clean(p.currentOpeningHours?.weekdayDescriptions?.join(' · ')), halalStatus: 'Halal status unknown—check the business before eating',
+    rating: Number.isFinite(p.rating) ? p.rating : null, reviews: Number.isSafeInteger(p.userRatingCount) ? p.userRatingCount : null,
+    openNow: typeof p.currentOpeningHours?.openNow === 'boolean' ? p.currentOpeningHours.openNow : null, priceLevel: clean(p.priceLevel) || null,
+    mapsUrl: typeof p.googleMapsUri === 'string' ? p.googleMapsUri : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.displayName.text} ${p.location.latitude},${p.location.longitude}`)}`,
+    osmUrl: ''
   }))
 }
+async function read(url, options, timeout) {
+  const r = await fetch(url, { ...options, headers: { ...headers, ...options?.headers }, signal: AbortSignal.timeout(timeout) })
+  if (!r.ok) throw new Error(r.status === 429 ? 'Free map service is busy. Wait a moment before retrying.' : 'Free map service is unavailable. Try again later or open Google Maps.')
+  return r.json()
+}
 export default async function handler(req, res) {
-  if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return send(res, 405, { error: 'Use POST.' }) }
-  let b
-  try { b = typeof req.body === 'string' ? JSON.parse(req.body) : req.body ?? {} } catch { return send(res, 400, { error: 'Invalid request.' }) }
-  const area = typeof b.area === 'string' ? b.area.trim() : ''
-  const validCoord = typeof b.latitude === 'number' && typeof b.longitude === 'number' && Number.isFinite(b.latitude) && Number.isFinite(b.longitude) && Math.abs(b.latitude) <= 90 && Math.abs(b.longitude) <= 180
-  if ((!validCoord && (!area || area.length > 120)) || typeof b.radiusKm !== 'number' || !Number.isFinite(b.radiusKm) || b.radiusKm < 1 || b.radiusKm > 50 || ![0, 4, 4.3, 4.5].includes(b.minRating) || ![0, 20, 100].includes(b.minReviews) || !['any', 'budget'].includes(b.price) || typeof b.openNow !== 'boolean') return send(res, 400, { error: 'Check your location and filters. Radius must be 1–50 km.' })
-  const key = process.env.GOOGLE_PLACES_API_KEY
-  if (!key) return send(res, 503, { code: 'NOT_CONFIGURED', error: 'Live restaurant search is not connected yet. The app owner needs to configure Google Places.' })
+  if (req.method !== 'POST') { res.setHeader('Allow','POST'); return send(res,405,{error:'Use POST.'}) }
+  let b; try { b = typeof req.body === 'string' ? JSON.parse(req.body) : req.body ?? {} } catch { return send(res,400,{error:'Invalid request.'}) }
+  if (!b || typeof b !== 'object') return send(res,400,{error:'Invalid request.'})
+  const area = clean(b.area,121), validCoord = typeof b.latitude === 'number' && typeof b.longitude === 'number' && coord(b.latitude,b.longitude)
+  if ((!validCoord && (area.length < 2 || area.length > 120)) || typeof b.radiusKm !== 'number' || !Number.isFinite(b.radiusKm) || b.radiusKm < 1 || b.radiusKm > 50) return send(res,400,{error:'Enter a location and radius from 1–50 km.'})
+  const key = JSON.stringify([validCoord ? [b.latitude,b.longitude] : area.toLowerCase(), b.radiusKm]), now = Date.now(), cached = cache.get(key)
+  if (cached && cached.until > now) return send(res,200,cached.data)
+  // One uncached request at a time per process; public providers are not unlimited.
+  if (inFlight || now < nextRequest) return send(res,429,{error:'Please wait a few seconds before another map search.'})
+  inFlight = true; nextRequest = now + 3000
   try {
-    let center = { latitude: b.latitude, longitude: b.longitude }, locationLabel = 'Your location'
-    if (!validCoord) {
-      const found = await google(key, 'searchText', { textQuery: `${area}, Malaysia`, regionCode: 'MY', languageCode: 'en', pageSize: 1 }, 'places.location,places.displayName,places.formattedAddress')
-      const place = found.places?.[0]
-      if (!place?.location) return send(res, 404, { error: 'Area not found. Try a town, postcode or landmark.' })
-      center = place.location
-      locationLabel = place.formattedAddress || place.displayName?.text || area
+    let center = {latitude:b.latitude,longitude:b.longitude}, locationLabel = 'Your location'
+    const googleKey = clean(process.env.GOOGLE_PLACES_API_KEY, 300)
+    if (googleKey) {
+      const requestCount = validCoord ? 1 : 2
+      if (!reserveGoogleRequests(requestCount)) return send(res,429,{error:'Google Places monthly or daily limit reached. Try again later or use the free map search.'})
+      if (!validCoord) {
+        const found = await googlePlaces(googleKey, 'searchText', { textQuery: `${area}, Malaysia`, regionCode: 'MY', languageCode: 'en', pageSize: 1 }, 'places.location,places.displayName,places.formattedAddress')
+        const place = found.places?.[0]
+        if (!place?.location) return send(res,404,{error:'Malaysian area not found. Try a town, postcode or landmark.'})
+        center = place.location
+        locationLabel = clean(place.formattedAddress || place.displayName?.text || area)
+      }
+      const found = await googlePlaces(googleKey, 'searchNearby', { includedTypes: ['restaurant'], maxResultCount: 20, rankPreference: 'POPULARITY', languageCode: 'en', locationRestriction: { circle: { center, radius: b.radiusKm * 1000 } } }, googleFields)
+      const result = { places: rankGoogle(found.places || [], center, b.radiusKm), locationLabel, source: 'Google Maps', searchedAt: new Date().toISOString() }
+      if (cache.size >= 50) cache.clear()
+      cache.set(key,{until:Date.now()+900000,data:result})
+      return send(res,200,result)
     }
-    const data = await google(key, 'searchNearby', { includedTypes: ['restaurant'], maxResultCount: 20, rankPreference: 'POPULARITY', languageCode: 'en', locationRestriction: { circle: { center, radius: b.radiusKm * 1000 } } }, fields)
-    return send(res, 200, { places: rankPlaces(data.places ?? [], center, b), locationLabel, source: 'Google Maps', searchedAt: new Date().toISOString() })
-  } catch { return send(res, 502, { error: 'Restaurant search is unavailable. Try again later or open Google Maps.' }) }
+    if (!validCoord) {
+      const query = new URLSearchParams({q:area,countrycode:'MY',limit:'1',lang:'en'})
+      const data = await read(`${process.env.PHOTON_API_URL || 'https://photon.komoot.io/api/'}?${query}`, {}, 7500)
+      const feature = data.features?.[0], point = feature?.geometry?.coordinates
+      if (!Array.isArray(point) || !coord(point[1],point[0]) || feature.properties?.countrycode?.toUpperCase() !== 'MY') return send(res,404,{error:'Malaysian area not found. Try a town or landmark, or use your location.'})
+      center = {latitude:point[1],longitude:point[0]}
+      locationLabel = [...new Set([feature.properties.name,feature.properties.city,feature.properties.state].map(v=>clean(v)).filter(Boolean))].join(', ') || area
+    }
+    const query = `[out:json][timeout:12][maxsize:16777216];nwr(around:${b.radiusKm*1000},${center.latitude},${center.longitude})[amenity~"^(restaurant|fast_food|cafe|food_court)$"][name];out center tags 500;`
+    const data = await read(process.env.OVERPASS_API_URL || 'https://overpass-api.de/api/interpreter', {method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({data:query})}, 16000)
+    if (!Array.isArray(data.elements) || data.remark) throw new Error('Free map search could not finish. Try a smaller radius or retry later.')
+    const result = {places:rankOSM(data.elements,center,b.radiusKm),locationLabel,source:'OpenStreetMap',searchedAt:new Date().toISOString()}
+    if (cache.size >= 50) cache.clear()
+    cache.set(key,{until:Date.now()+900000,data:result})
+    return send(res,200,result)
+  } catch(e) { return send(res,502,{error:e instanceof Error && e.message.startsWith('Free map') ? e.message : 'Free map search could not finish. Try a smaller radius, retry later or open Google Maps.'}) }
+  finally { inFlight = false }
 }

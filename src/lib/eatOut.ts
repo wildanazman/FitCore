@@ -1,7 +1,7 @@
 import { apiUrl } from './apiBase'
-export type Restaurant = { id: string; name: string; address: string; rating: number; reviews: number; distanceKm: number; openNow: boolean | null; priceLevel: string | null; mapsUrl: string; attributions: { provider?: string; providerUri?: string }[] }
-export type RestaurantFilters = { radiusKm: number; minRating: number; minReviews: number; openNow: boolean; price: 'any' | 'budget' }
-export async function findRestaurants(location: { latitude: number; longitude: number } | { area: string }, filters: RestaurantFilters, signal: AbortSignal): Promise<{ places: Restaurant[]; locationLabel: string }> {
+export type Restaurant = { id: string; name: string; address: string; distanceKm: number; cuisine: string; openingHours: string; halalStatus: string; mapsUrl: string; osmUrl: string; rating?: number | null; reviews?: number | null; openNow?: boolean | null; priceLevel?: string | null }
+export type RestaurantFilters = { radiusKm: number }
+export async function findRestaurants(location: { latitude: number; longitude: number } | { area: string }, filters: RestaurantFilters, signal: AbortSignal): Promise<{ places: Restaurant[]; locationLabel: string; source?: string }> {
   const response = await fetch(apiUrl('/api/nearby-restaurants'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...location, ...filters }), signal })
   const data = await response.json().catch(() => null)
   if (!response.ok) throw new Error(data?.error || 'Restaurant search is unavailable. Please retry.')

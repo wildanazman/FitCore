@@ -11,3 +11,4 @@
 @media(prefers-reduced-motion:reduce){.eat-out-wheel{transition:none}}
 .eat-out-page .eat-out-google-attribution{font-weight:400;font-style:normal;letter-spacing:normal;white-space:nowrap;color:#5e5e5e;font-size:12px}
 .eat-out-page input::placeholder{color:#627089;opacity:1}
+.eat-out-list summary{min-height:44px;cursor:pointer;font-size:14px;font-weight:600;padding-top:12px}.eat-out-list details p{font-size:13px;color:#627089;line-height:1.6;margin-bottom:12px}
