@@ -1,7 +1,7 @@
 import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 import { isExcludedRestaurant, restaurantNameKey } from '../../shared/restaurantCuration.js'
 
-export type MallDirectoryKey = 'ioi-city-mall' | 'alamanda' | 'the-mines'
+export type MallDirectoryKey = 'ioi-city-mall' | 'alamanda' | 'the-mines' | 'tamarind-square' | 'dpulze'
 export type MallPlaceCategory = 'meals' | 'cafe-snacks' | 'all'
 export type MallPlaceCategoryOverride = Exclude<MallPlaceCategory, 'all'>
 
@@ -28,6 +28,9 @@ const MINES_NAMES = [
 ]
 
 export const MALL_DIRECTORIES: MallDirectory[] = [
+  { key: 'dpulze', name: 'DPULZE Shopping Centre', address: 'Cyber 12, Cyberjaya', sourceUrl: 'https://dpulze.com/directory/', names: ["4Fingers Crispy Chicken","Bananabro","Bungkus Kaw Kaw","Campur Campur Kitchen","Canton Boy","GO Noodle House (Non-Halal)","Homst Recipe","HWC Coffee","I Love Yoo!","Johnny's Restaurant","Kenangan Coffee","KGB","Kopihut","Luckin Coffee","Mr Dakgalbi","Nando’s","Oldtown White Coffee – Basic","Omulah by Teppanyaki","Pasta Zanmai","Penang Chendul","Pizza Hut Express","Pop Meals","Restoran Sana Sini","Sepiring","Sopoong","Stuff'd","Suki-ya","Sushi King","Sushi Zanmai","The Chicken Rice Shop","The Coffee Bean & Tea Leaf","US Pizza","Zus Coffee"] },
+  // Official F&B snapshot, 8 October 2026; not a certification claim.
+  { key: 'tamarind-square', name: 'Tamarind Square', address: 'Cyber 10, Cyberjaya', sourceUrl: 'https://www.tamarindsq.com/directory/', names: ["10 Gram","10 Pots","10 Thai","A Bite of Yunnam","After 7 Lounge","Afters Baker","Alcea Coffee","Alfie Coffee","Amirah Ali Solutions","Antipodean Black","Arabesq","Auntea Jenny","Ayam Gepuk Boss","Bakez Grocer","Barba Bros Enterprise","Bings Cafe","Boat Noodle","Botanist","Burger King","Cafe Met","Celsius Coffee","Cha Tra Mue","Chagee","Dapur Pramugari","Digital Pylot","Dokebi Chicken","Duer Ventures","Food Project","Four Season Noodle House","Four Seasons Noodle House","Fuel Shack","Furu Japanese Restaurant","Gisomo Group Enterprise","Glaze Eatery","Herbs & Butter","Hot & Roll","HWC Coffee","Jamu Haus Cafe","Kaapi Kreat","Kaysha","Kopi & Wrap","Lourve Cafe & Co","Makdas","Maybematcha","Mixue","Murni Discovery","Noir","Padang Ijau Restaurant","Pakej Usaha (Kocha Lala)","Pastribella","Pekan Ipoh","Rasa Lemak","Restoran Al Arif Nasi Kandar Penang","Restoran Rajo Padang","San Francisco Coffee","Sand Kitchen Restaurant","Savoir Cafe","Sepohon","Shisha Town","Simple Box","Sukhothai Cuisine","Tackle Classic","Tama Food Court","Thai Moment","Thai Tomyam Maphraw","Toast Maker","Valentine Cafe","Wallace Chicken","Warung Geprek","Wow Tea & Beautea","Zans Pizza","Zuby"] },
   { key: 'ioi-city-mall', name: 'IOI City Mall', address: 'IOI Resort City, Putrajaya', sourceUrl: 'https://www.ioicitymall.com.my/?cat=36&tenantlist=full', names: IOI_NAMES },
   { key: 'alamanda', name: 'Alamanda Putrajaya', address: 'Presint 1, Putrajaya', sourceUrl: 'https://www.alamanda.com.my/specialty-fnb-stores/', names: ALAMANDA_NAMES },
   { key: 'the-mines', name: 'The Mines', address: 'Mines Resort City, Seri Kembangan', sourceUrl: 'https://the-mines.com.my/stores-locate-to/', names: MINES_NAMES },
@@ -37,7 +40,7 @@ const excludedMallName = (name: string) => hasExcludedIngredients(name) || isExc
 const cafeSnackName = /\b(coffee|cafe|tea|juice|boba|bubble|gong cha|chagee|tealive|boost|starbucks|tim hortons|luckin|daboba|kenangan|auntea|bask bear|auntie anne|baskin|krispy|donut|bakery|chocolate|godiva|popcorn|yogurt|ice|chendul|churros|cinnabon|royce|dessert|snack|rotiboy|dipndip|perfect ice|cold stone|haagen dazs|tous les jours|juice works|newjuice|mixue)\b/i
 const mallSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 const cafeSnackBrands = new Set([
-  'Airi Berry', 'All About Chew', "BERYL'S", 'BING CHUN', 'BISOU BAKE SHOP', 'CHEEZUTO', 'CHEZ CHOUX', 'CHIZU', 'CORNERY', 'Crème De La Crème', 'DIMSUSU', 'DOTNUTS', "DOTTY'S PASTRIES", "DUNKIN'", "DUNKIN' DONUTS", 'FAMILY MART', 'FAMOUS AMOS', 'GULA PETITE', 'HANBING', 'HAPPY POTATO', 'HOKKAIDO BAKED CHEESE TART', 'HOT & ROLL', 'INSIDE SCOOP', 'JOM CHA', "JOYMOM'S", 'KEE NGUYEN', 'KENNY HILLS BAKERS', 'KOI Thé', 'KOONG WOH TONG', 'Korea Cotton Candy', 'LAVENDER', 'LLAO LLAO', 'MAKII MAKII', 'MBG FRUITSHOP', 'MELTKIES', 'MIX STORE', 'Maison La Manne', "Mokky's with Flaaah", 'NADEJE', 'PARIS BAGUETTE', 'POTATO CORNER', 'QCC Baked', 'SIGNATURE MARKET', 'SISTERS CRISPY POPIAH', 'SOYALAH', 'SQUID BOY', 'Salon Du Chocolat', 'THONG CHA PLUS', 'TICCO', 'TRUEDAN', 'The Founders Bakery', 'The Grass', 'YOLE', 'Yonny', 'ZUS Signature', 'ChaTraMue', 'Homebaker @ Clover', 'Mahnaz Food', 'I LOVE YOO!',
+  'Airi Berry', 'All About Chew', "BERYL'S", 'BING CHUN', 'BISOU BAKE SHOP', 'CHEEZUTO', 'CHEZ CHOUX', 'CHIZU', 'CORNERY', 'Crème De La Crème', 'DIMSUSU', 'DOTNUTS', "DOTTY'S PASTRIES", "DUNKIN'", "DUNKIN' DONUTS", 'FAMILY MART', 'FAMOUS AMOS', 'GULA PETITE', 'HANBING', 'HAPPY POTATO', 'HOKKAIDO BAKED CHEESE TART', 'HOT & ROLL', 'INSIDE SCOOP', 'JOM CHA', "JOYMOM'S", 'KEE NGUYEN', 'KENNY HILLS BAKERS', 'KOI Thé', 'KOONG WOH TONG', 'Korea Cotton Candy', 'LAVENDER', 'LLAO LLAO', 'MAKII MAKII', 'MBG FRUITSHOP', 'MELTKIES', 'MIX STORE', 'Maison La Manne', "Mokky's with Flaaah", 'NADEJE', 'PARIS BAGUETTE', 'POTATO CORNER', 'QCC Baked', 'SIGNATURE MARKET', 'SISTERS CRISPY POPIAH', 'SOYALAH', 'SQUID BOY', 'Salon Du Chocolat', 'THONG CHA PLUS', 'TICCO', 'TRUEDAN', 'The Founders Bakery', 'The Grass', 'YOLE', 'Yonny', 'ZUS Signature', 'Afters Baker', 'Bakez Grocer', 'Cha Tra Mue', 'Maybematcha', 'Pastribella', 'Kaapi Kreat', 'Kopi & Wrap', 'ChaTraMue', 'Homebaker @ Clover', 'Mahnaz Food', 'I LOVE YOO!',
 ].map(restaurantNameKey))
 export const isMallCafeSnack = (name: string) => cafeSnackName.test(name) || cafeSnackBrands.has(restaurantNameKey(name))
 
@@ -45,6 +48,8 @@ export function mallRestaurants(directory: MallDirectory, category: MallPlaceCat
   const seen = new Set<string>()
   return directory.names.map(name => name.trim()).filter(name => {
     const key = restaurantNameKey(name)
+    // F&B registration names do not establish a consumer-facing restaurant.
+    if (directory.key === 'tamarind-square' && /solutions|enterprise|ventures|digital pylot|shisha town/i.test(name)) return false
     if (!name || excludedMallName(name) || seen.has(key)) return false
     seen.add(key); return true
   }).map(name => {

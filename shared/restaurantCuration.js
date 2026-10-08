@@ -18,6 +18,7 @@ export const restaurantExclusions = [
   { name: 'YING XIAN CANTON CUISINE', source: 'https://wanderlog.com/place/details/13686919/ying-xian-canton-cuisine-%25E8%25B5%25A2%25E9%25B2%259C%25E6%25B5%25B7%25E9%25B2%259C%25E5%25A4%25A7%25E6%258E%2592%25E6%25A1%25A3ioi-city-mall-2', reason: 'IOI outlet pork lard dishes' },
 ]
 export const restaurantNameKey = name => String(name).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+export const isNonFoodBusiness = name => /\buptown sports\b|\bsporting goods\b|\bsports? (shop|store|equipment|centre|center)\b|\b(hardware|pharmacy|dental|car wash|fitness centre|gymnasium|vape shop)\b/i.test(name)
 export const isExcludedRestaurant = name => {
   const key = ` ${restaurantNameKey(name)} `
   return restaurantExclusions.some(item => key.includes(` ${restaurantNameKey(item.name)} `)) || /restaurant\s*&\s*bar|wine bar|\bpub\b|\bbrewery\b|\bthe barn\b/i.test(name)

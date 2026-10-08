@@ -1,9 +1,21 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-07T00:00:00Z",
+  "generatedAt": "2026-10-08T00:00:00Z",
   "title": "Design System: FitCore",
   "extensions": {
     "colorMeta": {
+      "makan-cobalt": { "role": "primary", "displayName": "Makan Mana cobalt", "scope": "Eat out route only; masthead, actions and selection." },
+      "makan-cobalt-hover": { "role": "primary", "displayName": "Makan Mana cobalt hover", "scope": "Eat out primary action hover only." },
+      "makan-coral": { "role": "secondary", "displayName": "Makan Mana coral", "scope": "Eat out winner dialog top edge and wheel segments only." },
+      "makan-marigold": { "role": "secondary", "displayName": "Makan Mana marigold", "scope": "Eat out wordmark, roulette stage and Search action only." },
+      "makan-peach": { "role": "tertiary", "displayName": "Makan Mana peach", "scope": "Eat out wordmark question mark only." },
+      "makan-ground": { "role": "neutral", "displayName": "Makan Mana pale ground", "scope": "Eat out route only." },
+      "makan-ink": { "role": "neutral", "displayName": "Makan Mana ink", "scope": "Eat out primary information only." },
+      "makan-muted": { "role": "neutral", "displayName": "Makan Mana muted text", "scope": "Eat out supporting information only." },
+      "makan-line": { "role": "neutral", "displayName": "Makan Mana divider", "scope": "Eat out fields and rows only." },
+      "makan-soft": { "role": "neutral", "displayName": "Makan Mana soft surface", "scope": "Eat out unselected controls only." },
+      "makan-tint": { "role": "neutral", "displayName": "Makan Mana selected tint", "scope": "Eat out included pool controls and mall selection only." },
+      "makan-warm-ink": { "role": "neutral", "displayName": "Makan Mana warm ink", "scope": "Eat out marigold surfaces only." },
       "cobalt": {
         "role": "primary",
         "displayName": "Electric cobalt",
@@ -34,6 +46,14 @@
       }
     },
     "typographyMeta": {
+      "makan-wordmark": {
+        "displayName": "Makan Mana live wordmark",
+        "purpose": "Eat out route only: single-line Lilita One, white makan, marigold mana and small peach question mark. At 420px and below use 40px; at 350px and below use 36px. Self-hosted with OFL; does not replace global Hanken roles."
+      },
+      "makan-ticker": {
+        "displayName": "Makan Mana restaurant ticker",
+        "purpose": "Eat out route only: live restaurant-name roulette ticker; functional restaurant rows remain Hanken Grotesk."
+      },
       "display": {
         "displayName": "Measurement display",
         "purpose": "Prominent quantities with units."
@@ -65,6 +85,16 @@
     },
     "shadows": [
       {
+        "name": "makan-wheel",
+        "value": "0 12px 26px #77591326",
+        "purpose": "Eat out decorative wheel only."
+      },
+      {
+        "name": "makan-winner",
+        "value": "0 24px 80px #17253a40",
+        "purpose": "Eat out native winner dialog only; backdrop is #25243cba."
+      },
+      {
         "name": "dock",
         "value": "0 9px 30px #23365526",
         "purpose": "Separate stable navigation from scrolling content."
@@ -76,6 +106,16 @@
       }
     ],
     "motion": [
+      {
+        "name": "makan-wheel-travel",
+        "value": "3.1s cubic-bezier(.12,.75,.15,1)",
+        "purpose": "Eat out roulette wheel only; removed for reduced motion."
+      },
+      {
+        "name": "makan-winner-arrival",
+        "value": "420ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "Eat out modal arrives from translateY(20px) scale(.96); removed for reduced motion."
+      },
       {
         "name": "control",
         "value": "160ms ease",
@@ -103,6 +143,9 @@
       }
     ],
     "breakpoints": [
+      { "name": "makan-narrow", "value": "350px" },
+      { "name": "makan-mobile", "value": "420px" },
+      { "name": "makan-wide", "value": "760px" },
       {
         "name": "compact-shared",
         "value": "360px"
@@ -130,6 +173,38 @@
     ]
   },
   "components": [
+    {
+      "name": "Makan Mana compact masthead",
+      "kind": "custom",
+      "refersTo": "makan-masthead",
+      "description": "Approved Eat out route identity: compact cobalt, single-line live wordmark. Preview assumes self-hosted Lilita One is loaded; fallback is sans-serif. Shared FitCore header remains above it. The Back action uses marigold keyboard focus.",
+      "html": "<header class=\"ds-makan-masthead\"><button type=\"button\">Back to Food</button><h1 aria-label=\"Makan Mana?\"><span>makan</span> <span>mana<span class=\"ds-makan-question\">?</span></span></h1><p>Tak tahu nak makan apa? Kita pilih.</p></header>",
+      "css": ".ds-makan-masthead{padding:12px 22px 22px;background:#2647cf;color:#fff;border-radius:16px;overflow:hidden;font-family:'Hanken Grotesk',sans-serif}.ds-makan-masthead button{display:flex;align-items:center;min-height:44px;padding:0;border:0;background:transparent;color:#fff;font:700 12px 'Hanken Grotesk',sans-serif;cursor:pointer}.ds-makan-masthead button:hover{text-decoration:underline}.ds-makan-masthead button:active{opacity:.85}.ds-makan-masthead button:focus-visible{outline:3px solid #ffc847;outline-offset:4px}.ds-makan-masthead h1{margin:5px 0 0;padding:5px 0;font:400 clamp(36px,8vw,56px)/1 'Lilita One',sans-serif;letter-spacing:-.025em}.ds-makan-masthead h1>span+span{color:#ffc847}.ds-makan-question{display:inline-block;margin-left:1px;color:#ffb8a7;transform:rotate(10deg)}.ds-makan-masthead p{margin:10px 0 0;font-size:13px;line-height:1.5}@media(max-width:420px){.ds-makan-masthead{padding:12px 18px 22px}.ds-makan-masthead h1{font-size:40px}}@media(max-width:350px){.ds-makan-masthead h1{font-size:36px}}@media(min-width:760px){.ds-makan-masthead{padding:20px 42px 28px}}"
+    },
+    {
+      "name": "Makan Mana primary action",
+      "kind": "button",
+      "refersTo": "makan-primary",
+      "description": "Eat out only: location request or explicit fair spin, with a 52px minimum height. Preview is visual; no geolocation or roulette runs in the panel.",
+      "html": "<button type=\"button\" class=\"ds-makan-primary\">Jom spin · 24 places</button>",
+      "css": ".ds-makan-primary{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;padding:14px 18px;border:0;border-radius:12px;background:#2647cf;color:#fff;font:800 15px 'Hanken Grotesk',sans-serif;cursor:pointer;transition:background 160ms,transform 160ms}.ds-makan-primary:hover:not(:disabled){background:#1c36a7;transform:translateY(-1px)}.ds-makan-primary:active:not(:disabled){transform:none}.ds-makan-primary:focus-visible{outline:3px solid #2647cf;outline-offset:4px}.ds-makan-primary:disabled{opacity:.45;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-makan-primary{transition:none}}"
+    },
+    {
+      "name": "Makan Mana daily pool toggle",
+      "kind": "chip",
+      "refersTo": "makan-pool-toggle",
+      "description": "Eat out only: pressed means included. Skip today keeps the restaurant row listed. Winners and manual skips persist locally by selected date, retaining up to 60 dates; unavailable storage is session-only. Include today restores one, Include all again clears that date only. Static panel sample does not persist state.",
+      "html": "<button type=\"button\" class=\"ds-makan-pool\" aria-pressed=\"true\" aria-label=\"Skip today: Example restaurant\">Skip today</button>",
+      "css": ".ds-makan-pool{display:flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #dedeea;border-radius:10px;background:#e9ecff;color:#2647cf;font:800 12px 'Hanken Grotesk',sans-serif;cursor:pointer}.ds-makan-pool[aria-pressed=false]{background:#f0eff8;color:#626176}.ds-makan-pool:hover:not(:disabled){border-color:#2647cf}.ds-makan-pool:active:not(:disabled){opacity:.85}.ds-makan-pool:focus-visible{outline:3px solid #2647cf;outline-offset:4px}.ds-makan-pool:disabled{opacity:.45;cursor:not-allowed}"
+    },
+    {
+      "name": "Makan Mana roulette stage",
+      "kind": "custom",
+      "refersTo": "makan-roulette",
+      "description": "Eat out only: marigold stage and Lilita live-name hierarchy. Static preview; the app supplies its bounded decorative wheel, equal-chance selection, sound mute and native winner dialog.",
+      "html": "<section class=\"ds-makan-stage\"><h3>Let fate pick dinner.</h3><p class=\"ds-makan-ticker\">Your next food stop?</p><button type=\"button\">Jom spin · 24 places</button><p>24 places included. Every place has an equal chance.</p></section>",
+      "css": ".ds-makan-stage{padding:24px;border-radius:16px;background:#ffc847;color:#453510;text-align:center;font-family:'Hanken Grotesk',sans-serif}.ds-makan-stage h3{margin:0 0 18px;font:400 29px/1.2 'Lilita One',sans-serif;letter-spacing:-.02em}.ds-makan-stage .ds-makan-ticker{display:grid;place-items:center;min-height:62px;margin:10px 0 16px;font:400 28px/1.1 'Lilita One',sans-serif;overflow-wrap:anywhere}.ds-makan-stage button{display:block;width:100%;max-width:360px;min-height:52px;margin:auto;padding:14px 18px;border:0;border-radius:12px;background:#2647cf;color:#fff;font:800 15px 'Hanken Grotesk',sans-serif;cursor:pointer;transition:background 160ms,transform 160ms}.ds-makan-stage button:hover{background:#1c36a7;transform:translateY(-1px)}.ds-makan-stage button:active{transform:none}.ds-makan-stage button:focus-visible{outline:3px solid #2647cf;outline-offset:4px}.ds-makan-stage>p:last-child{max-width:48ch;margin:12px auto 0;font-size:12px;line-height:1.5}@media(prefers-reduced-motion:reduce){.ds-makan-stage button{transition:none}}"
+    },
     {
       "name": "Shared FitCore header",
       "kind": "custom",

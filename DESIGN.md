@@ -16,7 +16,30 @@ colors:
   success-surface: "#def4ed"
   error: "#b53b35"
   error-surface: "#fff1f0"
+  makan-cobalt: "#2647cf"
+  makan-cobalt-hover: "#1c36a7"
+  makan-coral: "#f36b55"
+  makan-marigold: "#ffc847"
+  makan-peach: "#ffb8a7"
+  makan-ground: "#fafaff"
+  makan-ink: "#25243c"
+  makan-muted: "#626176"
+  makan-line: "#dedeea"
+  makan-soft: "#f0eff8"
+  makan-tint: "#e9ecff"
+  makan-warm-ink: "#453510"
 typography:
+  makan-wordmark:
+    fontFamily: "Lilita One, sans-serif"
+    fontSize: "clamp(36px, 8vw, 56px)"
+    fontWeight: 400
+    lineHeight: 1
+    letterSpacing: "-0.025em"
+  makan-ticker:
+    fontFamily: "Lilita One, sans-serif"
+    fontSize: "28px"
+    fontWeight: 400
+    lineHeight: 1.1
   display:
     fontFamily: "Hanken Grotesk, sans-serif"
     fontSize: "48px"
@@ -71,6 +94,7 @@ rounded:
   group: "12px"
   surface: "16px"
   full: "9999px"
+  makan-field: "10px"
 spacing:
   base: "4px"
   sm: "8px"
@@ -78,6 +102,31 @@ spacing:
   lg: "24px"
   xl: "40px"
 components:
+  makan-masthead:
+    backgroundColor: "{colors.makan-cobalt}"
+    textColor: "{colors.white}"
+    rounded: "{rounded.surface}"
+    padding: "12px 22px 22px"
+    typography: "{typography.makan-wordmark}"
+  makan-primary:
+    backgroundColor: "{colors.makan-cobalt}"
+    textColor: "{colors.white}"
+    rounded: "{rounded.group}"
+    padding: "14px 18px"
+    height: "52px"
+  makan-primary-hover:
+    backgroundColor: "{colors.makan-cobalt-hover}"
+    textColor: "{colors.white}"
+  makan-pool-toggle:
+    backgroundColor: "{colors.makan-tint}"
+    textColor: "{colors.makan-cobalt}"
+    rounded: "{rounded.makan-field}"
+    padding: "10px 14px"
+  makan-roulette:
+    backgroundColor: "{colors.makan-marigold}"
+    textColor: "{colors.makan-warm-ink}"
+    rounded: "{rounded.surface}"
+    padding: "24px"
   button-primary:
     backgroundColor: "{colors.cobalt}"
     textColor: "{colors.white}"
@@ -158,6 +207,10 @@ Success and error colors communicate feedback with explanatory text. Citrus is t
 
 **The Action Color Rule.** Use cobalt for action and selection; communicate status through text as well as color.
 
+### Makan Mana route scope
+
+The `makan-*` tokens belong only to Eat out (`/eat-out`). This approved colorful urban typography identity uses its own cobalt for the compact masthead, actions and selected destination tabs; marigold for the roulette stage and Search action; coral for the winner dialog's top edge; and peach for the wordmark question mark. Its pale ground, ink, muted text, dividers and selection tint stay local to this route. The shared FitCore palette and theme choices retain their existing rules.
+
 ## Typography
 
 Hanken Grotesk with a sans-serif fallback serves every text role. The frontmatter captures the reused type scale. Standard page headings and Home's greeting share the headline role, with its compact variant at viewport widths up to (390px) and desktop variant from (850px). Supporting page copy uses the supporting role, switching to its desktop variant at the same wide breakpoint; it sits (7px) beneath the heading. The energy reading increases to (66px) on desktop. Section headings commonly sit between (22px) and the title size. Compact control labels and supporting metadata use (11–14px).
@@ -166,6 +219,10 @@ Use tabular numerals for changing quantities, daily totals, dates and measuremen
 
 **The Measurement Rule.** Give a number hierarchy through size and weight, then state its unit and whether it is estimated.
 
+### Makan Mana route scope
+
+Lilita One adds the approved playful voice to the live single-line `makan mana?` wordmark, roulette heading, ticker, wheel center and winner name. The first word is white, the second marigold, and the small peach question mark rotates (10deg). The wordmark is (40px) through (420px), then (36px) through (350px); its default responsive scale is in frontmatter. Functional controls, restaurant rows, location instructions and data continue to use Hanken Grotesk. Lilita One and the route's Google Fonts icon subset are self-hosted in `public/fonts`; Lilita's OFL is retained beside the font. No raster identity assets ship.
+
 ## Layout
 
 The shell occupies the viewport on mobile and scrolls content inside a stable navigation frame. Standard routes have a maximum width of (640px). At (520px), the surrounding canvas gains vertical padding (24px) and a rounded framed shell. Home expands to (1060px) at (850px), with fuel and actions beside timeline and habits; its column gap is (32px). Other routes retain their focused single-column workspace.
@@ -173,6 +230,10 @@ The shell occupies the viewport on mobile and scrolls content inside a stable na
 Typical page gutters are (20px); Home uses (22px), rising to (38px) on desktop. Reserve approximately (110–125px) below content for the dock and safe area. Home compacts spacing at widths up to (390px), matching the shared compact heading breakpoint; some form controls compact below (360px). Horizontal choice rows may scroll inside their own region without widening the page. Keep form groups and numeric grids readable at narrow widths.
 
 Page organization reflects the shipped tasks: Food starts with search, photo scan and pasted estimate, followed by meals and nutrition; Activity switches between finding a workout and today's log; Diet separates My week, Approach and Food guide; Body leads with a weigh-in and trend, with the calorie scenario collapsed below; Settings separates Profile, Targets, Preferences and Data; Running separates This week from Race & setup. These are route-specific structures, not a mandate to copy Home's composition onto every page.
+
+### Makan Mana route scope
+
+Eat out has a (960px) maximum content width, (24px) gutters and (140px) bottom clearance; through (420px), these become (16px) gutters and (130px) bottom clearance. The shared header precedes a compact cobalt masthead, compact fuel strip, destination tabs and location task. This replaces the earlier oversized coral, two-line poster proposal. At (760px), the search region caps at (680px), mall choices become three columns, the roulette stage pairs wheel and action, and restaurant rows become two columns. Through (350px), mall choices use one column. Selected city presets hide the radius fieldset; radius reappears when no presets are selected.
 
 ## Elevation & Depth
 
@@ -212,11 +273,17 @@ The bottom dock combines visible icons with text labels. The active route has co
 
 Food distinguishes the diet budget from estimated maintenance intake. The maintenance panel shows Mifflin–St Jeor TDEE, the recorded intake gap and a conditional seven-day energy-equivalent scenario, never a guaranteed maximum intake or scale-weight forecast. An empty log does not trigger a weight-loss projection. Calculations use the most recent weigh-in on or before the selected date; routine activity is already represented in TDEE and logged workouts are not automatically added a second time. Home uses the same baseline. Details disclose the simplified 7,700 kcal/kg arithmetic, incomplete-day risk, water shifts and metabolic uncertainty.
 
-Makan mana uses a bounded decorative wheel and live restaurant-name ticker rather than hundreds of numbered sectors. Every eligible place in the selected category starts included; name search and sort change the displayed list without changing roulette membership. A native dialog presents the chosen restaurant, directions and explicit food logging handoff. Locally synthesized spin/celebration sound is user-triggered and mutable, while reduced motion removes wheel travel and popup movement. Directory results never imply Google ratings or halal certification; rating sort requires supplied ratings. Drinks, desserts and snacks are categorized separately, and reviewed pork/alcohol exclusions retain evidence links in the shared curation data.
-
 The energy ruler combines an intake value, remaining budget, endpoints and a measured fill; its citrus accent emphasizes the quantity. A dated timeline distinguishes meals, planned activity and completed activity. Habit completion changes the checkbox and text treatment. Empty states describe the missing record and offer the next action. Photo capture uses a dark working surface; review returns to chalk, editable servings, meal placement and explicit estimated values.
 
 Date and dock selection use springs; Home's date spring is stiffness (380) and damping (34). Ordinary control color transitions take (160ms); Home counts and macro fills take (450ms), and inline expansion takes (240ms). Shared route and reveal motion uses brief fades and small travel. Honor reduced motion by removing selection travel, animated counting and expansion timing. Motion must not imply a successful save, live synchronization or reliable analysis when that state has not occurred.
+
+### Makan Mana masthead, roulette and daily pool
+
+The compact cobalt masthead uses the single-line live wordmark, a Back to Food action, a small dice cue and one sentence of Malay supporting copy. It is a route identity component, not a shared header replacement. Destination, city and category choices expose selection with `aria-pressed`; source choices are grouped buttons. Route controls keep minimum (44px) targets and a (3px) focus outline with (4px) offset; the masthead Back action uses marigold focus for contrast against cobalt.
+
+The marigold roulette stage uses a bounded decorative wheel and live restaurant-name ticker. All eligible places start included unless skipped for the selected date. Every included place has an equal chance; name search and sort change display only. Winners are automatically skipped, and manual Skip today removes a place from that day's spin pool while retaining its restaurant row. Date-keyed skips persist locally across reloads and route changes; another date has a separate pool. Storage retains up to (60) date entries; if local storage is unavailable, skips remain session-only. Include today restores one place; Include all again clears only that date's skips. Use my location clears selected city presets before searching with the saved radius.
+
+A native dialog shows the chosen restaurant, directions and explicit dated food-search handoff. Its white surface has a coral top edge (14px), (16px) corners, a (440px) maximum width, scrollable height and modal backdrop. The winner arrival takes (420ms); wheel travel takes (3.1s). Locally synthesized sound starts only on a spin and has a mute control. Reduced motion removes wheel travel and popup movement. Directory results never imply Google ratings or halal certification; rating sort requires supplied ratings. Drinks, desserts and snacks remain separate categories, and reviewed pork/alcohol exclusions retain evidence links in shared curation data.
 
 ## Do's and Don'ts
 

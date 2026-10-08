@@ -128,6 +128,7 @@ export function clearState(): void {
   try {
     localStorage.removeItem(KEY)
     localStorage.removeItem(FOOD_AI_USAGE_KEY)
+    localStorage.removeItem('fitcore.roulette-skips.v1')
   } catch {
     /* noop */
   }
