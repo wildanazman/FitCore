@@ -12,14 +12,16 @@ import { WeightFeedback } from '../components/WeightFeedback'
 import { shortDate, todayISO } from '../lib/date'
 import { dayFuel, tdee, toDisplayWeight, weightUnit } from '../lib/nutrition'
 import { dietDef, netCarbsOn, nowMinutes, windowState } from '../lib/diet'
-import type { DayFuel } from '../types'
+import type { DayFuel, FoodEntry } from '../types'
+import { FoodEditSheet } from './Food'
 import './home.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
 const spring = { type: 'spring', stiffness: 380, damping: 34 } as const
 
 export function Home() {
-  const { state, profile, toggleSession, toggleDietTask } = useApp()
+  const { state, profile, toggleSession, toggleDietTask, updateFood, removeFood } = useApp()
+  const [selectedFood, setSelectedFood] = useState<FoodEntry | null>(null)
   const nav = useNavigate()
   const reducedMotion = useReducedMotion()
   const [today, setToday] = useState(todayISO())
@@ -110,6 +112,7 @@ export function Home() {
           <div className="home-feed-tabs" role="group" aria-label="Filter daily timeline">{([{ id: 'all', label: 'Everything' }, { id: 'meal', label: 'Meals' }, { id: 'activity', label: 'Movement' }] as const).map((tab) => <button type="button" key={tab.id} onClick={() => setFeed(tab.id)} aria-pressed={feed === tab.id}>{feed === tab.id && <motion.span layoutId="home-feed-selected" transition={reducedMotion ? { duration: 0 } : spring} />}<span>{tab.label}</span></button>)}</div>
           <div className="home-entries" aria-live="polite"><AnimatePresence mode="wait" initial={false}><motion.div key={`${date}-${feed}`} initial={{ opacity: reducedMotion ? 1 : 0.4, y: reducedMotion ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: reducedMotion ? 1 : 0, y: reducedMotion ? 0 : -4 }} transition={{ duration: reducedMotion ? 0 : 0.15 }}>
             {entries.length ? entries.map((entry) => <div className={`home-entry home-entry-${entry.kind}`} key={`${entry.kind}-${entry.id}`}>
+              {entry.kind === 'meal' && <button type="button" className="home-meal-detail-hit" aria-label={`View nutrition facts: ${entry.title}`} onClick={() => setSelectedFood(state.foods.find(food => food.id === entry.id) ?? null)} />}
               <span className="home-entry-symbol">{entry.photo ? <img src={entry.photo} alt="" /> : <Icon name={entry.kind === 'meal' ? 'restaurant' : entry.session?.icon ?? 'exercise'} size={22} />}</span>
               <div className="home-entry-copy"><strong>{entry.title}</strong><span>{entry.detail}{entry.kind === 'meal' || entry.session?.loggedAt ? ` · ${time(entry.at)}` : ''}</span></div>
               {entry.session && !entry.session.manual ? <motion.button type="button" className="home-session-check" aria-label={`${entry.session.completed ? 'Mark incomplete' : 'Mark complete'}: ${entry.title}`} aria-pressed={entry.session.completed} onClick={() => toggleSession(entry.id)} whileTap={reducedMotion ? undefined : { scale: 0.9 }}><Icon name={entry.session.completed ? 'check_circle' : 'radio_button_unchecked'} size={25} fill={entry.session.completed} /></motion.button> : <span className="home-entry-energy"><strong>{entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? '—' : `${entry.kind === 'meal' ? '+' : '−'}${entry.kcal}`}</strong><small>{entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? 'not estimated' : 'kcal'}</small></span>}
@@ -125,6 +128,7 @@ export function Home() {
         </section>
 
         {!weightHidden && <WeightFeedback date={date}/>}
+        {selectedFood && <FoodEditSheet key={selectedFood.id} entry={selectedFood} onClose={() => setSelectedFood(null)} onSave={patch => { updateFood(selectedFood.id, patch); setSelectedFood(null) }} onDelete={() => { removeFood(selectedFood.id); setSelectedFood(null) }}/>} 
       </div>
     </div>
   </div>

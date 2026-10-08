@@ -9,12 +9,13 @@ import { DIET_LIST } from '../lib/diet'
 import type { DietMode, UserProfile } from '../types'
 import './settings.css'
 import { THEMES, useTheme } from '../store/ThemeContext'
+import { BackupTransfer } from '../components/BackupTransfer'
 
 export function Settings() {
   const { theme, setTheme } = useTheme()
   const { state, profile, weightKg, updateProfile, reset } = useApp()
   const navigate = useNavigate()
-  const [category, setCategory] = useState<'profile' | 'targets' | 'preferences' | 'data'>('profile')
+  const [category, setCategory] = useState<'overview' | 'profile' | 'targets' | 'preferences' | 'connections' | 'data'>('overview')
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmation, setConfirmation] = useState('')
   const confirmationRef = useRef<HTMLInputElement>(null)
@@ -33,10 +34,18 @@ export function Settings() {
 
   return <div className="settings-page">
     <TopBar />
-    <header className="page-heading"><h1>Settings</h1><p>Your profile, your pace.</p></header>
-    <nav className="page-switch settings-categories" aria-label="Settings categories">{([{ id: 'profile', label: 'Profile' }, { id: 'targets', label: 'Targets' }, { id: 'preferences', label: 'Preferences' }, { id: 'data', label: 'Data' }] as const).map(item => <button key={item.id} type="button" aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{item.label}</button>)}</nav>
+    <header className="page-heading"><h1>{category === 'overview' ? 'Your FitCore.' : category === 'profile' ? 'Your profile.' : category === 'targets' ? 'Your targets.' : category === 'preferences' ? 'Your look.' : category === 'connections' ? 'Connections.' : 'Your data.'}</h1><p>{category === 'overview' ? 'Fine-tune the app around you.' : 'One change here. Updated across your app.'}</p></header>
     <div className="settings-content">
-      <div className="settings-identity" aria-label="Your FitCore profile"><div className="settings-avatar" aria-hidden="true">{(profile.name.trim()[0] || 'F').toUpperCase()}</div><div><strong>{profile.name.trim() || 'Your profile'}</strong><span>{profile.goal === 'lose' ? 'Fat loss' : profile.goal === 'gain' ? 'Build strength' : 'Maintain'} · {logs} saved {logs === 1 ? 'item' : 'items'}</span></div><Icon name="person" size={22} /></div>
+      {category !== 'overview' && <button type="button" className="settings-overview-back" onClick={() => { setCategory('overview'); setConfirmReset(false); setConfirmation('') }}><Icon name="arrow_back" size={20}/>All settings</button>}
+      {category === 'overview' && <>
+        <button type="button" className="settings-profile-entry" onClick={() => setCategory('profile')}><span className="settings-avatar" aria-hidden="true">{(profile.name.trim()[0] || 'F').toUpperCase()}</span><span><strong>{profile.name.trim() || 'Your profile'}</strong><small>{profile.age} years · {profile.heightCm} cm · {profile.units === 'metric' ? 'Metric' : 'Imperial'}</small></span><span className="settings-edit-label">Edit<Icon name="arrow_forward" size={18}/></span></button>
+        <section className="settings-hub" aria-label="Personalise FitCore"><h2>Make it work for you.</h2><div className="settings-menu">
+          <SettingsRow icon="tune" title="Goals & daily targets" detail={`${profile.goal === 'lose' ? 'Lose fat' : profile.goal === 'gain' ? 'Build' : 'Maintain'} · ${(profile.calorieTargetOverride ?? automaticTarget).toLocaleString()} kcal/day`} onClick={() => setCategory('targets')}/>
+          <SettingsRow icon="palette" title="Appearance" detail={THEMES.find(item => item.id === theme)?.name ?? 'FitCore Blue'} onClick={() => setCategory('preferences')}><span className="settings-theme-dots" aria-hidden="true">{THEMES.find(item => item.id === theme)?.colors.map(color => <i key={color} style={{ background: color }}/>)}</span></SettingsRow>
+          <SettingsRow icon="watch" title="Connections & reminders" detail="Device preferences, reminders & photo AI" onClick={() => setCategory('connections')}/>
+        </div></section>
+        <section className="settings-hub" aria-label="Data control"><h2>You're in control.</h2><div className="settings-menu"><SettingsRow icon="database" title="Data & storage" detail={`${logs} saved items · export or clear your data`} onClick={() => setCategory('data')}/></div><p className="settings-local-note"><Icon name="lock" size={17}/>Your logs are stored in this browser, on this device.</p></section>
+      </>}
 
       <section className="settings-section" hidden={category !== 'profile'} aria-labelledby="settings-profile-title"><div className="settings-section-head"><h2 id="settings-profile-title">About you</h2><p>These details shape your daily estimates.</p></div><div className="settings-fields">
         <Field id="settings-name" label="Name"><input id="settings-name" value={profile.name} onChange={(e) => updateProfile({ name: e.target.value })} autoComplete="name" /></Field>
@@ -58,7 +67,7 @@ export function Settings() {
       </div></section>
 
       <section className="settings-section" hidden={category !== 'preferences'} aria-labelledby="settings-theme-title"><div className="settings-section-head"><h2 id="settings-theme-title">Make it yours.</h2><p>One app. Your colours. Changes apply across every page.</p></div><div className="theme-options">{THEMES.map(option => <button type="button" className="theme-option" key={option.id} aria-pressed={theme === option.id} onClick={() => setTheme(option.id)}><span className="theme-preview" aria-hidden="true">{option.colors.map(color => <span key={color} style={{ background: color }}/>)}</span><strong>{option.name}{theme === option.id && <Icon name="check_circle" size={18}/>}</strong><small>{option.description}</small></button>)}</div></section>
-      <details className="settings-more" open hidden={category !== 'preferences'}><summary>Connections & preferences <Icon name="expand_more" size={22} /></summary><div className="settings-more-body">
+      <details className="settings-more" open hidden={category !== 'connections'}><summary>Connections & preferences <Icon name="expand_more" size={22} /></summary><div className="settings-more-body">
         <h3>Wearables</h3><p>Saved as preferences; live device syncing is not available yet.</p>
         {([['appleHealth', 'Apple Health'], ['garmin', 'Garmin Connect'], ['strava', 'Strava']] as const).map(([key, label]) => <Toggle key={key} label={label} on={profile.wearables[key]} onClick={() => updateProfile({ wearables: { ...profile.wearables, [key]: !profile.wearables[key] } })} />)}
         <h3>Reminders</h3><p>Saved as preferences; push notifications are not enabled yet.</p>
@@ -70,6 +79,7 @@ export function Settings() {
       </div></details>
 
       <section className="settings-section settings-data" hidden={category !== 'data'} aria-labelledby="settings-data-title"><div className="settings-section-head"><h2 id="settings-data-title">Your data</h2><p>Stored in this browser on this device.</p></div>
+        <BackupTransfer/>
         <button type="button" className="settings-export" onClick={() => downloadCSV(state)}><Icon name="download" size={22} /><span><strong>Export logs as CSV</strong><small>Food, weight and training logs. Photos and profile are not included.</small></span><Icon name="arrow_forward" size={20} /></button>
         <div className="settings-danger"><div className="settings-danger-title"><Icon name="delete_forever" size={22} /><div><h3>Clear all data</h3><p>Remove your profile, food and activity logs, weight entries, photos, plans, preferences and local AI usage from this browser.</p></div></div>
           {!confirmReset ? <button type="button" className="settings-clear-start" onClick={() => setConfirmReset(true)}>Clear all data</button> : <div className="settings-confirm"><p>This cannot be undone. Export your logs first if you want a copy. Type <strong>CLEAR</strong> to confirm.</p><label htmlFor="settings-confirm-input">Confirmation</label><input ref={confirmationRef} id="settings-confirm-input" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} autoComplete="off" spellCheck={false} placeholder="Type CLEAR" /><div className="settings-confirm-actions"><button type="button" onClick={() => { setConfirmReset(false); setConfirmation('') }}>Cancel</button><button type="button" className="settings-confirm-delete" disabled={confirmation !== 'CLEAR'} onClick={clearEverything}>Erase my data</button></div></div>}
@@ -78,6 +88,10 @@ export function Settings() {
       <p className="settings-footer">FitCore · Your data stays on this device</p>
     </div>
   </div>
+}
+
+function SettingsRow({ icon, title, detail, onClick, children }: { icon: string; title: string; detail: string; onClick: () => void; children?: React.ReactNode }) {
+  return <button type="button" className="settings-menu-row" onClick={onClick}><span className="settings-menu-icon"><Icon name={icon} size={22}/></span><span className="settings-menu-copy"><strong>{title}</strong><small>{detail}</small></span>{children}<Icon name="chevron_right" size={20}/></button>
 }
 
 function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) { return <div className="settings-field"><label htmlFor={id}>{label}</label>{children}</div> }

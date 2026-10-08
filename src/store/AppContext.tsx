@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import type { AppState, DietTask, FoodEntry, PlanSession, ProgressPhoto, UserProfile, WeightEntry } from '../types'
-import { clearState, emptyState, loadState, saveState, seedForProfile } from '../lib/storage'
+import { clearState, emptyState, loadState, saveState, seedForProfile, persistImportedState } from '../lib/storage'
 import { generatePlan, scheduledRunKey } from '../lib/plan'
 import { latestMeasured } from '../lib/body'
 import { togglePlannedTask } from '../lib/dietPlanner'
 
 type Action =
+  | { type: 'restore'; state: AppState }
   | { type: 'acknowledgeStreak'; days: number[] }
   | { type: 'onboard'; profile: UserProfile }
   | { type: 'updateProfile'; patch: Partial<UserProfile>; regenerate?: boolean }
@@ -32,6 +33,7 @@ function currentWeight(state: AppState): number {
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'restore': return action.state
     case 'acknowledgeStreak':
       return { ...state, streakMilestonesSeen: [...new Set([...(state.streakMilestonesSeen ?? []), ...action.days])] }
     case 'onboard':
@@ -112,6 +114,7 @@ function regenerateKeepingProgress(state: AppState, profile: UserProfile): AppSt
 }
 
 interface Ctx {
+  restore: (state: AppState) => void
   acknowledgeStreak: (days: number[]) => void
   state: AppState
   profile: UserProfile
@@ -148,6 +151,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Ctx>(
     () => ({
+      restore: next => { persistImportedState(next); dispatch({ type:'restore', state:next }) },
       acknowledgeStreak: days => dispatch({ type: 'acknowledgeStreak', days }),
       state,
       profile: state.profile,

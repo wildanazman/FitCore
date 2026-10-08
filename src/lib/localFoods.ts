@@ -1,9 +1,6 @@
-// Local (Malaysian / SEA) food reference — factual per-serving nutrition used to
-// power manual search, quick-add, and cautious checks against AI results.
-//
-// Values are typical single servings, cross-referenced with the Malaysian Food
-// Composition Database (MyFCD, MOH Malaysia — https://myfcd.moh.gov.my) and
-// common nutrition sources. Nutrition facts are factual data, not proprietary.
+// Local search combines a published MyFCD per-100 g snapshot with legacy
+// serving estimates. Legacy numbers lack per-item citations and are NOT
+// verified nutrition facts. Never represent their values as restaurant data.
 
 import { MYFCD_FOODS } from './myfcdFoods'
 import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
@@ -200,7 +197,29 @@ const CURATED_LOCAL_FOODS: LocalFood[] = [
 ]
 
 // Keep curated foods first, then add the official MyFCD per-100 g snapshot.
-export const LOCAL_FOODS: LocalFood[] = [...CURATED_LOCAL_FOODS, ...MYFCD_FOODS].filter(f => !hasExcludedIngredients([f.name, ...(f.aka ?? [])].join(' ')))
+function suggestedPortion(food: LocalFood): { grams:number; label:string } {
+  const name = food.name.toLowerCase()
+  if (/complete set|set mandy|set khabsyah|briyani \(ayam\)|briyani \(daging\)/.test(name)) return {grams:400,label:'1 meal'}
+  if (/rice|nasi/.test(name) && food.category === 'Rice') return {grams:150,label:'1 rice portion'}
+  if (/kuih|karipap|cucur|bahulu|cara |lepat|samosa|koleh|cakar ayam/.test(name)) return {grams:40,label:'1 piece'}
+  if (/bubur|dessert|taufu|puding/.test(name)) return {grams:200,label:'1 bowl'}
+  if (food.category === 'Meat' || food.category === 'Seafood') return {grams:100,label:'1 side portion'}
+  if (food.category === 'Vegetable') return {grams:80,label:'1 vegetable portion'}
+  return {grams:100,label:'1 portion'}
+}
+const publishedFoods: LocalFood[] = MYFCD_FOODS.map(food => {
+  const portion = suggestedPortion(food), multiplier = portion.grams / 100
+  return { ...food, emoji:'', serving:`${portion.label} · ${portion.grams} g`, kcal:Math.round(food.kcal*multiplier),protein:Math.round(food.protein*multiplier*10)/10,carbs:Math.round(food.carbs*multiplier*10)/10,fat:Math.round(food.fat*multiplier*10)/10,
+    nutritionSource:`MyFCD · scaled from 100 g. Assumed ${portion.grams} g portion; weigh or adjust yours.`, nutritionSourceUrl:`https://myfcd.moh.gov.my/myfcdcurrent/index.php/site/detail_product/${encodeURIComponent(food.aka?.[0] ?? '')}/0/10/-1/0/0/`, aka:[...(food.aka ?? []),...(food.name.includes('MANDY') ? ['nasi mandi ayam','nasi arab ayam','mandi chicken'] : []),...(food.name.includes('KHABSYAH') ? ['nasi kabsa kambing','kabsa lamb','kabsah kambing'] : [])] }
+})
+const estimatedFoods: LocalFood[] = CURATED_LOCAL_FOODS.map(food => ({ ...food, emoji:'', nutritionSource:'Unverified serving estimate · recipe and portion vary' }))
+export const LOCAL_FOODS: LocalFood[] = [...publishedFoods, ...estimatedFoods].filter(f => !hasExcludedIngredients([f.name, ...(f.aka ?? [])].join(' ')))
+/** A discovery collection, not a measured popularity ranking. No new nutrients
+ * are invented: references retain their published basis or estimate label. */
+export const POPULAR_MALAYSIAN_FOODS: LocalFood[] = [
+  ...publishedFoods.filter(food => /traditional|kuih|bubur|nasi|rice,|rendang|satay|sambal|masak|goreng|roti jala|karipap|cucur|lepat|bahulu|cakar ayam|koleh|samosa|sirap bandung/i.test(food.name)),
+  ...estimatedFoods.filter(food => !/protein|greek|avocado|caesar|salmon|fish & chips|lamb chop|cup noodles|char siew|bak kut teh/i.test(food.name)),
+].filter(food => !hasExcludedIngredients([food.name,...(food.aka??[])].join(' '))).slice(0,100)
 
 function norm(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -209,7 +228,7 @@ function norm(s: string): string {
 /** Search suggestions, requiring every entered word to match. No nutrition is inferred from a partial match. */
 export function searchLocalFoods(query: string, limit = 20): LocalFood[] {
   const q = norm(query)
-  if (!q) return LOCAL_FOODS.slice(0, limit)
+  if (!q) return POPULAR_MALAYSIAN_FOODS.slice(0, limit)
   const terms = q.split(' ')
   const scored = LOCAL_FOODS.map((f) => {
     const names = [f.name, ...(f.aka ?? [])].map(norm)

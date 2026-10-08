@@ -1,0 +1,19 @@
+.meal-nutrition-label { color:var(--palette-ink); background:var(--palette-surface); border:1px solid var(--palette-ink); padding:14px; margin-bottom:18px; }
+.meal-nutrition-label h3 { font-size:26px; font-weight:800; line-height:1.1; margin:0 0 8px; }
+.meal-nutrition-label p { font-size:12px; line-height:1.5; margin:5px 0; }
+.meal-label-calories { border-top:7px solid var(--palette-ink); border-bottom:4px solid var(--palette-ink); display:flex; align-items:center; justify-content:space-between; padding:8px 0; margin-top:10px; font-size:20px; font-weight:700; }
+.meal-label-calories strong { font-size:30px; font-variant-numeric:tabular-nums; }
+.meal-nutrition-label dl>div { display:flex; justify-content:space-between; border-bottom:1px solid var(--palette-line); padding:8px 0; font-size:14px; }
+.meal-nutrition-label dt { font-weight:650; }
+.meal-nutrition-label dd { margin:0; font-variant-numeric:tabular-nums; }
+.home-entry-meal { position:relative; }
+.home-meal-detail-hit { position:absolute; inset:0; width:100%; height:100%; z-index:1; border-radius:12px; cursor:pointer; }
+.home-meal-detail-hit:focus-visible { outline:3px solid var(--palette-accent); outline-offset:3px; }
+.home-meal-detail-hit:hover { background:color-mix(in srgb,var(--palette-accent) 5%,transparent); }
+.meal-portion-control { color:var(--palette-ink); display:grid; gap:12px; padding:14px 0; }
+.meal-portion-control p,.meal-portion-control small { font-size:12px; color:var(--palette-muted); line-height:1.5; }
+.meal-portion-control label { display:flex; align-items:center; justify-content:space-between; font-size:14px; }
+.meal-portion-control input { width:90px; min-height:44px; padding:8px; background:var(--palette-surface); border:1px solid var(--palette-outline); border-radius:8px; }
+.meal-portion-control>div { display:flex; gap:8px; }
+.meal-portion-control button { flex:1; min-height:44px; border-radius:8px; background:var(--palette-soft); }
+.meal-portion-control button[aria-pressed=true] { background:var(--palette-accent); color:var(--palette-on-accent); }

@@ -26,7 +26,8 @@ const prompt = [
   '3. Use web search to find reliable calories and macros for each component. Prefer the Malaysian Food Composition Database (MyFCD, myfcd.moh.gov.my) and reputable nutrition databases, especially for Malaysian / South-East Asian dishes.',
   '4. Sum the components into a total for the whole serving shown.',
   'Return ONLY a raw JSON object, no markdown fences and no prose, with exactly these keys:',
-  '{"name": string, "emoji": string, "items": [{"name": string, "grams": number, "kcal": number}], "kcal": number, "protein": number, "carbs": number, "fat": number, "confidence": number, "assumptions": string}',
+  '{"name": string, "emoji": string, "items": [{"name": string, "portion": string, "grams": number, "kcal": number, "protein": number, "carbs": number, "fat": number}], "kcal": number, "protein": number, "carbs": number, "fat": number, "confidence": number, "assumptions": string}',
+  'Separate each visible food, sauce and estimated cooking oil. Include per-component macros and common portion descriptions. Meal totals must equal the sum of components. Unknown ingredients and oil amounts are assumptions, not measurements.',
   'kcal must be roughly equal to protein*4 + carbs*4 + fat*9. confidence is 0..1 reflecting how sure you are of the food and portion.',
   'If the portion is uncertain, say so in assumptions and lower confidence. Do not invent hidden ingredients.',
 ].join(' ')
@@ -57,6 +58,10 @@ function normalizeDetection(value, source) {
     ? value.items.slice(0, 12).map((it) => ({
         name: String(it?.name || 'item').slice(0, 60),
         grams: Math.max(0, Math.round(Number(it?.grams) || 0)),
+        portion: typeof it?.portion === 'string' ? it.portion : undefined,
+        protein: typeof it?.protein === 'number' && Number.isFinite(it.protein) ? Math.max(0, it.protein) : undefined,
+        carbs: typeof it?.carbs === 'number' && Number.isFinite(it.carbs) ? Math.max(0, it.carbs) : undefined,
+        fat: typeof it?.fat === 'number' && Number.isFinite(it.fat) ? Math.max(0, it.fat) : undefined,
         kcal: Math.max(0, Math.round(Number(it?.kcal) || 0)),
       }))
     : []

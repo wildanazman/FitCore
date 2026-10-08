@@ -118,6 +118,12 @@ export function saveState(state: AppState): void {
   }
 }
 
+/** Import must fail visibly before replacing in-memory data if storage is full. */
+export function persistImportedState(state: AppState): void {
+  try { localStorage.setItem(KEY, JSON.stringify(state)) }
+  catch { throw new Error('Not enough browser storage to restore this backup. Your current data has not changed. Free some device storage and try again.') }
+}
+
 export function clearState(): void {
   try {
     localStorage.removeItem(KEY)

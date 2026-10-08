@@ -1,0 +1,31 @@
+.capture-studio { position:absolute; z-index:20; inset:82px 20px max(18px,env(safe-area-inset-bottom)); display:flex; flex-direction:column; align-items:center; color:var(--palette-ink); overflow-y:auto; }
+.capture-studio h1 { font-size:18px; font-weight:650; letter-spacing:-.015em; line-height:1.35; margin:0 0 12px; }
+.capture-modes { display:flex; gap:4px; background:var(--palette-soft); padding:4px; border-radius:12px; margin-bottom:18px; }
+.capture-modes button { min-height:44px; padding:8px 18px; border-radius:9px; display:flex; align-items:center; justify-content:center; gap:8px; color:var(--palette-muted); font-size:13px; font-weight:700; }
+.capture-modes button[aria-pressed=true] { background:var(--palette-surface); color:var(--palette-accent); }
+.capture-preview { position:relative; width:100%; max-width:270px; aspect-ratio:3/4; flex-shrink:0; background:var(--palette-tint); border-radius:16px; overflow:hidden; transition:width .25s ease,aspect-ratio .25s ease; }
+.camera-frame-landscape .capture-preview { max-width:360px; aspect-ratio:4/3; }
+.camera-capture .capture-preview video { position:absolute; inset:0; width:100%; height:100%; max-height:none; left:0; top:0; transform:none; object-fit:contain; border-radius:0; background:#101310; }
+.capture-preview-start { position:absolute; inset:0; width:100%; padding:40px 24px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:16px; color:var(--palette-accent); text-align:center; }
+.capture-preview-start strong { color:var(--palette-ink); font-size:19px; line-height:1.4; max-width:15ch; }
+.capture-preview-start>span { color:var(--palette-muted); font-size:12px; }
+.capture-frame-corner { position:absolute; width:24px; height:24px; border:2px solid var(--palette-accent); pointer-events:none; }
+.corner-tl { top:14px; left:14px; border-right:0; border-bottom:0; border-radius:5px 0 0; }
+.corner-tr { top:14px; right:14px; border-left:0; border-bottom:0; border-radius:0 5px 0 0; }
+.corner-bl { bottom:14px; left:14px; border-right:0; border-top:0; border-radius:0 0 0 5px; }
+.corner-br { bottom:14px; right:14px; border-left:0; border-top:0; border-radius:0 0 5px; }
+.capture-rotate { position:absolute; z-index:2; top:8px; right:8px; display:flex; gap:5px; align-items:center; min-height:44px; padding:8px 10px; background:var(--palette-surface); color:var(--palette-ink); border-radius:8px; font-size:12px; }
+.capture-guide { color:var(--palette-muted); font-size:12px; line-height:1.5; margin:14px 0; text-align:center; }
+.capture-controls { display:grid; grid-template-columns:1fr 90px 1fr; gap:22px; align-items:center; width:100%; max-width:320px; margin-top:auto; padding-top:8px; }
+.capture-controls>button:not(.capture-shutter) { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-height:64px; min-width:44px; color:var(--palette-ink); font-size:12px; }
+.capture-shutter { height:82px; width:82px; padding:5px; border:2px solid var(--palette-accent); border-radius:50%; background:var(--palette-bg); }
+.capture-shutter>span { display:grid; place-items:center; width:100%; height:100%; border-radius:50%; background:var(--palette-accent); color:var(--palette-on-accent); }
+.capture-shutter:active>span { transform:scale(.92); }
+.capture-shutter-label { font-size:12px; color:var(--palette-muted); margin:12px 0 14px; }
+.capture-options { width:100%; border-top:1px solid var(--palette-line); font-size:12px; }
+.capture-options summary { display:flex; justify-content:space-between; align-items:center; min-height:44px; cursor:pointer; color:var(--palette-muted); }
+.capture-options p { color:var(--palette-muted); font-size:12px; line-height:1.5; padding:10px 0; }
+.capture-studio button:focus-visible,.capture-studio summary:focus-visible { outline:3px solid var(--palette-accent); outline-offset:3px; }
+.capture-studio button:disabled { opacity:.6; }
+@media(max-height:760px) { .capture-studio { top:72px; } .capture-studio h1 { font-size:18px; margin-bottom:10px; } .capture-modes { margin-bottom:12px; } .capture-preview { max-width:210px; } .camera-frame-landscape .capture-preview { max-width:290px; } .capture-controls { gap:16px; padding-top:0; } }
+@media(prefers-reduced-motion:reduce) { .capture-preview { transition:none; } }

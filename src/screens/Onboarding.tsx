@@ -7,6 +7,8 @@ import type { Goal, UserProfile } from '../types'
 import { FitCoreLogo } from '../components/FitCoreLogo'
 import '../components/fitcore-logo.css'
 import './onboarding.css'
+import { BackupTransfer } from '../components/BackupTransfer'
+import './settings.css'
 
 // Inline pictograms remain usable when an external icon font is unavailable.
 function Icon({ name, size = 24 }: { name: string; size?: number }) {
@@ -84,6 +86,7 @@ export function Onboarding() {
   const title = step === 0 ? 'What brings you here?' : metric?.title ?? (step === 2 ? 'A detail for your estimate.' : step === 5 ? 'What does your day look like?' : step === 6 ? (profile.goal === 'lose' ? 'Find your own pace.' : 'Fuel your direction.') : 'This is your first day.')
   const description = step === 0 ? 'Let’s build a day around you. Start with your direction.' : metric?.description ?? (step === 2 ? 'The current calorie equation uses sex. This is only for the estimate.' : step === 5 ? 'Include your everyday movement and usual training—not your busiest day.' : step === 6 ? 'Try a strategy. See how your daily fuel changes.' : 'A starting plan, not a perfect-day checklist. Make it yours as you go.')
   return <LayoutGroup id="first-day"><div className="onboarding first-day-onboarding">
+    {step===0&&<details className="onboarding-restore"><summary>Already use FitCore? Restore your backup</summary><BackupTransfer importOnly/></details>}
     <header className="first-day-header"><div className="first-day-brand"><FitCoreLogo size={32} />{step > 0 && <motion.span layoutId="chosen-direction" className="first-day-goal-chip" transition={{ duration: reduced ? 0 : .3 }}><Icon name={goal.icon} size={16} />{goal.label}</motion.span>}</div>
       <div className="first-day-progress" role="progressbar" aria-label="Setup progress" aria-valuenow={step + 1} aria-valuemin={0} aria-valuemax={8}>{CHAPTERS.map((label, i) => <div key={label} className={i <= chapter ? 'is-reached' : ''}><span>{label}</span><i><motion.b animate={{ scaleX: i < chapter ? 1 : i > chapter ? 0 : step === 7 ? 1 : (step === 0 ? 1 : step <= 4 ? step / 4 : 1) }} transition={{ duration: reduced ? 0 : .3 }} /></i></div>)}</div>
     </header>

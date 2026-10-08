@@ -10,6 +10,10 @@ export interface DetectionItem {
   name: string
   grams?: number
   kcal: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  portion?: string
 }
 
 export interface Detection {
@@ -78,7 +82,8 @@ const SYSTEM_PROMPT =
   'You are a nutrition vision model. Identify the single main meal in the image and estimate ' +
   'its macros for the portion shown. Favor South-East Asian and Malaysian dishes when plausible. ' +
   'Respond ONLY with compact JSON: ' +
-  '{"name":string,"emoji":string,"kcal":number,"protein":number,"carbs":number,"fat":number,"confidence":number} ' +
+  '{"name":string,"emoji":string,"kcal":number,"protein":number,"carbs":number,"fat":number,"confidence":number,"items":[{"name":string,"portion":string,"grams":number,"kcal":number,"protein":number,"carbs":number,"fat":number}]} ' +
+  'Break the meal into visible components, including sauces and estimated cooking oil. Totals must equal the sum of components. Do not claim invisible ingredients are measured. ' +
   'where confidence is 0..1. No prose.'
 
 interface AnthropicContentBlock {
@@ -95,6 +100,10 @@ function normalizeDetection(value: Partial<Detection>, source: Detection['source
         name: String(it?.name ?? 'item'),
         grams: it?.grams != null ? Math.max(0, Math.round(Number(it.grams))) : undefined,
         kcal: Math.max(0, Math.round(Number(it?.kcal) || 0)),
+        protein: typeof it?.protein === 'number' && Number.isFinite(it.protein) ? Math.max(0, it.protein) : undefined,
+        carbs: typeof it?.carbs === 'number' && Number.isFinite(it.carbs) ? Math.max(0, it.carbs) : undefined,
+        fat: typeof it?.fat === 'number' && Number.isFinite(it.fat) ? Math.max(0, it.fat) : undefined,
+        portion: typeof it?.portion === 'string' ? it.portion : undefined,
       }))
     : undefined
   return {

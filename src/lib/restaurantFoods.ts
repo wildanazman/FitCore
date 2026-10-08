@@ -3,6 +3,7 @@
  * KFC and McDonald's publish complete nutrition; MOH's calorie bank is kcal-only.
  */
 import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
+import { SUBWAY_SG_FOODS } from './subwaySingapore'
 export type RestaurantBrand = 'KFC' | "McDonald's" | 'Pizza Hut' | 'Subway' | 'ZUS Coffee' | 'CHAGEE' | 'Marrybrown'
 
 export interface RestaurantFood {
@@ -32,6 +33,7 @@ const moh = (brand: RestaurantBrand, name: string, serving: string, kcal: number
 const menu = (brand: RestaurantBrand, name: string, sourceUrl: string): RestaurantFood => ({ brand, name, serving: 'Size/customisation not specified', kcal: null, protein: null, carbs: null, fat: null, sourceUrl, sourceLabel: `${brand} Malaysia menu`, note: 'No verified Malaysia calorie value in this offline snapshot.' })
 
 export const RESTAURANT_FOODS: RestaurantFood[] = [
+  ...SUBWAY_SG_FOODS,
   kfc('Original Recipe Chicken — drumstick', '1 piece', 160, 16, 7, 8),
   kfc('Original Recipe Chicken — thigh', '1 piece', 287, 20, 11, 18),
   kfc('Original Recipe Chicken — rib', '1 piece', 275, 27, 8, 15),

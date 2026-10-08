@@ -95,6 +95,9 @@ export interface UserProfile {
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 
 export interface FoodEntry {
+  /** Portion represented by the stored nutrition, before the servings multiplier. */
+  portion?: string
+  components?: { name:string; grams?:number; portion?:string; kcal:number; protein?:number; carbs?:number; fat?:number }[]
   id: string
   name: string
   emoji: string

@@ -4,13 +4,21 @@ import { useApp } from '../store/AppContext'
 import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 import { Icon } from '../components/Icon'
 import { LogDatePicker } from '../components/LogDatePicker'
-import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type FoodAIProvider } from '../lib/foodAI'
+import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type DetectionItem, type FoodAIProvider } from '../lib/foodAI'
 import { lookupFood, sourceLabel } from '../lib/foodLookup'
 import { isLogDate, timestampOnDate, todayISO, uid } from '../lib/date'
 import type { FoodEntry, MealSlot } from '../types'
 import './camera.css'
+import './capture-studio.css'
+import { CorrectMealComponent } from '../components/CorrectMealComponent'
 
 type Phase = 'capture' | 'analyzing' | 'result' | 'edit'
+
+function componentTotals(det: Detection): Detection {
+  if(!det.items?.length || !det.items.every(item=>[item.protein,item.carbs,item.fat].every(n=>typeof n==='number'&&Number.isFinite(n))))return det
+  const sum=(key:'kcal'|'protein'|'carbs'|'fat')=>det.items!.reduce((total,item)=>total+(item[key]??0),0)
+  return {...det,kcal:sum('kcal'),protein:sum('protein'),carbs:sum('carbs'),fat:sum('fat')}
+}
 
 export function Camera() {
   const { profile, addFood } = useApp()
@@ -31,6 +39,10 @@ export function Camera() {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [provider, setProvider] = useState<FoodAIProvider>('auto')
   const [mealSlot, setMealSlot] = useState<MealSlot>(slotForNow())
+  const [correcting,setCorrecting]=useState<number|null>(null)
+  const [facing,setFacing]=useState<'environment'|'user'>('environment')
+  const [orientation,setOrientation]=useState<'portrait'|'landscape'>('portrait')
+  const [captureMode,setCaptureMode]=useState<'meal'|'drink'>('meal')
 
   useEffect(() => {
     if (phase !== 'capture' || photo || !cameraRequested) {
@@ -48,7 +60,7 @@ export function Camera() {
       setCameraReady(false)
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1920 } },
+          video: { facingMode: { ideal: facing }, aspectRatio: { ideal: orientation === 'portrait' ? 3/4 : 4/3 }, width: { ideal: 1280 }, height: { ideal: 1920 } },
           audio: false,
         })
         if (cancelled) {
@@ -71,7 +83,7 @@ export function Camera() {
       cancelled = true
       stopCamera()
     }
-  }, [phase, photo, cameraRequested])
+  }, [phase, photo, cameraRequested, facing, orientation])
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -80,6 +92,8 @@ export function Camera() {
   }
 
   async function analyzePhoto(dataUrl: string) {
+    setDet(null)
+    setCorrecting(null)
     setPhoto(dataUrl)
     setPhase('analyzing')
     setError(null)
@@ -87,7 +101,7 @@ export function Camera() {
     try {
       const result = await detectFood(dataUrl, profile.anthropicApiKey, provider)
       recordFoodAIUsage(result.source)
-      setDet({ ...result, requestedProvider: provider })
+      setDet({ ...componentTotals(result), requestedProvider: provider })
       setServings(1)
       setPhase('result')
     } catch {
@@ -153,6 +167,7 @@ export function Camera() {
       servings,
       confidence: det.confidence,
       photo: photo ?? undefined,
+      components: det.items,
     }
     addFood(entry)
     nav(`/food?date=${logDate}`)
@@ -186,18 +201,25 @@ export function Camera() {
   }
 
   const confidenceHigh = (det?.confidence ?? 0) >= 0.85
-  const breakdownItems = det?.items?.length ? det.items : det ? [{ name: det.name, kcal: det.kcal }] : []
+  const breakdownItems: DetectionItem[] = det?.items?.length ? det.items : det ? [{ name: det.name, kcal: det.kcal }] : []
+  function changeComponent(index: number, factor: number) {
+    if (!det?.items || !det.items.every(item => [item.protein,item.carbs,item.fat].every(value => typeof value === 'number' && Number.isFinite(value)))) return
+    const items=det.items.map((item,i)=>i!==index?item:{...item,portion:undefined,grams:item.grams?item.grams*factor:undefined,kcal:item.kcal*factor,protein:item.protein!*factor,carbs:item.carbs!*factor,fat:item.fat!*factor})
+    setDet(componentTotals({...det,items}))
+  }
+  function replaceComponent(index:number,item:DetectionItem) {
+    if(!det)return
+    const items=det.items?.length?det.items:[{name:det.name,kcal:det.kcal,protein:det.protein,carbs:det.carbs,fat:det.fat}]
+    if(!items.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value)))){setError('This result has no per-food macros. Retry analysis first, or edit the whole meal estimate.');return}
+    const next=items.map((part,i)=>i===index?item:part)
+    setDet(componentTotals({...det,items:next,name:items.length===1?item.name:det.name,note:'Food corrected using a serving reference. Check the portion; reference values are not a measurement of your photo.'}))
+    setCorrecting(null)
+  }
 
   return (
-    <div className={`app-shell camera-shell camera-${phase} flex flex-col items-center justify-end relative overflow-hidden`}>
+    <div className={`app-shell camera-shell camera-${phase} camera-frame-${orientation} flex flex-col items-center justify-end relative overflow-hidden`}>
       {/* Background */}
-      {photo && phase === 'analyzing' ? (
-        <div className="absolute inset-0 bg-cover bg-center blur-sm" style={{ backgroundImage: `url(${photo})` }}>
-          <div className="absolute inset-0 bg-background/60" />
-        </div>
-      ) : (
-        <div className="absolute inset-0 bg-[#101b2d]" />
-      )}
+      <div className="camera-backdrop absolute inset-0" />
 
       {/* Top actions */}
       {(phase === 'capture' || phase === 'analyzing') && <div className="absolute top-0 left-0 w-full p-margin-mobile flex justify-between items-center z-30 pt-lg">
@@ -217,74 +239,32 @@ export function Camera() {
       {/* Capture phase */}
       {phase === 'capture' && (
         <>
-          <video
-            ref={videoRef}
-            className={`absolute inset-0 h-full w-full object-contain bg-black transition-opacity duration-300 ${cameraReady ? 'opacity-100' : 'opacity-0'}`}
-            playsInline
-            muted
-            autoPlay
-          />
-          <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/55 via-transparent to-black/80" />
-          {!cameraReady && (
-            <div className="camera-idle-visual">
-              <div className="camera-idle-icon">
-                {cameraRequested && !cameraError && <div className="absolute inset-0 border-t-2 border-lime rounded-full animate-spin" />}
-                <Icon name={cameraError ? 'no_photography' : 'photo_camera'} size={34} className="text-lime" />
-              </div>
-              {(cameraError || cameraRequested) && <p>{cameraError ?? 'Opening live camera...'}</p>}
+          <div className="capture-studio">
+            <h1>Scan your meal</h1>
+            <div className="capture-modes" role="group" aria-label="Capture framing guide">{(['meal','drink'] as const).map(mode=><button type="button" key={mode} aria-pressed={captureMode===mode} onClick={()=>setCaptureMode(mode)}><Icon name={mode==='meal'?'restaurant':'local_cafe'} size={19}/>{mode==='meal'?'Meal':'Drink'}</button>)}</div>
+            <div className={`capture-preview ${cameraReady?'is-live':''}`}>
+              <video ref={videoRef} playsInline muted autoPlay className={cameraReady?'opacity-100':'opacity-0'}/>
+              {!cameraReady&&<button type="button" className="capture-preview-start" onClick={()=>setCameraRequested(true)} disabled={cameraRequested&&!cameraError}><Icon name={cameraRequested&&!cameraError?'progress_activity':'photo_camera'} className={cameraRequested&&!cameraError?'animate-spin':''} size={34}/><strong>{cameraRequested&&!cameraError?'Opening camera…':'Bring your food into focus.'}</strong><span>Tap to open your camera</span></button>}
+              <span className="capture-frame-corner corner-tl"/><span className="capture-frame-corner corner-tr"/><span className="capture-frame-corner corner-bl"/><span className="capture-frame-corner corner-br"/>
+              <button type="button" className="capture-rotate" onClick={()=>setOrientation(value=>value==='portrait'?'landscape':'portrait')} aria-label={orientation==='portrait'?'Switch to landscape frame':'Switch to portrait frame'}><Icon name="screen_rotation" size={20}/>{orientation==='portrait'?'3:4':'4:3'}</button>
             </div>
-          )}
-          <div className="camera-capture-controls z-20 flex w-full flex-col items-center text-center px-margin-mobile pb-xl gap-lg">
-            <div className="camera-status" aria-live="polite">
-              <span className="font-label-caps text-label-caps uppercase tracking-widest text-lime">
-                {cameraReady ? 'Live camera is ready' : 'Camera opens only when you tap'}
-              </span>
-            </div>
-            <div>
-              <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Capture your meal.</h1>
-              <p className="font-body-md text-body-md text-on-surface-variant max-w-xs">
-                Point at your food, snap, or add a photo from gallery.
-              </p>
-            </div>
-            <details className="w-full max-w-sm text-left rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-on-surface-variant">
-              <summary className="cursor-pointer font-data-mono text-[11px]">Analysis options</summary>
-              <div className="pt-3"><ProviderPicker value={provider} onChange={setProvider} /><p className="mt-2 text-[11px] leading-snug">For offline logging, search the on-device food list from Food. A photo still needs an online vision service.</p></div>
-            </details>
-            <div className="flex items-center gap-lg">
-              <button
-                onClick={() => galleryRef.current?.click()}
-                className="w-14 h-14 rounded-full bg-ink-card border border-white/15 text-on-surface flex items-center justify-center active:scale-95 transition"
-                aria-label="Upload from gallery"
-              >
-                <Icon name="photo_library" size={24} />
-              </button>
-              <button
-                onClick={cameraReady ? captureLivePhoto : () => setCameraRequested(true)}
-                className="w-20 h-20 rounded-full bg-lime text-on-lime flex items-center justify-center shadow-[0_0_24px_rgba(201,242,78,0.45)] active:scale-95 transition disabled:opacity-60"
-                aria-label="Take photo"
-                disabled={cameraRequested && !cameraReady && !cameraError}
-              >
-                <Icon name="photo_camera" fill size={36} />
-              </button>
-              <div className="w-14 h-14" aria-hidden="true" />
-            </div>
-            <p className="font-data-mono text-[11px] text-on-surface-variant">{cameraReady ? 'Tap to take photo' : 'Tap camera to enable it, or choose a saved photo'}</p>
+            <p className="capture-guide" aria-live="polite">{cameraError??(captureMode==='meal'?'Whole plate in frame. A little daylight helps.':'Include the full cup and its size or label.')}</p>
+            <div className="capture-controls"><button type="button" onClick={()=>galleryRef.current?.click()} aria-label="Upload from gallery"><Icon name="photo_library" size={25}/><span>Gallery</span></button><button type="button" className="capture-shutter" onClick={cameraReady?captureLivePhoto:()=>setCameraRequested(true)} aria-label={cameraReady?'Take photo':'Open camera'} disabled={cameraRequested&&!cameraReady&&!cameraError}><span><Icon name="photo_camera" size={30}/></span></button><button type="button" onClick={()=>setFacing(value=>value==='environment'?'user':'environment')} aria-label={facing==='environment'?'Switch to front camera':'Switch to back camera'}><Icon name="flip_camera_ios" size={25}/><span>{facing==='environment'?'Back':'Front'}</span></button></div>
+            <p className="capture-shutter-label">{cameraReady?'Tap to capture & review':'Open camera, or pick a saved photo'}</p>
+            <details className="capture-options"><summary>Analysis options <Icon name="expand_more" size={18}/></summary><ProviderPicker value={provider} onChange={setProvider}/><p>Photo analysis needs an online vision service. Nothing is logged until you confirm.</p></details>
           </div>
         </>
       )}
 
       {/* Analyzing */}
       {phase === 'analyzing' && (
-        <div className="z-20 flex flex-col items-center pb-[36%] gap-md px-margin-mobile text-center">
-          <div className="w-24 h-24 border-2 border-lime/30 rounded-full flex items-center justify-center relative">
-            <div className="absolute inset-0 border-t-2 border-lime rounded-full animate-spin" />
-            <Icon name="travel_explore" size={36} className="text-lime" />
-          </div>
-          <span className="font-label-caps text-label-caps text-lime uppercase tracking-widest">Analyzing…</span>
-          <p className="font-body-md text-[13px] text-on-surface-variant max-w-[240px]">
-            Identifying each item and looking up nutrition data on the web. This can take up to a minute — accuracy over speed.
-          </p>
-        </div>
+        <section className="camera-analysis" aria-live="polite" aria-busy="true">
+          {photo&&<img src={photo} alt="Meal photo being analysed"/>}
+          <h1>A closer look at your plate.</h1>
+          <p>Estimating the foods, portions and nutrition in your photo. You'll review the result before anything is saved.</p>
+          <div className="camera-analysis-status"><Icon name="progress_activity" className="animate-spin" size={20}/><span>Analysis in progress</span></div>
+          <small>A photo is an estimate—not a measurement. Sauces, oil and portion sizes may need correction.</small>
+        </section>
       )}
 
       {/* Result / edit screen */}
@@ -298,7 +278,8 @@ export function Camera() {
               {error && <p className="camera-result-alert">{error}</p>}
               <div className="camera-result-macros"><MacroChip label="Protein" v={Math.round(det.protein * servings)} /><MacroChip label="Carbs" v={Math.round(det.carbs * servings)} /><MacroChip label="Fat" v={Math.round(det.fat * servings)} /></div>
               <section className="camera-result-section"><h2>Log this meal</h2><p>Choose where it belongs and check the portion.</p><div className="camera-result-slots" role="group" aria-label="Meal type">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => <button key={slot} type="button" aria-pressed={mealSlot === slot} onClick={() => setMealSlot(slot)}>{slot}</button>)}</div><div className="camera-result-quantity"><span>Servings</span><div><button type="button" aria-label="Decrease servings" disabled={servings <= 0.5} onClick={() => setServings((s) => Math.max(0.5, Math.round((s - 0.5) * 10) / 10))}><Icon name="remove" size={20} /></button><strong>{servings.toFixed(1)}</strong><button type="button" aria-label="Increase servings" onClick={() => setServings((s) => Math.round((s + 0.5) * 10) / 10)}><Icon name="add" size={20} /></button></div></div></section>
-              {breakdownItems.length > 0 && <section className="camera-result-section"><h2>What we found</h2><div className="camera-result-breakdown">{breakdownItems.map((item, index) => <div key={index}><span>{item.name}{item.grams ? <small>{item.grams} g estimated</small> : null}</span><strong>{Math.round(item.kcal * servings)} <small>kcal</small></strong></div>)}</div></section>}
+              {breakdownItems.length > 0 && <section className="camera-result-section"><h2>Inside your plate.</h2><p>{det.items?.length ? 'Estimated calories for each food. Available nutrients are shown below.' : 'Only a whole-meal estimate was returned. Retry analysis for a component breakdown.'}</p><div className="camera-components">{breakdownItems.map((item,index)=><article key={index}><header><div><h3>{item.name}</h3><p>{item.portion ? `${item.portion} · ` : ''}{item.grams ? `${Math.round(item.grams*servings)} g estimated` : 'Portion not measured'}</p></div><strong>{Math.round(item.kcal*servings)}<small>kcal</small></strong></header><ComponentNutrients item={item} servings={servings}/>{det.items?.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value)))&&<div className="camera-component-adjust"><span>Adjust this portion</span><button type="button" aria-label={`Reduce ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,.75)}>−25%</button><button type="button" aria-label={`Increase ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,1.25)}>+25%</button></div>}</article>)}</div></section>}
+              <section className="camera-result-section camera-food-corrections"><h2>Not the right food?</h2><p>Replace a component with a local or online serving reference.</p>{correcting===null?<div>{breakdownItems.map((item,index)=><button type="button" key={index} onClick={()=>setCorrecting(index)}><span>{item.name}</span><span>Change<Icon name="edit" size={17}/></span></button>)}</div>:<CorrectMealComponent key={correcting} name={breakdownItems[correcting]?.name??det.name} onApply={item=>replaceComponent(correcting,item)} onCancel={()=>setCorrecting(null)}/>}</section>
               {(det.assumptions || det.note) && <details className="camera-result-details"><summary>About this estimate <Icon name="expand_more" size={20} /></summary><div>{det.assumptions && <p>{det.assumptions}</p>}{det.note && <p>{det.note}</p>}</div></details>}
               <details className="camera-result-details"><summary>Analysis details <Icon name="expand_more" size={20} /></summary><div><p>Requested mode: {foodProviderLabel(det.requestedProvider ?? provider)}</p><p>Result source: {detectionSourceLabel(det.source)}</p><p>{detectionUsageLabel(det.source, foodAIUsage(det.source))}</p><button type="button" onClick={retryAnalysis}>Retry analysis with this photo</button></div></details>
             </> : <div className="camera-result-edit"><EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} /></div>}
@@ -403,6 +384,12 @@ function detectionUsageLabel(source: Detection['source'], usedThisMonth: number)
   }
 }
 
+function ComponentNutrients({ item, servings }: { item: { protein?: number; carbs?: number; fat?: number }; servings: number }) {
+  const keys = (['protein', 'carbs', 'fat'] as const).filter(key => typeof item[key] === 'number' && Number.isFinite(item[key]))
+  if (!keys.length) return null
+  return <dl>{keys.map(key => <div key={key}><dt>{key}</dt><dd>{Math.round(item[key]! * servings)} g</dd></div>)}</dl>
+}
+
 function MacroChip({ label, v }: { label: string; v: number }) {
   return (
     <div className="camera-result-macro"><span>{label}</span><strong>{v}<small>g</small></strong></div>
@@ -423,7 +410,7 @@ function EditForm({
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [lookupMessage, setLookupMessage] = useState<string | null>(null)
   const cls = 'w-full bg-surface border border-outline-variant rounded-lg px-md py-2 text-on-surface font-data-mono focus:border-primary focus:outline-none'
-  const num = (k: 'kcal' | 'protein' | 'carbs' | 'fat') => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...det, [k]: +e.target.value })
+  const num = (k: 'kcal' | 'protein' | 'carbs' | 'fat') => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...det, [k]: Math.max(0,+e.target.value || 0), items: undefined })
 
   async function updateFromOnline() {
     const name = det.name.trim()
@@ -445,7 +432,7 @@ function EditForm({
       <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Edit meal</h2>
       <label className="flex flex-col gap-1">
         <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Name</span>
-        <input className={cls} value={det.name} onChange={(e) => onChange({ ...det, name: e.target.value, confidence: 1 })} />
+        <input className={cls} value={det.name} onChange={(e) => onChange({ ...det, name: e.target.value })} />
       </label>
       <button
         onClick={updateFromOnline}
