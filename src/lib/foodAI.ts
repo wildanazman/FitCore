@@ -5,6 +5,7 @@
 
 import { matchLocalFood } from './localFoods'
 import { apiUrl } from './apiBase'
+import { googleAuthHeaders } from '../store/AuthContext'
 
 export interface DetectionItem {
   name: string
@@ -110,7 +111,7 @@ function normalizeDetection(value: Partial<Detection>, source: Detection['source
 async function detectWithServer(dataUrl: string, model: string): Promise<Detection> {
   const res = await fetch(apiUrl('/api/detect-food'), {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...googleAuthHeaders() },
     body: JSON.stringify({ image: dataUrl, provider: 'gemini', model }),
   })
   const json = await res.json().catch(() => null)

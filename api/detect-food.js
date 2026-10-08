@@ -7,6 +7,7 @@
 // itemised JSON estimate.
 
 import { isGeminiModel, DEFAULT_GEMINI_MODEL } from '../shared/geminiModels.js'
+import { reserveCameraScan } from '../server/camera-quota.js'
 
 export const config = { maxDuration: 60 }
 
@@ -181,8 +182,11 @@ export default async function handler(req, res) {
   const inlineData = dataUrlToInlineData(image)
   if (!inlineData) return sendJson(res, 400, { error: 'Expected a jpeg, png, or webp data URL' })
 
+  let quota
+  try { quota = await reserveCameraScan(req) }
+  catch (err) { return sendJson(res, err.status || 503, { error: err.message }) }
   try {
-    return sendJson(res, 200, await detectWithGemini(geminiKey, inlineData, model))
+    return sendJson(res, 200, { ...await detectWithGemini(geminiKey, inlineData, model), quota })
   } catch (err) {
     return sendJson(res, 502, { error: `Gemini: ${err?.message || 'Photo analysis failed'}. Try another model in Settings or search the food list.` })
   }

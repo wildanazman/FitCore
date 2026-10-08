@@ -11,6 +11,7 @@ process.env.GOOGLE_LOGIN_CLIENT_ID = clientId
 process.env.GOOGLE_ADMIN_EMAILS = 'owner@gmail.com'
 OAuth2Client.prototype.getFederatedSignonCertsAsync = async () => ({ certs: { fixture: publicKey.export({ type: 'spki', format: 'pem' }) } })
 const { default: handler } = await import('../api/account.js')
+const { reserveCameraScan, cameraDay } = await import('../server/camera-quota.js')
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url')
 const now = Math.floor(Date.now() / 1000)
 function token(patch = {}) {
@@ -36,6 +37,34 @@ try {
   assert.equal((await request('POST', token({ exp: now - 3600 }))).statusCode, 401)
   assert.equal((await request('POST', token() + 'tampered')).statusCode, 401)
   assert.equal((await request('POST')).statusCode, 401)
+  assert.equal(cameraDay(new Date('2026-10-08T16:00:00Z')), '2026-10-09')
+  const scanRequest = credential => ({ headers: { authorization: `Bearer ${credential}` } })
+  assert.equal((await reserveCameraScan(scanRequest(token()))).unlimited, true)
+  await assert.rejects(reserveCameraScan({ headers: {} }), error => error.status === 401)
+  await assert.rejects(reserveCameraScan(scanRequest(token({ email: 'someone@gmail.com' }))), error => error.status === 503)
+  const originalFetch = globalThis.fetch
+  const oldUrl = process.env.KV_REST_API_URL
+  const oldToken = process.env.KV_REST_API_TOKEN
+  process.env.KV_REST_API_URL = 'https://quota.fixture'
+  process.env.KV_REST_API_TOKEN = 'fixture'
+  let count = 0
+  globalThis.fetch = async (_url, options) => {
+    const command = JSON.parse(options.body)
+    assert.equal(command[0], 'EVAL')
+    assert.match(command[3], /fitcore:camera:/)
+    return { ok: true, json: async () => ({ result: count >= 4 ? -1 : ++count }) }
+  }
+  try {
+    const scans = await Promise.all(Array.from({ length: 8 }, () => reserveCameraScan(scanRequest(token({ email: 'someone@gmail.com' }))).then(value => value, error => ({ status: error.status }))))
+    assert.equal(scans.filter(result => result.status === 429).length, 4)
+    assert.equal(count, 4)
+    globalThis.fetch = async () => { throw new Error('offline') }
+    await assert.rejects(reserveCameraScan(scanRequest(token({ email: 'someone@gmail.com' }))), error => error.status === 503)
+  } finally {
+    globalThis.fetch = originalFetch
+    if (oldUrl === undefined) delete process.env.KV_REST_API_URL; else process.env.KV_REST_API_URL = oldUrl
+    if (oldToken === undefined) delete process.env.KV_REST_API_TOKEN; else process.env.KV_REST_API_TOKEN = oldToken
+  }
   assert.equal((await request('POST', token(), 'https://evil.example')).statusCode, 403)
   delete process.env.GOOGLE_LOGIN_CLIENT_ID
   assert.equal((await request('POST', token())).statusCode, 503)
