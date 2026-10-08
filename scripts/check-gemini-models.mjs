@@ -5,9 +5,11 @@ const originalFetch = globalThis.fetch
 const originalKey = process.env.GEMINI_API_KEY
 const originalModel = process.env.GEMINI_MODEL
 let calls = []
+let payloads = []
 process.env.GEMINI_API_KEY = 'test-only-not-a-real-key'
-globalThis.fetch = async (url) => {
+globalThis.fetch = async (url, options) => {
   calls.push(url)
+  payloads.push(JSON.parse(options.body))
   return { ok: true, status: 200, json: async () => ({ modelVersion: 'resolved-version', usageMetadata: { promptTokenCount: 2000, candidatesTokenCount: 300, thoughtsTokenCount: 700 }, candidates: [{ content: { parts: [{ text: '{"name":"Test meal","kcal":200,"protein":10,"carbs":30,"fat":4,"confidence":0.6,"items":[]}' }] } }] }) }
 }
 async function request(body) {
@@ -24,6 +26,9 @@ try {
     assert.equal(res.body.model, 'resolved-version')
     assert.deepEqual(res.body.usage, { inputTokens: 2000, outputTokens: 300, thinkingTokens: 700 })
     assert.ok(calls.at(-1).includes(`/models/${option.id}:generateContent`))
+    const config = payloads.at(-1).generationConfig
+    assert.equal(config.maxOutputTokens, option.id === 'gemini-2.5-flash' ? 8192 : 4096)
+    assert.deepEqual(config.thinkingConfig, option.id === 'gemini-2.5-flash' ? { thinkingBudget: 1024 } : undefined)
   }
   const before = calls.length
   assert.equal((await request({ image, model: 'unknown' })).statusCode, 400)
@@ -35,6 +40,15 @@ try {
   assert.equal((await request({ image, model: 'gemini-2.5-flash' })).body.requestedModel, 'gemini-2.5-flash')
   assert.equal(geminiModelOrDefault(undefined), 'gemini-2.5-flash')
   assert.equal(geminiModelOrDefault('unknown'), 'gemini-2.5-flash')
+  let truncatedCalls = 0
+  globalThis.fetch = async () => {
+    truncatedCalls++
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"name":' }] } }] }) }
+  }
+  const truncated = await request({ image, model: 'gemini-2.5-flash' })
+  assert.equal(truncated.statusCode, 502)
+  assert.match(truncated.body.error, /cut short/)
+  assert.equal(truncatedCalls, 1, 'Do not charge an identical retry for truncated output')
   console.log('Passed model selection, allowlist, defaults, token metadata and Claude rejection. Mock responses only; no paid calls.')
 } finally {
   globalThis.fetch = originalFetch

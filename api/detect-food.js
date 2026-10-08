@@ -81,9 +81,9 @@ function normalizeDetection(value, source) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function callGemini(endpoint, payload) {
+async function callGemini(endpoint, payload, timeoutMs) {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS)
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -103,17 +103,21 @@ async function detectWithGemini(apiKey, inlineData, model) {
   const payload = {
     contents: [{ role: 'user', parts: [{ text: prompt.replace('web search', 'Google Search') }, { inlineData }] }],
     tools: [{ google_search: {} }],
-    generationConfig: { temperature: 0.15, maxOutputTokens: 4096 },
+    generationConfig: { temperature: 0.15, maxOutputTokens: model === 'gemini-2.5-flash' ? 8192 : 4096,
+      ...(model === 'gemini-2.5-flash' ? { thinkingConfig: { thinkingBudget: 1024 } } : {}) },
   }
 
+  const deadline = Date.now() + GEMINI_TIMEOUT_MS
   let lastError = 'Gemini failed'
   for (let attempt = 1; attempt <= GEMINI_ATTEMPTS; attempt++) {
     let result
     try {
-      result = await callGemini(endpoint, payload)
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) throw Object.assign(new Error('timeout'), { name: 'AbortError' })
+      result = await callGemini(endpoint, payload, remaining)
     } catch (err) {
       lastError = err?.name === 'AbortError' ? 'Gemini timed out' : 'Could not reach Gemini'
-      if (attempt < GEMINI_ATTEMPTS) {
+      if (err?.name !== 'AbortError' && attempt < GEMINI_ATTEMPTS && deadline - Date.now() > 1000) {
         await sleep(500 * attempt)
         continue
       }
@@ -122,7 +126,7 @@ async function detectWithGemini(apiKey, inlineData, model) {
 
     if (!result.ok) {
       lastError = result.json?.error?.message || `Gemini API ${result.status}`
-      if (RETRY_STATUS.has(result.status) && attempt < GEMINI_ATTEMPTS) {
+      if (RETRY_STATUS.has(result.status) && attempt < GEMINI_ATTEMPTS && deadline - Date.now() > 1000) {
         await sleep(500 * attempt)
         continue
       }
@@ -133,16 +137,15 @@ async function detectWithGemini(apiKey, inlineData, model) {
     if (result.json.promptFeedback?.blockReason) {
       throw new Error(`Image blocked by safety filter (${result.json.promptFeedback.blockReason})`)
     }
+    if (cand?.finishReason === 'MAX_TOKENS') {
+      throw new Error('Nutrition estimate was cut short at the token limit; no automatic repeat was charged')
+    }
     const text = (cand?.content?.parts ?? [])
-      .filter((p) => typeof p.text === 'string')
+      .filter((p) => typeof p.text === 'string' && !p.thought)
       .map((p) => p.text)
       .join('')
     if (!text) {
       lastError = `Gemini returned no text${cand?.finishReason ? ` (${cand.finishReason})` : ''}`
-      if (attempt < GEMINI_ATTEMPTS) {
-        await sleep(400 * attempt)
-        continue
-      }
       throw new Error(lastError)
     }
     try {
@@ -151,10 +154,6 @@ async function detectWithGemini(apiKey, inlineData, model) {
         usage: { inputTokens: Number(usage.promptTokenCount) || 0, outputTokens: Number(usage.candidatesTokenCount) || 0, thinkingTokens: Number(usage.thoughtsTokenCount) || 0 } }
     } catch {
       lastError = 'Gemini returned an unreadable nutrition estimate'
-      if (attempt < GEMINI_ATTEMPTS) {
-        await sleep(400 * attempt)
-        continue
-      }
       throw new Error(lastError)
     }
   }
