@@ -28,7 +28,7 @@ try {
     assert.ok(calls.at(-1).includes(`/models/${option.id}:generateContent`))
     const config = payloads.at(-1).generationConfig
     assert.equal(config.maxOutputTokens, option.id === 'gemini-2.5-flash' ? 8192 : 4096)
-    assert.deepEqual(config.thinkingConfig, option.id === 'gemini-2.5-flash' ? { thinkingBudget: 1024 } : undefined)
+    assert.deepEqual(config.thinkingConfig, option.id === 'gemini-2.5-flash' ? { thinkingBudget: 512 } : undefined)
   }
   const before = calls.length
   assert.equal((await request({ image, model: 'unknown' })).statusCode, 400)

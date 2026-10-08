@@ -16,17 +16,10 @@ const GEMINI_ATTEMPTS = 2
 const RETRY_STATUS = new Set([429, 500, 502, 503, 504])
 
 const prompt = [
-  'You are a meticulous nutritionist analysing a food photo for a personal calorie tracker.',
-  'Accuracy matters more than speed. Work step by step:',
-  '1. Identify every distinct food and drink component visible in the image.',
-  '2. Estimate each component’s portion using plate, bowl, utensil and hand scale (grams or common units).',
-  '3. Use web search to find reliable calories and macros for each component. Prefer the Malaysian Food Composition Database (MyFCD, myfcd.moh.gov.my) and reputable nutrition databases, especially for Malaysian / South-East Asian dishes.',
-  '4. Sum the components into a total for the whole serving shown.',
-  'Return ONLY a raw JSON object, no markdown fences and no prose, with exactly these keys:',
+  'Estimate the visible meal. Identify up to 12 foods/sauces and edible portions (exclude bones); do not invent hidden ingredients. Use Google Search for reliable nutrition references; prefer MyFCD for Malaysian food.',
+  'Return compact JSON only, no markdown/prose, using these keys:',
   '{"name": string, "emoji": string, "items": [{"name": string, "portion": string, "grams": number, "kcal": number, "protein": number, "carbs": number, "fat": number}], "kcal": number, "protein": number, "carbs": number, "fat": number, "confidence": number, "assumptions": string}',
-  'Separate each visible food, sauce and estimated cooking oil. Include per-component macros and common portion descriptions. Meal totals must equal the sum of components. Unknown ingredients and oil amounts are assumptions, not measurements.',
-  'kcal must be roughly equal to protein*4 + carbs*4 + fat*9. confidence is 0..1 reflecting how sure you are of the food and portion.',
-  'If the portion is uncertain, say so in assumptions and lower confidence. Do not invent hidden ingredients.',
+  'Use prepared-food values, including frying fat. NEVER list absorbed oil separately or add oil to already-fried food values. If using raw values, include oil once inside its food component. Sum items into meal totals; kcal approximately equals 4*protein+4*carbs+9*fat. Nutrients in grams, confidence 0..1; lower it for uncertain portions. Keep portion labels short and assumptions under 250 characters; mention uncertain oil/portion estimates. Numbers to at most one decimal place.',
 ].join(' ')
 
 function sendJson(res, status, body) {
@@ -104,7 +97,7 @@ async function detectWithGemini(apiKey, inlineData, model) {
     contents: [{ role: 'user', parts: [{ text: prompt.replace('web search', 'Google Search') }, { inlineData }] }],
     tools: [{ google_search: {} }],
     generationConfig: { temperature: 0.15, maxOutputTokens: model === 'gemini-2.5-flash' ? 8192 : 4096,
-      ...(model === 'gemini-2.5-flash' ? { thinkingConfig: { thinkingBudget: 1024 } } : {}) },
+      ...(model === 'gemini-2.5-flash' ? { thinkingConfig: { thinkingBudget: 512 } } : {}) },
   }
 
   const deadline = Date.now() + GEMINI_TIMEOUT_MS

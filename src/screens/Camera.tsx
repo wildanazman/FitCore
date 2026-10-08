@@ -41,6 +41,7 @@ export function Camera() {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [mealSlot, setMealSlot] = useState<MealSlot>(slotForNow())
   const [correcting,setCorrecting]=useState<number|null>(null)
+  const [removedComponent, setRemovedComponent] = useState<{ name: string; previous: Detection } | null>(null)
   const [facing,setFacing]=useState<'environment'|'user'>('environment')
   const [orientation,setOrientation]=useState<'portrait'|'landscape'>('portrait')
   const [captureMode,setCaptureMode]=useState<'meal'|'drink'>('meal')
@@ -94,6 +95,7 @@ export function Camera() {
 
   async function analyzePhoto(dataUrl: string) {
     setDet(null)
+    setRemovedComponent(null)
     setCorrecting(null)
     setPhoto(dataUrl)
     setPhase('analyzing')
@@ -206,6 +208,7 @@ export function Camera() {
   function changeComponent(index: number, factor: number) {
     if (!det?.items || !det.items.every(item => [item.protein,item.carbs,item.fat].every(value => typeof value === 'number' && Number.isFinite(value)))) return
     const items=det.items.map((item,i)=>i!==index?item:{...item,portion:undefined,grams:item.grams?item.grams*factor:undefined,kcal:item.kcal*factor,protein:item.protein!*factor,carbs:item.carbs!*factor,fat:item.fat!*factor})
+    setRemovedComponent(null)
     setDet(componentTotals({...det,items}))
   }
   function replaceComponent(index:number,item:DetectionItem) {
@@ -213,8 +216,25 @@ export function Camera() {
     const items=det.items?.length?det.items:[{name:det.name,kcal:det.kcal,protein:det.protein,carbs:det.carbs,fat:det.fat}]
     if(!items.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value)))){setError('This result has no per-food macros. Retry analysis first, or edit the whole meal estimate.');return}
     const next=items.map((part,i)=>i===index?item:part)
+    setRemovedComponent(null)
     setDet(componentTotals({...det,items:next,name:items.length===1?item.name:det.name,note:'Food corrected using a serving reference. Check the portion; reference values are not a measurement of your photo.'}))
     setCorrecting(null)
+  }
+  function removeComponent(index: number) {
+    if (!det?.items || det.items.length <= 1) return
+    const removed = det.items[index]
+    const items = det.items.filter((_, i) => i !== index)
+    const hasCompleteMacros = det.items.every(item => [item.protein, item.carbs, item.fat].every(value => typeof value === 'number' && Number.isFinite(value)))
+    const next = hasCompleteMacros ? componentTotals({ ...det, items }) : {
+      ...det, items, kcal: items.reduce((sum, item) => sum + item.kcal, 0),
+      protein: Math.max(0, det.protein - (removed.protein ?? 0)),
+      carbs: Math.max(0, det.carbs - (removed.carbs ?? 0)),
+      fat: Math.max(0, det.fat - (removed.fat ?? 0)),
+      note: 'Item removed. Per-food nutrients are incomplete; review the whole-meal macros before saving.',
+    }
+    setRemovedComponent({ name: removed.name, previous: det })
+    setCorrecting(null)
+    setDet(next)
   }
 
   return (
@@ -279,7 +299,22 @@ export function Camera() {
               {error && <p className="camera-result-alert">{error}</p>}
               <div className="camera-result-macros"><MacroChip label="Protein" v={Math.round(det.protein * servings)} /><MacroChip label="Carbs" v={Math.round(det.carbs * servings)} /><MacroChip label="Fat" v={Math.round(det.fat * servings)} /></div>
               <section className="camera-result-section"><h2>Log this meal</h2><p>Choose where it belongs and check the portion.</p><div className="camera-result-slots" role="group" aria-label="Meal type">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => <button key={slot} type="button" aria-pressed={mealSlot === slot} onClick={() => setMealSlot(slot)}>{slot}</button>)}</div><div className="camera-result-quantity"><span>Servings</span><div><button type="button" aria-label="Decrease servings" disabled={servings <= 0.5} onClick={() => setServings((s) => Math.max(0.5, Math.round((s - 0.5) * 10) / 10))}><Icon name="remove" size={20} /></button><strong>{servings.toFixed(1)}</strong><button type="button" aria-label="Increase servings" onClick={() => setServings((s) => Math.round((s + 0.5) * 10) / 10)}><Icon name="add" size={20} /></button></div></div></section>
-              {breakdownItems.length > 0 && <section className="camera-result-section"><h2>Inside your plate.</h2><p>{det.items?.length ? 'Estimated calories for each food. Available nutrients are shown below.' : 'Only a whole-meal estimate was returned. Retry analysis for a component breakdown.'}</p><div className="camera-components">{breakdownItems.map((item,index)=><article key={index}><header><div><h3>{item.name}</h3><p>{item.portion ? `${item.portion} · ` : ''}{item.grams ? `${Math.round(item.grams*servings)} g estimated` : 'Portion not measured'}</p></div><strong>{Math.round(item.kcal*servings)}<small>kcal</small></strong></header><ComponentNutrients item={item} servings={servings}/>{det.items?.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value)))&&<div className="camera-component-adjust"><span>Adjust this portion</span><button type="button" aria-label={`Reduce ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,.75)}>−25%</button><button type="button" aria-label={`Increase ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,1.25)}>+25%</button></div>}</article>)}</div></section>}
+              {breakdownItems.length > 0 && <section className="camera-result-section">
+                <h2>Inside your plate.</h2>
+                <p>Check each food and portion. Remove anything you didn't eat; totals update automatically.</p>
+                <div className="camera-component-feedback" role="status">
+                  {removedComponent && <><span>{removedComponent.name} removed.</span><button type="button" onClick={() => { setDet(removedComponent.previous); setRemovedComponent(null); }}>Undo</button></>}
+                </div>
+                <div className="camera-components">{breakdownItems.map((item,index)=><article key={`${index}-${item.name}`}>
+                  <header><div><h3>{item.name}</h3><p>{item.portion ? `${item.portion} · ` : ''}{item.grams ? `${Math.round(item.grams*servings)} g estimated` : 'Portion not measured'}</p></div><strong>{Math.round(item.kcal*servings)}<small>kcal</small></strong></header>
+                  <ComponentNutrients item={item} servings={servings}/>
+                  <div className="camera-component-adjust">
+                    {det.items?.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value))) && <><button type="button" aria-label={`Reduce ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,.75)}>−25%</button><button type="button" aria-label={`Increase ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,1.25)}>+25%</button></>}
+                    {det.items && <button type="button" className="camera-component-remove" aria-label={`Remove ${item.name} from meal`} disabled={det.items.length <= 1} onClick={() => removeComponent(index)}><Icon name="delete" size={16}/>Remove</button>}
+                  </div>
+                </article>)}</div>
+                {det.items?.length === 1 && <p>Keep at least one food, or take another photo to start again.</p>}
+              </section>}
               <section className="camera-result-section camera-food-corrections"><h2>Not the right food?</h2><p>Replace a component with a local or online serving reference.</p>{correcting===null?<div>{breakdownItems.map((item,index)=><button type="button" key={index} onClick={()=>setCorrecting(index)}><span>{item.name}</span><span>Change<Icon name="edit" size={17}/></span></button>)}</div>:<CorrectMealComponent key={correcting} name={breakdownItems[correcting]?.name??det.name} onApply={item=>replaceComponent(correcting,item)} onCancel={()=>setCorrecting(null)}/>}</section>
               {(det.assumptions || det.note) && <details className="camera-result-details"><summary>About this estimate <Icon name="expand_more" size={20} /></summary><div>{det.assumptions && <p>{det.assumptions}</p>}{det.note && <p>{det.note}</p>}</div></details>}
               <details className="camera-result-details"><summary>Analysis details <Icon name="expand_more" size={20} /></summary><div><p>Model used: {det.model ?? 'Not reported'}</p><p>Selected model: {det.requestedModel ?? 'Not reported'}</p><p>Result source: {detectionSourceLabel(det.source)}</p>{det.usage && <p>Tokens: {det.usage.inputTokens.toLocaleString()} input · {det.usage.outputTokens.toLocaleString()} output · {det.usage.thinkingTokens.toLocaleString()} thinking. Counts are for the successful response, not earlier retries or search charges.</p>}<p>{detectionUsageLabel(det.source, foodAIUsage(det.source))}</p><GeminiModelPicker id="result-gemini-model" value={profile.geminiModel} onChange={geminiModel => updateProfile({ geminiModel })}/><button type="button" onClick={retryAnalysis}>Retry with selected model</button></div></details>

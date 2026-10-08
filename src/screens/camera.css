@@ -39,7 +39,11 @@
 .camera-components dl { display:grid; grid-template-columns:repeat(3,1fr); margin:14px 0; gap:12px; }
 .camera-components dt { color:var(--palette-muted); font-size:12px; text-transform:capitalize; }
 .camera-components dd { margin:4px 0 0; font-size:14px; font-weight:700; }
-.camera-component-adjust { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--palette-muted); }
+.camera-component-adjust { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:14px; color:var(--palette-muted); }
+.camera-component-adjust .camera-component-remove { display:flex; align-items:center; gap:6px; margin-inline-start:auto; background:transparent; color:var(--palette-ink); }
+.camera-component-adjust button:disabled { opacity:.5; cursor:not-allowed; }
+.camera-component-feedback { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--palette-ink); font-size:14px; }
+.camera-component-feedback button { min-height:44px; padding:8px 12px; color:var(--palette-accent); font-weight:700; }
 .camera-component-adjust>span { flex:1; }
 .camera-component-adjust button { min-height:44px; padding:8px 12px; border-radius:8px; background:var(--palette-tint); color:var(--palette-accent); font-weight:700; }
 @media(max-height:720px) { .camera-viewfinder { height:170px; } .camera-capture .camera-idle-visual { top:12%; } .camera-capture .camera-capture-controls { gap:10px!important; } }
