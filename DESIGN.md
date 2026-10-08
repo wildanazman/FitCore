@@ -1,6 +1,6 @@
 ---
 name: FitCore
-description: A daily digital ledger for food, movement and habits.
+description: A daily digital ledger for food, movement and habits. One shared interface with selectable semantic colour palettes.
 colors:
   cobalt: "#2453ee"
   cobalt-hover: "#1740cc"

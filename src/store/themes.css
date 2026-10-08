@@ -1,0 +1,87 @@
+/* Semantic palette: components own layout; themes only supply these roles. */
+:root, :root[data-theme="classic"] {
+  --palette-bg:#f4f6fa; --palette-surface:#fff; --palette-ink:#17253a; --palette-muted:#627089;
+  --palette-accent:#2453ee; --palette-hover:#1740cc; --palette-on-accent:#fff;
+  --palette-line:#dfe5ef; --palette-outline:#ccd6e7; --palette-tint:#e8eeff; --palette-soft:#e8edf5;
+  --palette-strong:#17253a; --palette-on-strong:#fff; --palette-highlight:#e6fa78;
+  --palette-success:#145e54; --palette-success-bg:#def4ed; --palette-error:#b53b35; --palette-error-bg:#fff1f0;
+  --palette-scheme:light;
+}
+:root[data-theme="volt"] {
+  --palette-bg:#101310; --palette-surface:#1c211b; --palette-ink:#f1f5eb; --palette-muted:#b0bba7;
+  --palette-accent:#d5f66b; --palette-hover:#e1ff88; --palette-on-accent:#1c2607;
+  --palette-line:#35412e; --palette-outline:#59674f; --palette-tint:#303c20; --palette-soft:#252e21;
+  --palette-strong:#293820; --palette-on-strong:#f1f5eb; --palette-highlight:#d5f66b;
+  --palette-success:#95ddbb; --palette-success-bg:#18392b; --palette-error:#ffb4ad; --palette-error-bg:#442521;
+  --palette-scheme:dark;
+}
+:root[data-theme="rose"] {
+  --palette-bg:#fcf5f8; --palette-surface:#fff; --palette-ink:#392333; --palette-muted:#745869;
+  --palette-accent:#b52062; --palette-hover:#92164d; --palette-on-accent:#fff;
+  --palette-line:#eddde5; --palette-outline:#dcbfcd; --palette-tint:#fbe6ef; --palette-soft:#f4e8ef;
+  --palette-strong:#4d273c; --palette-on-strong:#fff; --palette-highlight:#f7c0d8;
+  --palette-scheme:light;
+}
+:root[data-theme="dream"] {
+  --palette-bg:#f6f4fc; --palette-surface:#fff; --palette-ink:#302843; --palette-muted:#665876;
+  --palette-accent:#7151bd; --palette-hover:#593b9d; --palette-on-accent:#fff;
+  --palette-line:#e5dff0; --palette-outline:#cfc3e2; --palette-tint:#eee7fc; --palette-soft:#ebe6f4;
+  --palette-strong:#3b2b5b; --palette-on-strong:#fff; --palette-highlight:#d7c7fa;
+  --palette-scheme:light;
+}
+:root[data-theme="ocean"] {
+  --palette-bg:#0e1924; --palette-surface:#182938; --palette-ink:#eaf5fa; --palette-muted:#adbfce;
+  --palette-accent:#75dece; --palette-hover:#a0eee2; --palette-on-accent:#09332d;
+  --palette-line:#304657; --palette-outline:#506b7e; --palette-tint:#1c403f; --palette-soft:#203545;
+  --palette-strong:#123844; --palette-on-strong:#eaf5fa; --palette-highlight:#75dece;
+  --palette-success:#95ddbb; --palette-success-bg:#18392b; --palette-error:#ffb4ad; --palette-error-bg:#442521;
+  --palette-scheme:dark;
+}
+html[data-theme] input, html[data-theme] select, html[data-theme] textarea,
+html[data-theme] .app-shell, html[data-theme] .home-page { color-scheme:var(--palette-scheme); }
+.theme-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.theme-option { text-align:left; padding:14px; border:1px solid var(--palette-line); border-radius:12px; background:var(--palette-surface); color:var(--palette-ink); min-height:132px; }
+.theme-option[aria-pressed=true] { outline:2px solid var(--palette-accent); outline-offset:2px; }
+.theme-option strong { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 4px; font-size:14px; }
+.theme-option small { display:block; color:var(--palette-muted); line-height:1.5; font-size:12px; }
+.theme-preview { display:flex; height:38px; border-radius:8px; overflow:hidden; border:1px solid var(--palette-line); }
+.theme-preview span { flex:1; }
+/* Contrast belongs to a surface role, not a literal white foreground. */
+html[data-theme] .home-energy:not(.is-over), html[data-theme] .home-energy:not(.is-over) h2,
+html[data-theme] .home-energy:not(.is-over) .home-energy-reading>div>span,
+html[data-theme] .home-energy:not(.is-over) .home-energy-ends,
+html[data-theme] .home-energy:not(.is-over) .home-energy-message { color:var(--palette-on-accent); }
+html[data-theme] .home-energy:not(.is-over) .home-energy-message { border-color:color-mix(in srgb,var(--palette-on-accent) 25%,transparent); }
+html[data-theme] .home-energy-ticks i { background:color-mix(in srgb,var(--palette-on-accent) 18%,transparent); }
+html[data-theme] .home-energy-top button:hover { background:color-mix(in srgb,var(--palette-on-accent) 15%,transparent); }
+html[data-theme] .home-energy-fill { background:var(--palette-on-accent); }
+html[data-theme] .home-energy-unit { color:var(--palette-on-accent); }
+html[data-theme] .home-energy.is-over { color:var(--palette-on-strong); }
+html[data-theme] .home-energy.is-over h2, html[data-theme] .home-energy.is-over .home-energy-reading>div>span,
+html[data-theme] .home-energy.is-over .home-energy-ends, html[data-theme] .home-energy.is-over .home-energy-ends strong,
+html[data-theme] .home-energy.is-over .home-energy-message { color:var(--palette-on-strong); }
+html[data-theme] .diet-brief { color:var(--palette-on-strong); }
+html[data-theme] .diet-brief p, html[data-theme] .diet-brief span, html[data-theme] .diet-brief small { color:var(--palette-on-strong); }
+html[data-theme] .achievement-feature.is-earned { color:var(--palette-on-accent); }
+html[data-theme] .achievement-feature.is-earned p { color:var(--palette-on-accent); }
+html[data-theme] .settings-danger p, html[data-theme] .settings-confirm label { color:var(--palette-error); }
+html[data-theme] .settings-switch.is-on>span { background:var(--palette-on-accent); }
+html[data-theme] .home-macro-label { color:var(--palette-muted); }
+html[data-theme="volt"] .home-macro-carbs, html[data-theme="ocean"] .home-macro-carbs { --macro:#efa568; --macro-label:#efa568; }
+html[data-theme="volt"] .home-macro-fat, html[data-theme="ocean"] .home-macro-fat { --macro:#c5a3ed; }
+/* Strong panels have their own foreground, independent of accent brightness. */
+.activity-page .activity-library .activity-library-title,
+.activity-page .activity-library .activity-editor-heading,
+.activity-page .activity-library .strength-add-set,
+.activity-page .activity-library .exercise-muscles button[aria-pressed=true] { color:var(--palette-on-strong); }
+.activity-page .activity-library-title h2,
+.activity-page .activity-library-title p,
+.activity-page .activity-editor-heading h2,
+.activity-page .activity-editor-heading p,
+.activity-page .activity-editor-heading>button { color:var(--palette-on-strong); }
+.run-progression thead th { color:var(--palette-on-strong); }
+/* Instant palette/state switches avoid interpolating unreadable colour pairs. */
+.activity-page .activity-library .home-activity-categories button,
+.page-switch>button, .home-dock nav a, .home-dock .home-scan { transition-property:transform,box-shadow; }
+html[data-theme]:not([data-theme="classic"]) .home-protein-help summary>.material-symbols-outlined:first-child { color:var(--palette-accent); }
+@media(max-width:360px) { .theme-options { gap:10px; } .theme-option { padding:12px; } }

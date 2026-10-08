@@ -32,8 +32,13 @@ export function WeightHistory({ entries, units, targetKg, onLog }: { entries: We
   const padding = Math.max(units === 'metric' ? 1 : 2, (rawMax - rawMin) * .18)
   const min = Math.floor(rawMin - padding), max = Math.ceil(rawMax + padding)
   const W = Math.max(240, plotWidth), H = 268, L = 49, R = 12, T = 34, B = 34
-  const span = Math.max(1, daysBetween(data.start, data.end))
-  const x = (date: string) => L + daysBetween(data.start, date) / span * (W - L - R)
+  // The period is a filter, not empty canvas. Anchor the visual domain to the
+  // first and latest recorded readings so a first log never sits at the far
+  // right simply because the selected 30/90-day window began earlier.
+  const plotStart = points[0]?.date ?? data.start
+  const plotEnd = points[points.length - 1]?.date ?? data.end
+  const span = Math.max(1, daysBetween(plotStart, plotEnd))
+  const x = (date: string) => L + daysBetween(plotStart, date) / span * (W - L - R)
   const y = (value: number) => T + (max - value) / (max - min || 1) * (H - T - B)
   let path = '', previous: typeof selected | undefined
   for (const p of points) {
@@ -56,21 +61,21 @@ export function WeightHistory({ entries, units, targetKg, onLog }: { entries: We
       <div className="weight-history-reading" aria-live="polite"><div><span>{shortDate(selected.date)}, {selected.date.slice(0, 4)}</span><strong>{selected.value.toFixed(1)} <small>{unit}</small></strong><small>Recorded weight</small></div><div className="weight-history-average"><span>7-day average</span><strong>{selected.mean === null ? '—' : selected.mean.toFixed(1)} <small>{selected.mean === null ? '' : unit}</small></strong><small>{selected.mean === null ? 'Not enough readings' : `From ${selected.samples} measured days`}</small></div></div>
       <div className="weight-history-chart-control" role="slider" tabIndex={0} aria-label="Inspect a weigh-in" aria-valuemin={0} aria-valuemax={Math.max(0, points.length - 1)} aria-valuenow={Math.max(0, index)} aria-valuetext={`${shortDate(selected.date)}, ${selected.value.toFixed(1)} ${unit}`} onKeyDown={e => { let next = index; if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next--; else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next++; else if (e.key === 'Home') next = 0; else if (e.key === 'End') next = points.length - 1; else return; e.preventDefault(); setSelectedDate(points[Math.max(0, Math.min(points.length - 1, next))].date) }}>
       <svg ref={plotRef} className="weight-history-plot" viewBox={`0 0 ${W} ${H}`} aria-hidden="true" onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); inspect(e.clientX, e.currentTarget.getBoundingClientRect()) }} onPointerMove={e => { if (e.buttons || e.currentTarget.hasPointerCapture(e.pointerId)) inspect(e.clientX, e.currentTarget.getBoundingClientRect()) }}>
-        {[0, 1, 2, 3, 4].map(i => { const value = max - i * (max - min) / 4; return <g key={i}><line x1={L} x2={W - R} y1={y(value)} y2={y(value)} stroke="#dfe5ef" /><text x={L - 9} y={y(value) + 4} textAnchor="end">{value.toFixed(1)}</text></g> })}
+        {[0, 1, 2, 3, 4].map(i => { const value = max - i * (max - min) / 4; return <g key={i}><line x1={L} x2={W - R} y1={y(value)} y2={y(value)} stroke="var(--palette-line)" /><text x={L - 9} y={y(value) + 4} textAnchor="end">{value.toFixed(1)}</text></g> })}
         <text x={L - 9} y={10} textAnchor="end">{unit}</text>
-        {goalVisible && <line x1={L} x2={W - R} y1={y(goal!)} y2={y(goal!)} stroke="#627089" strokeDasharray="2 5" />}
-        <path d={path} fill="none" stroke="#17253a" strokeWidth="1.5" strokeDasharray="5 4" strokeLinecap="round" strokeLinejoin="round" />
-        <path d={measuredPath} fill="none" stroke="#2453ee" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        <line x1={x(selected.date)} x2={x(selected.date)} y1={T} y2={H - B} stroke="#2453ee" strokeDasharray="2 5" opacity=".45" />
-        <circle cx={x(selected.date)} cy={y(selected.value)} r="9" fill="#e8eeff" />
-        {points.map(p => <circle key={p.date} cx={x(p.date)} cy={y(p.value)} r={p.date === selected.date ? 5 : 2.5} fill={p.date === selected.date ? '#2453ee' : '#ffffff'} stroke="#2453ee" strokeWidth="1.5" />)}
-        {[0, .5, 1].map((ratio, i) => <text key={i} x={L + ratio * (W - L - R)} y={H - 9} textAnchor={i === 0 ? 'start' : i === 2 ? 'end' : 'middle'}>{shortDate(addDays(data.start, Math.round(span * ratio)))}</text>)}
+        {goalVisible && <line x1={L} x2={W - R} y1={y(goal!)} y2={y(goal!)} stroke="var(--palette-muted)" strokeDasharray="2 5" />}
+        <path d={path} fill="none" stroke="var(--palette-ink)" strokeWidth="1.5" strokeDasharray="5 4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={measuredPath} fill="none" stroke="var(--palette-accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1={x(selected.date)} x2={x(selected.date)} y1={T} y2={H - B} stroke="var(--palette-accent)" strokeDasharray="2 5" opacity=".45" />
+        <circle cx={x(selected.date)} cy={y(selected.value)} r="9" fill="var(--palette-tint)" />
+        {points.map(p => <circle key={p.date} cx={x(p.date)} cy={y(p.value)} r={p.date === selected.date ? 5 : 2.5} fill={p.date === selected.date ? 'var(--palette-accent)' : 'var(--palette-surface)'} stroke="var(--palette-accent)" strokeWidth="1.5" />)}
+        {[0, .5, 1].map((ratio, i) => <text key={i} x={L + ratio * (W - L - R)} y={H - 9} textAnchor={i === 0 ? 'start' : i === 2 ? 'end' : 'middle'}>{shortDate(addDays(plotStart, Math.round(span * ratio)))}</text>)}
       </svg>
       </div>
       <div className="weight-history-inspect"><p>{points.length} measured {points.length === 1 ? 'day' : 'days'}<span>Drag the chart to inspect</span></p><div><button type="button" aria-label="Previous weigh-in" disabled={index <= 0} onClick={() => setSelectedDate(points[index - 1].date)}><Icon name="chevron_left" size={20} /></button><button type="button" aria-label="Next weigh-in" disabled={index >= points.length - 1} onClick={() => setSelectedDate(points[index + 1].date)}><Icon name="chevron_right" size={20} /></button></div></div>
       <div className="weight-history-legend"><span><i className="weight-history-line" />Recorded</span><span><i className="weight-history-dash" />7-day average</span>{goalVisible && <span><i className="weight-history-goal-line" />Goal</span>}</div>
       <div className="weight-history-footer"><div><span>Recorded change in view</span><strong>{points.length < 2 ? '—' : `${signed(change)} ${unit}`}</strong><small>{points.length} measured {points.length === 1 ? 'day' : 'days'}</small></div>{goal !== null && <div><span>Saved goal</span><strong>{goal.toFixed(1)} {unit}</strong><small>{Math.abs(last.value - goal) < .05 ? 'At your goal' : `${Math.abs(last.value - goal).toFixed(1)} ${unit} ${last.value > goal ? 'above' : 'below'} goal at last reading`}</small></div>}</div>
-      <details className="weight-history-data"><summary>Readings & chart details</summary><p>Dates are spaced to actual time. The axis is zoomed, not zero-based. The average uses logged days in the preceding 7 calendar days, not seven entries. Missing days are not filled; lines break across gaps longer than a week. One reading per day; if a day was logged twice, the last saved entry is shown.</p><table><thead><tr><th>Date</th><th>Weight · {unit}</th><th>7-day avg · {unit}</th></tr></thead><tbody>{[...points].reverse().map(p => <tr key={p.date}><td>{shortDate(p.date)}, {p.date.slice(0, 4)}</td><td>{p.value.toFixed(1)}</td><td>{p.mean === null ? '—' : p.mean.toFixed(1)}</td></tr>)}</tbody></table></details>
+      <details className="weight-history-data"><summary>Readings & chart details</summary><p>Dates are spaced to actual time between your first and latest reading in this window. The period filters which readings are shown; it does not add empty canvas before your first log. The average uses logged days in the preceding 7 calendar days, not seven entries. Missing days are not filled; lines break across gaps longer than a week. One reading per day; if a day was logged twice, the last saved entry is shown.</p><table><thead><tr><th>Date</th><th>Weight · {unit}</th><th>7-day avg · {unit}</th></tr></thead><tbody>{[...points].reverse().map(p => <tr key={p.date}><td>{shortDate(p.date)}, {p.date.slice(0, 4)}</td><td>{p.value.toFixed(1)}</td><td>{p.mean === null ? '—' : p.mean.toFixed(1)}</td></tr>)}</tbody></table></details>
     </>}
   </section>
 }

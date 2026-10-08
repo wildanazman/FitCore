@@ -87,7 +87,7 @@ export function Food() {
       <Reveal>
         <section className="food-score" aria-label="Daily calorie summary">
           <div className="food-score-top"><span>{Math.round(calPct)}% USED</span></div>
-          <div className="food-score-main"><div><span>{fuel.remaining < 0 ? 'OVER TARGET' : 'LEFT TO EAT'}</span><strong>{Math.abs(fuel.remaining).toLocaleString()}</strong><small>KCAL</small></div><div className="food-score-ring" style={{ background: `conic-gradient(#2453ee ${calPct}%, #dfe5ef ${calPct}%)` }}><div><Icon name="restaurant" size={26} /></div></div></div>
+          <div className="food-score-main"><div><span>{fuel.remaining < 0 ? 'OVER TARGET' : 'LEFT TO EAT'}</span><strong>{Math.abs(fuel.remaining).toLocaleString()}</strong><small>KCAL</small></div><div className="food-score-ring" style={{ background: `conic-gradient(var(--palette-accent) ${calPct}%, var(--palette-line) ${calPct}%)` }}><div><Icon name="restaurant" size={26} /></div></div></div>
           <div className="food-score-rule" />
           <div className="food-score-bottom"><div><span>EATEN</span><strong>{fuel.consumed.toLocaleString()}</strong></div><div><span>DAILY TARGET</span><strong>{fuel.budget.toLocaleString()}</strong></div></div>
           <div className="food-score-track" role="progressbar" aria-label={`${fuel.consumed} of ${fuel.budget} calories eaten`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(calPct)}><span style={{ width: `${calPct}%` }} /></div>

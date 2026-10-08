@@ -8,8 +8,8 @@
 
 html,
 body {
-  background-color: #f4f6fa;
-  color: #17253a;
+  background-color: var(--palette-bg);
+  color: var(--palette-ink);
 }
 
 body {
@@ -58,19 +58,19 @@ body {
   min-height: 100dvh;
   position: relative;
   overflow: hidden;
-  background-color: #f4f6fa;
+  background-color: var(--palette-bg);
   background-image: none;
 }
 
 /* Shared light-surface elevation. */
 .card-elev, .glow-soft { box-shadow: 0 5px 20px #263f6410; }
 .glow-lime { box-shadow: 0 5px 20px #2453ee20; }
-.diet-hero, .home-brief { background: #e8eeff; }
-.home-brief-alert { background: #fff1f0; }
+.diet-hero, .home-brief { background: var(--palette-tint); }
+.home-brief-alert { background: var(--palette-error-bg); }
 
 @media (min-width: 520px) {
   body {
-    background-color: #e8edf5;
+    background-color: var(--palette-soft);
     padding: 24px 0;
   }
   .app-shell {
@@ -78,7 +78,7 @@ body {
     min-height: 0;
     max-height: calc(100dvh - 48px);
     border-radius: 28px;
-    border: 1px solid #dfe5ef;
+    border: 1px solid var(--palette-line);
     box-shadow: 0 24px 80px rgba(35, 60, 105, 0.10);
   }
 }

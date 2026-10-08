@@ -1,1 +1,1 @@
-.fitcore-wordmark{display:inline-flex;align-items:center;gap:9px;color:#17253a;font:800 23px/1 'Hanken Grotesk',sans-serif;letter-spacing:-.035em;white-space:nowrap}.fitcore-wordmark>span:last-child>span{color:#2453ee}.fitcore-wordmark svg{flex:none}
+.fitcore-wordmark{display: inline-flex;align-items: center;gap: 9px;color: var(--palette-ink);font: 800 23px/1 'Hanken Grotesk',sans-serif;letter-spacing: -.035em;white-space: nowrap}.fitcore-wordmark>span:last-child>span{color: var(--palette-accent)}.fitcore-wordmark svg{flex: none}

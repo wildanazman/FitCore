@@ -6,13 +6,14 @@ import './index.css'
 import App from './App'
 import './theme.css'
 import { AppProvider } from './store/AppContext'
+import { ThemeProvider } from './store/ThemeContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MotionConfig reducedMotion="user"><HashRouter>
-      <AppProvider>
+      <ThemeProvider><AppProvider>
         <App />
-      </AppProvider>
+      </AppProvider></ThemeProvider>
     </HashRouter></MotionConfig>
   </StrictMode>,
 )

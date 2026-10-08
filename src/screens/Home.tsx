@@ -24,6 +24,8 @@ export function Home() {
   const reducedMotion = useReducedMotion()
   const [today, setToday] = useState(todayISO())
   const [date, setDate] = useState(today)
+  const [weightHidden, setWeightHidden] = useState(() => { try { return localStorage.getItem('fitcore-weight-hidden') !== 'false' } catch { return true } })
+  function toggleWeightVisibility() { setWeightHidden(hidden => { const next = !hidden; try { localStorage.setItem('fitcore-weight-hidden', String(next)) } catch { /* Keep privacy toggle usable when storage is unavailable. */ } return next }) }
   useEffect(() => {
     const refreshDay = () => {
       const next = todayISO()
@@ -61,7 +63,6 @@ export function Home() {
   const diet = dietDef(profile.dietMode)
   const fasting = diet.kind === 'window' && isToday ? windowState(profile.eatingWindowStartHour, profile.dietMode, nowMinutes()) : null
   const carbRemaining = Math.max(0, profile.netCarbCapG - netCarbsOn(state.foods, date))
-  const weightChange = toDisplayWeight(dayWeight - profile.startWeightKg, profile.units)
   const weightLabel = weightUnit(profile.units)
   const entries = [
     ...foods.map((food) => ({ id: food.id, kind: 'meal' as const, title: food.name, detail: food.slot, at: food.loggedAt, kcal: Math.round(food.kcal * food.servings), photo: food.photo, session: null })),
@@ -81,6 +82,7 @@ export function Home() {
 
     <div className="home-dashboard">
       <div className="home-primary-column">
+        <div className="home-weight-checkin"><button type="button" className="home-body-link" onClick={() => nav('/body')}><span className="home-body-icon"><Icon name="monitor_weight" size={26} /></span><span className="home-body-copy"><strong>Weight check-in</strong><small>{state.weights.some(w=>w.date === date) ? 'Weight logged · view progress' : 'Log your weight'}</small></span><span className="home-body-value">{weightHidden ? <span aria-label="Weight hidden">•••</span> : <>{toDisplayWeight(dayWeight, profile.units).toFixed(1)}<small>{weightLabel}</small></>}</span></button><button type="button" className="home-weight-visibility" onClick={toggleWeightVisibility} aria-label={weightHidden ? 'Show weight' : 'Hide weight'} aria-pressed={!weightHidden}><Icon name={weightHidden ? 'visibility_off' : 'visibility'} size={21}/></button></div>
         <EnergyBoard fuel={fuel} onOpenFood={() => nav(`/food?date=${date}`)} />
         <div className="home-quick-actions">
           <motion.button type="button" className="home-log-meal" onClick={() => nav(`/food?add=1&date=${date}`)} whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="restaurant" size={23} /></span><span><strong>Log a meal</strong><small>Search or scan</small></span><Icon name="add" size={21} /></motion.button>
@@ -122,8 +124,7 @@ export function Home() {
           {tasks.length > 0 ? <><div className="home-habit-summary"><span>{doneTasks} of {tasks.length} planned actions complete</span><span>{Math.round(doneTasks / tasks.length * 100)}%</span></div><div className="home-habit-list">{tasks.slice(0, 3).map((task) => <label key={task.id} className={task.completed ? 'is-done' : ''}><input type="checkbox" checked={task.completed} onChange={() => toggleDietTask(task.id)} /><span className="home-habit-check"><Icon name="check" size={15} /></span><span>{task.title}</span></label>)}</div>{tasks.length > 3 && <button type="button" className="home-text-link" onClick={() => nav('/diet')}>See all {tasks.length} actions<Icon name="arrow_forward" size={16} /></button>}</> : <button type="button" className="home-create-plan" onClick={() => nav('/diet')}><Icon name="add" size={18} />Build your weekly plan<span>One small promise at a time.</span></button>}
         </section>
 
-        <button type="button" className="home-body-link" onClick={() => nav('/body')}><span className="home-body-icon"><Icon name="monitor_weight" size={26} /></span><span className="home-body-copy"><strong>{isToday?'Weight check-in':`Weight as of ${shortDate(date)}`}</strong><small>{state.weights.some(w=>w.date<=date) ? `${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} ${weightLabel} since you started` : 'Starting weight · no weigh-in yet'}</small></span><span className="home-body-value">{toDisplayWeight(dayWeight, profile.units).toFixed(1)}<small>{weightLabel}</small></span><Icon name="chevron_right" size={18} /></button>
-        <WeightFeedback date={date}/>
+        {!weightHidden && <WeightFeedback date={date}/>}
       </div>
     </div>
   </div>

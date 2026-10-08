@@ -8,8 +8,10 @@ import { downloadCSV } from '../lib/csv'
 import { DIET_LIST } from '../lib/diet'
 import type { DietMode, UserProfile } from '../types'
 import './settings.css'
+import { THEMES, useTheme } from '../store/ThemeContext'
 
 export function Settings() {
+  const { theme, setTheme } = useTheme()
   const { state, profile, weightKg, updateProfile, reset } = useApp()
   const navigate = useNavigate()
   const [category, setCategory] = useState<'profile' | 'targets' | 'preferences' | 'data'>('profile')
@@ -25,6 +27,7 @@ export function Settings() {
   function clearEverything() {
     if (confirmation !== 'CLEAR') return
     reset()
+    setTheme('classic')
     navigate('/', { replace: true })
   }
 
@@ -54,6 +57,7 @@ export function Settings() {
         {(profile.dietMode === 'omad' || profile.dietMode === '16:8') && <Field id="settings-window" label="Eating window starts"><select id="settings-window" value={profile.eatingWindowStartHour} onChange={(e) => updateProfile({ eatingWindowStartHour: +e.target.value })}>{Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}:00</option>)}</select></Field>}
       </div></section>
 
+      <section className="settings-section" hidden={category !== 'preferences'} aria-labelledby="settings-theme-title"><div className="settings-section-head"><h2 id="settings-theme-title">Make it yours.</h2><p>One app. Your colours. Changes apply across every page.</p></div><div className="theme-options">{THEMES.map(option => <button type="button" className="theme-option" key={option.id} aria-pressed={theme === option.id} onClick={() => setTheme(option.id)}><span className="theme-preview" aria-hidden="true">{option.colors.map(color => <span key={color} style={{ background: color }}/>)}</span><strong>{option.name}{theme === option.id && <Icon name="check_circle" size={18}/>}</strong><small>{option.description}</small></button>)}</div></section>
       <details className="settings-more" open hidden={category !== 'preferences'}><summary>Connections & preferences <Icon name="expand_more" size={22} /></summary><div className="settings-more-body">
         <h3>Wearables</h3><p>Saved as preferences; live device syncing is not available yet.</p>
         {([['appleHealth', 'Apple Health'], ['garmin', 'Garmin Connect'], ['strava', 'Strava']] as const).map(([key, label]) => <Toggle key={key} label={label} on={profile.wearables[key]} onClick={() => updateProfile({ wearables: { ...profile.wearables, [key]: !profile.wearables[key] } })} />)}

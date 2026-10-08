@@ -11,7 +11,7 @@ import { MALL_DIRECTORIES, mallRestaurants, type MallDirectoryKey, type MallPlac
 import './eat-out.css'
 import { RouletteSound } from '../lib/rouletteSound'
 
-const colors = ['#2453ee', '#145e54', '#854ac0', '#a44515', '#17253a']
+const colors = ['var(--palette-accent)', 'var(--palette-success)', '#854ac0', '#a44515', 'var(--palette-ink)']
 const safeLink = (url: string) => { try { const u = new URL(url); return u.protocol === 'https:' ? u.href : undefined } catch { return undefined } }
 export function EatOut() {
   const nav = useNavigate(), reduced = useReducedMotion()
@@ -126,7 +126,7 @@ export function EatOut() {
       <p>{googleResults ? 'Ranked using Google rating, review count and distance among results returned—not a complete restaurant directory.' : mallResults ? 'Published mall directory, with reviewed pork/alcohol exclusions.' : 'Nearest among the mapped results returned—not a best-rated ranking or a complete restaurant directory.'}</p>
       <div className="eat-out-wheel-section">
         <div className="eat-out-spin-heading"><h3>Leave it to the spin.</h3><button type="button" className="eat-out-sound" aria-pressed={!muted} aria-label={muted ? 'Turn sound on' : 'Mute sound'} onClick={() => { setMuted(!muted); if (!muted) sound.current.stop() }}><Icon name={muted ? 'volume_off' : 'volume_up'} size={20} />{muted ? 'Sound off' : 'Sound on'}</button></div>
-        <div className="eat-out-wheel-wrap" aria-hidden="true"><span className="eat-out-pointer" /><div className="eat-out-wheel" style={{ transform: `rotate(${rotation}deg)`, transitionDuration: reduced ? '0s' : '3.1s', background: selected.length ? `conic-gradient(${Array.from({ length: Math.min(selected.length, 20) }, (_, i) => `${colors[i % colors.length]} ${i * 100 / Math.min(selected.length, 20)}% ${(i + 1) * 100 / Math.min(selected.length, 20)}%`).join(',')})` : '#e8edf5' }} /><div className="eat-out-wheel-center"><Icon name="restaurant" size={32} /><span>{spinning ? 'Picking…' : 'Let’s eat'}</span></div></div>
+        <div className="eat-out-wheel-wrap" aria-hidden="true"><span className="eat-out-pointer" /><div className="eat-out-wheel" style={{ transform: `rotate(${rotation}deg)`, transitionDuration: reduced ? '0s' : '3.1s', background: selected.length ? `conic-gradient(${Array.from({ length: Math.min(selected.length, 20) }, (_, i) => `${colors[i % colors.length]} ${i * 100 / Math.min(selected.length, 20)}% ${(i + 1) * 100 / Math.min(selected.length, 20)}%`).join(',')})` : 'var(--palette-soft)' }} /><div className="eat-out-wheel-center"><Icon name="restaurant" size={32} /><span>{spinning ? 'Picking…' : 'Let’s eat'}</span></div></div>
         <div className="eat-out-ticker" aria-hidden="true">{spinning ? ticker : winner?.name ?? 'Your next favourite awaits.'}</div>
         <button className="eat-out-primary" disabled={!selected.length || blocked} onClick={spin}><Icon name="casino" size={22} />{spinning ? 'Finding your next stop…' : winner ? 'Spin again' : `Spin all ${selected.length} places`}</button>
         <p aria-live="polite">{spinning ? 'Spinning your choices…' : selected.length ? `${selected.length} places included. Every place has an equal chance.` : 'Include at least one place below to spin.'}</p>

@@ -1,7 +1,7 @@
-.log-date-picker { margin:18px 0 22px; font:400 14px/1.4 'Hanken Grotesk',sans-serif; color:var(--app-ink); }
-.log-date-picker label { display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:700; }
-.log-date-picker input { min-width:0; max-width:70%; min-height:44px; padding:8px 12px; border:1px solid var(--app-line); border-radius:10px; background:#fff; color:inherit; font:inherit; }
-.log-date-picker [role=group] { display:flex; gap:8px; margin-top:10px; }
-.log-date-picker button { min-height:44px; padding:8px 14px; border:1px solid var(--app-line); border-radius:10px; background:#fff; color:var(--app-muted); font:700 13px 'Hanken Grotesk',sans-serif; }
-.log-date-picker button[aria-pressed=true] { background:#e8eeff; color:var(--app-blue); border-color:var(--app-blue); }
-.log-date-picker p { margin:10px 0 0; color:var(--app-muted); font-size:13px; max-width:50ch; }
+.log-date-picker { margin: 18px 0 22px; font: 400 14px/1.4 'Hanken Grotesk',sans-serif; color: var(--app-ink); }
+.log-date-picker label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 700; }
+.log-date-picker input { min-width: 0; max-width: 70%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--app-line); border-radius: 10px; background: var(--palette-surface); color: inherit; font: inherit; }
+.log-date-picker [role=group] { display: flex; gap: 8px; margin-top: 10px; }
+.log-date-picker button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--app-line); border-radius: 10px; background: var(--palette-surface); color: var(--app-muted); font: 700 13px 'Hanken Grotesk',sans-serif; }
+.log-date-picker button[aria-pressed=true] { background: var(--palette-tint); color: var(--app-blue); border-color: var(--app-blue); }
+.log-date-picker p { margin: 10px 0 0; color: var(--app-muted); font-size: 13px; max-width: 50ch; }

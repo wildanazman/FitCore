@@ -1,11 +1,11 @@
-.fitcore-topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:24px 20px 0; margin-bottom:26px; color:#17253a; font-family:'Hanken Grotesk',sans-serif; }
-.fitcore-topbar.is-inset { padding:0; }
-.fitcore-topbar button { font:inherit; cursor:pointer; touch-action:manipulation; }
-.fitcore-topbar button:focus-visible { outline:3px solid #2453ee; outline-offset:4px; }
-.fitcore-topbar-brand { display:inline-flex; align-items:center; gap:9px; min-height:44px; padding:0; border:0; background:transparent; color:#17253a; font-size:25px!important; font-weight:800!important; letter-spacing:-.035em; }
-.fitcore-topbar-brand>span>span { color:#2453ee; }
-.fitcore-topbar-right { display:flex; align-items:center; gap:16px; }
-.fitcore-topbar-date { font-size:13px; font-weight:600; color:#627089; }
-.fitcore-topbar-profile { position:relative; display:grid; place-items:center; width:44px; height:44px; border:1px solid #d6dfef; border-radius:50%; background:#e5ecfc; color:#24447e; font-size:18px!important; font-weight:800!important; }
-.fitcore-topbar-profile:hover { background:#d9e3fc; }
-.fitcore-topbar-profile>span { position:absolute; right:-2px; bottom:-1px; display:grid; place-items:center; width:18px; height:18px; background:#fff; border:2px solid #f4f6fa; border-radius:50%; }
+.fitcore-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 20px 0; margin-bottom: 26px; color: var(--palette-ink); font-family: 'Hanken Grotesk',sans-serif; }
+.fitcore-topbar.is-inset { padding: 0; }
+.fitcore-topbar button { font: inherit; cursor: pointer; touch-action: manipulation; }
+.fitcore-topbar button:focus-visible { outline: 3px solid var(--palette-accent); outline-offset: 4px; }
+.fitcore-topbar-brand { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--palette-ink); font-size: 25px!important; font-weight: 800!important; letter-spacing: -.035em; }
+.fitcore-topbar-brand>span>span { color: var(--palette-accent); }
+.fitcore-topbar-right { display: flex; align-items: center; gap: 16px; }
+.fitcore-topbar-date { font-size: 13px; font-weight: 600; color: var(--palette-muted); }
+.fitcore-topbar-profile { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--palette-line); border-radius: 50%; background: var(--palette-tint); color: var(--palette-accent); font-size: 18px!important; font-weight: 800!important; }
+.fitcore-topbar-profile:hover { background: var(--palette-tint); }
+.fitcore-topbar-profile>span { position: absolute; right: -2px; bottom: -1px; display: grid; place-items: center; width: 18px; height: 18px; background: var(--palette-surface); border: 2px solid var(--palette-bg); border-radius: 50%; }
