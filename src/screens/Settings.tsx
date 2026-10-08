@@ -11,6 +11,7 @@ import './settings.css'
 import { THEMES, useTheme } from '../store/ThemeContext'
 import { BackupTransfer } from '../components/BackupTransfer'
 import { GeminiModelPicker } from '../components/GeminiModelPicker'
+import { GoogleAccount } from '../components/GoogleAccount'
 
 export function Settings() {
   const { theme, setTheme } = useTheme()
@@ -39,6 +40,7 @@ export function Settings() {
     <div className="settings-content">
       {category !== 'overview' && <button type="button" className="settings-overview-back" onClick={() => { setCategory('overview'); setConfirmReset(false); setConfirmation('') }}><Icon name="arrow_back" size={20}/>All settings</button>}
       {category === 'overview' && <>
+        <GoogleAccount />
         <button type="button" className="settings-profile-entry" onClick={() => setCategory('profile')}><span className="settings-avatar" aria-hidden="true">{(profile.name.trim()[0] || 'F').toUpperCase()}</span><span><strong>{profile.name.trim() || 'Your profile'}</strong><small>{profile.age} years · {profile.heightCm} cm · {profile.units === 'metric' ? 'Metric' : 'Imperial'}</small></span><span className="settings-edit-label">Edit<Icon name="arrow_forward" size={18}/></span></button>
         <section className="settings-hub" aria-label="Personalise FitCore"><h2>Make it work for you.</h2><div className="settings-menu">
           <SettingsRow icon="tune" title="Goals & daily targets" detail={`${profile.goal === 'lose' ? 'Lose fat' : profile.goal === 'gain' ? 'Build' : 'Maintain'} · ${(profile.calorieTargetOverride ?? automaticTarget).toLocaleString()} kcal/day`} onClick={() => setCategory('targets')}/>

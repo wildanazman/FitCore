@@ -7,13 +7,14 @@ import App from './App'
 import './theme.css'
 import { AppProvider } from './store/AppContext'
 import { ThemeProvider } from './store/ThemeContext'
+import { AuthProvider } from './store/AuthContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MotionConfig reducedMotion="user"><HashRouter>
-      <ThemeProvider><AppProvider>
+      <ThemeProvider><AppProvider><AuthProvider>
         <App />
-      </AppProvider></ThemeProvider>
+      </AuthProvider></AppProvider></ThemeProvider>
     </HashRouter></MotionConfig>
   </StrictMode>,
 )

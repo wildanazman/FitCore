@@ -1,0 +1,5 @@
+Mode: Operate. Preserve FitCore Settings typography, palette tokens and layout. Add an account section with Google's official sign-in button, verified identity, administrator label only from the server, sign-out and recoverable connection errors.
+
+Account connection is separate from the existing device-local fitness state. Login, logout and token expiry must not seed, restore, clear or replace food, weight, activity, plans or profile. Explain that account connection does not yet sync logs or enforce per-user AI quotas. Signing out does not hide local records from another person using the same browser. Keep backup controls available.
+
+The Google web client uses only basic identity, with production and explicit local origins. Verify credentials on the server using Google's official authentication library, including signature, issuer, audience and expiry. Never derive admin privileges from client claims. Store the short-lived credential separately in session storage; clear only that key on logout. No client secret is shipped to the browser.
