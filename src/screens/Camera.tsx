@@ -4,7 +4,9 @@ import { useApp } from '../store/AppContext'
 import { hasExcludedIngredients } from '../../shared/foodSuitability.js'
 import { Icon } from '../components/Icon'
 import { LogDatePicker } from '../components/LogDatePicker'
-import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type DetectionItem, type FoodAIProvider } from '../lib/foodAI'
+import { detectFood, foodAIUsage, recordFoodAIUsage, slotForNow, type Detection, type DetectionItem } from '../lib/foodAI'
+import { GeminiModelPicker } from '../components/GeminiModelPicker'
+import { geminiModelOrDefault } from '../../shared/geminiModels.js'
 import { lookupFood, sourceLabel } from '../lib/foodLookup'
 import { isLogDate, timestampOnDate, todayISO, uid } from '../lib/date'
 import type { FoodEntry, MealSlot } from '../types'
@@ -21,7 +23,7 @@ function componentTotals(det: Detection): Detection {
 }
 
 export function Camera() {
-  const { profile, addFood } = useApp()
+  const { profile, addFood, updateProfile } = useApp()
   const nav = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedDate = searchParams.get('date') ?? ''
@@ -37,7 +39,6 @@ export function Camera() {
   const [cameraReady, setCameraReady] = useState(false)
   const [cameraRequested, setCameraRequested] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
-  const [provider, setProvider] = useState<FoodAIProvider>('auto')
   const [mealSlot, setMealSlot] = useState<MealSlot>(slotForNow())
   const [correcting,setCorrecting]=useState<number|null>(null)
   const [facing,setFacing]=useState<'environment'|'user'>('environment')
@@ -99,13 +100,13 @@ export function Camera() {
     setError(null)
     stopCamera()
     try {
-      const result = await detectFood(dataUrl, profile.anthropicApiKey, provider)
+      const result = await detectFood(dataUrl, geminiModelOrDefault(profile.geminiModel))
       recordFoodAIUsage(result.source)
-      setDet({ ...componentTotals(result), requestedProvider: provider })
+      setDet(componentTotals(result))
       setServings(1)
       setPhase('result')
-    } catch {
-      setError('Detection failed. Try again or log manually.')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Detection failed. Try another model or search the food list.')
       setPhase('result')
     }
   }
@@ -251,7 +252,7 @@ export function Camera() {
             <p className="capture-guide" aria-live="polite">{cameraError??(captureMode==='meal'?'Whole plate in frame. A little daylight helps.':'Include the full cup and its size or label.')}</p>
             <div className="capture-controls"><button type="button" onClick={()=>galleryRef.current?.click()} aria-label="Upload from gallery"><Icon name="photo_library" size={25}/><span>Gallery</span></button><button type="button" className="capture-shutter" onClick={cameraReady?captureLivePhoto:()=>setCameraRequested(true)} aria-label={cameraReady?'Take photo':'Open camera'} disabled={cameraRequested&&!cameraReady&&!cameraError}><span><Icon name="photo_camera" size={30}/></span></button><button type="button" onClick={()=>setFacing(value=>value==='environment'?'user':'environment')} aria-label={facing==='environment'?'Switch to front camera':'Switch to back camera'}><Icon name="flip_camera_ios" size={25}/><span>{facing==='environment'?'Back':'Front'}</span></button></div>
             <p className="capture-shutter-label">{cameraReady?'Tap to capture & review':'Open camera, or pick a saved photo'}</p>
-            <details className="capture-options"><summary>Analysis options <Icon name="expand_more" size={18}/></summary><ProviderPicker value={provider} onChange={setProvider}/><p>Photo analysis needs an online vision service. Nothing is logged until you confirm.</p></details>
+            <details className="capture-options"><summary>Analysis options <Icon name="expand_more" size={18}/></summary><GeminiModelPicker id="camera-gemini-model" value={profile.geminiModel} onChange={geminiModel => updateProfile({ geminiModel })}/><p>Google Search can have separate charges. Nothing is logged until you confirm.</p></details>
           </div>
         </>
       )}
@@ -281,7 +282,7 @@ export function Camera() {
               {breakdownItems.length > 0 && <section className="camera-result-section"><h2>Inside your plate.</h2><p>{det.items?.length ? 'Estimated calories for each food. Available nutrients are shown below.' : 'Only a whole-meal estimate was returned. Retry analysis for a component breakdown.'}</p><div className="camera-components">{breakdownItems.map((item,index)=><article key={index}><header><div><h3>{item.name}</h3><p>{item.portion ? `${item.portion} · ` : ''}{item.grams ? `${Math.round(item.grams*servings)} g estimated` : 'Portion not measured'}</p></div><strong>{Math.round(item.kcal*servings)}<small>kcal</small></strong></header><ComponentNutrients item={item} servings={servings}/>{det.items?.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value)))&&<div className="camera-component-adjust"><span>Adjust this portion</span><button type="button" aria-label={`Reduce ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,.75)}>−25%</button><button type="button" aria-label={`Increase ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,1.25)}>+25%</button></div>}</article>)}</div></section>}
               <section className="camera-result-section camera-food-corrections"><h2>Not the right food?</h2><p>Replace a component with a local or online serving reference.</p>{correcting===null?<div>{breakdownItems.map((item,index)=><button type="button" key={index} onClick={()=>setCorrecting(index)}><span>{item.name}</span><span>Change<Icon name="edit" size={17}/></span></button>)}</div>:<CorrectMealComponent key={correcting} name={breakdownItems[correcting]?.name??det.name} onApply={item=>replaceComponent(correcting,item)} onCancel={()=>setCorrecting(null)}/>}</section>
               {(det.assumptions || det.note) && <details className="camera-result-details"><summary>About this estimate <Icon name="expand_more" size={20} /></summary><div>{det.assumptions && <p>{det.assumptions}</p>}{det.note && <p>{det.note}</p>}</div></details>}
-              <details className="camera-result-details"><summary>Analysis details <Icon name="expand_more" size={20} /></summary><div><p>Requested mode: {foodProviderLabel(det.requestedProvider ?? provider)}</p><p>Result source: {detectionSourceLabel(det.source)}</p><p>{detectionUsageLabel(det.source, foodAIUsage(det.source))}</p><button type="button" onClick={retryAnalysis}>Retry analysis with this photo</button></div></details>
+              <details className="camera-result-details"><summary>Analysis details <Icon name="expand_more" size={20} /></summary><div><p>Model used: {det.model ?? 'Not reported'}</p><p>Selected model: {det.requestedModel ?? 'Not reported'}</p><p>Result source: {detectionSourceLabel(det.source)}</p>{det.usage && <p>Tokens: {det.usage.inputTokens.toLocaleString()} input · {det.usage.outputTokens.toLocaleString()} output · {det.usage.thinkingTokens.toLocaleString()} thinking. Counts are for the successful response, not earlier retries or search charges.</p>}<p>{detectionUsageLabel(det.source, foodAIUsage(det.source))}</p><GeminiModelPicker id="result-gemini-model" value={profile.geminiModel} onChange={geminiModel => updateProfile({ geminiModel })}/><button type="button" onClick={retryAnalysis}>Retry with selected model</button></div></details>
             </> : <div className="camera-result-edit"><EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} /></div>}
           </div>
           {phase === 'result' && <div className="camera-result-actions"><button type="button" onClick={() => setPhase('edit')}><Icon name="edit" size={20} /> Edit</button><button type="button" onClick={confirm}>Save meal <Icon name="check" size={20} /></button></div>}
@@ -309,34 +310,6 @@ export function Camera() {
   )
 }
 
-function ProviderPicker({ value, onChange }: { value: FoodAIProvider; onChange: (value: FoodAIProvider) => void }) {
-  const options: Array<{ value: FoodAIProvider; label: string; detail: string }> = [
-    { value: 'auto', label: 'Auto', detail: 'Best available' },
-    { value: 'gemini', label: 'Gemini', detail: 'Vision + web' },
-    { value: 'anthropic', label: 'Anthropic', detail: 'Claude vision' },
-  ]
-
-  return (
-    <div className="w-full max-w-sm text-left">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-label-caps text-[10px] uppercase tracking-widest text-on-surface-variant">Analysis engine</span>
-        <span className="font-data-mono text-[10px] text-lime">{options.find((option) => option.value === value)?.detail}</span>
-      </div>
-      <div className="grid grid-cols-3 gap-1 rounded-xl border border-white/15 bg-black/35 p-1 backdrop-blur-md">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={`rounded-lg px-1 py-2 text-center transition ${value === option.value ? 'bg-lime text-on-lime' : 'text-on-surface-variant hover:bg-white/10'}`}
-          >
-            <span className="block font-metric-md text-[11px]">{option.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function detectionSourceLabel(source: Detection['source']) {
   switch (source) {
@@ -356,23 +329,13 @@ function detectionSourceLabel(source: Detection['source']) {
   }
 }
 
-function foodProviderLabel(provider: FoodAIProvider) {
-  switch (provider) {
-    case 'auto':
-      return 'Auto'
-    case 'gemini':
-      return 'Gemini'
-    case 'anthropic':
-      return 'Anthropic'
-  }
-}
 
 function detectionUsageLabel(source: Detection['source'], usedThisMonth: number) {
   switch (source) {
     case 'local':
       return 'Usage: Unlimited · offline local reference'
     case 'gemini':
-      return `Free tier: Gemini · ${usedThisMonth} request(s) today · Google Search has a shared daily limit; exact remaining is in AI Studio`
+      return `Gemini · ${usedThisMonth} successful scan(s) today · billing and remaining quota are in Google AI Studio`
     case 'claude':
       return `Anthropic · ${usedThisMonth} request(s) today · free access is trial credit, not unlimited`
     case 'openfoodfacts':

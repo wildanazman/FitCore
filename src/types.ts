@@ -89,6 +89,7 @@ export interface UserProfile {
   notif: NotifPrefs
   /** Optional Anthropic API key — enables real Claude vision food detection + live coach. */
   anthropicApiKey: string
+  geminiModel?: import('../shared/geminiModels.js').GeminiModel
   onboarded: boolean
 }
 

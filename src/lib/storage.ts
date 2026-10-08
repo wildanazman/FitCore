@@ -3,6 +3,7 @@
 import type { AppState, UserProfile } from '../types'
 import { todayISO, uid } from './date'
 import { generatePlan } from './plan'
+import { DEFAULT_GEMINI_MODEL, geminiModelOrDefault } from '../../shared/geminiModels.js'
 
 const KEY = 'fitcore.state.v1'
 const FOOD_AI_USAGE_KEY = 'fitcore-food-ai-usage-v1'
@@ -44,6 +45,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   wearables: { appleHealth: false, garmin: false, strava: false },
   notif: { morningBrief: true, underFuelAlert: true, preRace: true },
   anthropicApiKey: '',
+  geminiModel: DEFAULT_GEMINI_MODEL,
   onboarded: false,
 }
 
@@ -68,6 +70,7 @@ export function loadState(): AppState | null {
         : DEFAULT_PROFILE.halfMarathonGoal
     const hadCustomGoal = Object.prototype.hasOwnProperty.call(parsed.profile, 'runGoalTimeMin')
     parsed.profile = { ...DEFAULT_PROFILE, ...parsed.profile }
+    parsed.profile.geminiModel = geminiModelOrDefault(parsed.profile.geminiModel)
     if (!hadCustomGoal) {
       const legacyMinutes = { finish: null, sub245: 165, sub240: 160, sub235: 155, sub230: 150, sub215: 135, sub200: 120, sub145: 105 }
       parsed.profile.runGoalTimeMin = parsed.profile.raceType === 'half-marathon' ? legacyMinutes[migratedGoal] : null

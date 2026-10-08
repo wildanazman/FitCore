@@ -1,19 +1,16 @@
 // Accurate food-photo analysis. Priority: correctness over speed.
 //
-// Primary: Claude Opus 4.8 (vision + adaptive thinking + web search grounding)
-//          via the official Anthropic SDK — uses ANTHROPIC_API_KEY.
-// Fallback: Gemini (GEMINI_API_KEY) with Google Search grounding.
+// Photo scans use Gemini only, with a validated user-selected model.
 //
-// Both engines identify each component on the plate, look up real nutrition
+// Gemini identifies each component on the plate and requests nutrition
 // data on the web (MyFCD preferred for Malaysian food), and return an
 // itemised JSON estimate.
 
-import Anthropic from '@anthropic-ai/sdk'
+import { isGeminiModel, DEFAULT_GEMINI_MODEL } from '../shared/geminiModels.js'
 
 export const config = { maxDuration: 60 }
 
 const MAX_IMAGE_CHARS = 7_000_000
-const GEMINI_MODEL = 'gemini-2.5-flash'
 const GEMINI_TIMEOUT_MS = 55_000
 const GEMINI_ATTEMPTS = 2
 const RETRY_STATUS = new Set([429, 500, 502, 503, 504])
@@ -79,59 +76,8 @@ function normalizeDetection(value, source) {
   }
 }
 
-// ---------- Claude (primary) ----------
 
-async function detectWithClaude(apiKey, inlineData) {
-  const client = new Anthropic({ apiKey, timeout: 55_000, maxRetries: 2 })
-
-  let messages = [
-    {
-      role: 'user',
-      content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: inlineData.mimeType, data: inlineData.data },
-        },
-        { type: 'text', text: prompt },
-      ],
-    },
-  ]
-
-  let response = await client.messages.create({
-    model: 'claude-opus-4-8',
-    max_tokens: 16000,
-    thinking: { type: 'adaptive' },
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
-    messages,
-  })
-
-  // Server-side web search can pause the turn; resume until done (bounded).
-  let continuations = 0
-  while (response.stop_reason === 'pause_turn' && continuations < 4) {
-    messages = [...messages, { role: 'assistant', content: response.content }]
-    response = await client.messages.create({
-      model: 'claude-opus-4-8',
-      max_tokens: 16000,
-      thinking: { type: 'adaptive' },
-      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }],
-      messages,
-    })
-    continuations++
-  }
-
-  if (response.stop_reason === 'refusal') {
-    throw new Error('Claude declined to analyse this image')
-  }
-
-  const text = response.content
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('')
-  if (!text) throw new Error(`Claude returned no text (${response.stop_reason})`)
-  return normalizeDetection(parseJsonObject(text), 'claude')
-}
-
-// ---------- Gemini (fallback) ----------
+// ---------- Gemini ----------
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -152,8 +98,7 @@ async function callGemini(endpoint, payload) {
   }
 }
 
-async function detectWithGemini(apiKey, inlineData) {
-  const model = process.env.GEMINI_MODEL || GEMINI_MODEL
+async function detectWithGemini(apiKey, inlineData, model) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`
   const payload = {
     contents: [{ role: 'user', parts: [{ text: prompt.replace('web search', 'Google Search') }, { inlineData }] }],
@@ -201,7 +146,9 @@ async function detectWithGemini(apiKey, inlineData) {
       throw new Error(lastError)
     }
     try {
-      return normalizeDetection(parseJsonObject(text), 'gemini')
+      const usage = result.json.usageMetadata || {}
+      return { ...normalizeDetection(parseJsonObject(text), 'gemini'), model: result.json.modelVersion || model, requestedModel: model,
+        usage: { inputTokens: Number(usage.promptTokenCount) || 0, outputTokens: Number(usage.candidatesTokenCount) || 0, thinkingTokens: Number(usage.thoughtsTokenCount) || 0 } }
     } catch {
       lastError = 'Gemini returned an unreadable nutrition estimate'
       if (attempt < GEMINI_ATTEMPTS) {
@@ -229,41 +176,22 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: 'Invalid JSON body' })
   }
 
-  const { image, provider = 'auto' } = body
-  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return sendJson(res, 400, { error: 'Expected a JSON object' })
+  const { image } = body
+  if (body.provider === 'anthropic') return sendJson(res, 400, { error: 'Photo scans now use Gemini. Refresh FitCore and choose a Gemini model.' })
+  if (body.model !== undefined && !isGeminiModel(body.model)) return sendJson(res, 400, { error: 'Unsupported Gemini model. Choose a model in Settings.' })
+  const model = body.model || (isGeminiModel(process.env.GEMINI_MODEL) ? process.env.GEMINI_MODEL : DEFAULT_GEMINI_MODEL)
   const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-  if (!anthropicKey && !geminiKey) {
-    return sendJson(res, 503, { error: 'No AI key configured (set ANTHROPIC_API_KEY or GEMINI_API_KEY)' })
-  }
-  if (provider === 'anthropic' && !anthropicKey) {
-    return sendJson(res, 400, { error: 'Anthropic mode needs ANTHROPIC_API_KEY or an Anthropic API key in Settings.' })
-  }
-  if (provider === 'gemini' && !geminiKey) {
-    return sendJson(res, 400, { error: 'Gemini mode needs GEMINI_API_KEY.' })
-  }
+  if (!geminiKey) return sendJson(res, 503, { error: 'Photo analysis needs GEMINI_API_KEY configured on the server.' })
   if (typeof image !== 'string') return sendJson(res, 400, { error: 'Expected an image data URL' })
   if (image.length > MAX_IMAGE_CHARS) return sendJson(res, 413, { error: 'Image is too large' })
 
   const inlineData = dataUrlToInlineData(image)
   if (!inlineData) return sendJson(res, 400, { error: 'Expected a jpeg, png, or webp data URL' })
 
-  const errors = []
-
-  if (provider === 'anthropic' && anthropicKey) {
-    try {
-      return sendJson(res, 200, await detectWithClaude(anthropicKey, inlineData))
-    } catch (err) {
-      errors.push(`Claude: ${err?.message || 'failed'}`)
-    }
+  try {
+    return sendJson(res, 200, await detectWithGemini(geminiKey, inlineData, model))
+  } catch (err) {
+    return sendJson(res, 502, { error: `Gemini: ${err?.message || 'Photo analysis failed'}. Try another model in Settings or search the food list.` })
   }
-
-  if (provider !== 'anthropic' && geminiKey) {
-    try {
-      return sendJson(res, 200, await detectWithGemini(geminiKey, inlineData))
-    } catch (err) {
-      errors.push(`Gemini: ${err?.message || 'failed'}`)
-    }
-  }
-
-  return sendJson(res, 502, { error: errors.join(' | ') || 'Food AI failed' })
 }

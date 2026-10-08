@@ -1,8 +1,9 @@
 import fs from 'node:fs'
 import assert from 'node:assert/strict'
+import { DEFAULT_GEMINI_MODEL } from '../shared/geminiModels.js'
 import { chromium } from '/Users/wildan/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
 const profileText=fs.readFileSync('src/lib/storage.ts','utf8').match(/export const DEFAULT_PROFILE: UserProfile = (\{[\s\S]*?\n\})/)[1]
-const profile={...Function(`return (${profileText})`)(),name:'Test',onboarded:true}
+const profile={...Function('DEFAULT_GEMINI_MODEL',`return (${profileText})`)(DEFAULT_GEMINI_MODEL),name:'Test',onboarded:true}
 const state={v:1,profile,foods:[],weights:[],photos:[],sessions:[],dietTasks:[]}
 const browser=await chromium.launch({headless:true,executablePath:'/Users/wildan/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'})
 try {

@@ -1,5 +1,6 @@
 import type { AppState } from '../types'
 import { DEFAULT_PROFILE, STATE_VERSION } from './storage'
+import { geminiModelOrDefault } from '../../shared/geminiModels.js'
 
 export interface Backup { format: 'fitcore-backup'; version: 1; exportedAt: string; state: AppState; theme: string }
 export function makeBackup(state: AppState, theme: string): Backup {
@@ -24,6 +25,7 @@ export function parseBackup(raw: string): Backup {
   const p = state.profile
   for (const [key, defaultValue] of Object.entries(DEFAULT_PROFILE)) {
     const value = p[key]
+    if (key === 'geminiModel' && value === undefined) continue // Older backups predate model selection.
     if (Array.isArray(defaultValue)) assert(Array.isArray(value))
     else if (record(defaultValue)) { assert(record(value)); for (const [sub, v] of Object.entries(defaultValue)) assert(typeof value[sub] === typeof v) }
     else if (defaultValue !== null) assert(typeof value === typeof defaultValue)
@@ -72,7 +74,7 @@ export function parseBackup(raw: string): Backup {
   if(Array.isArray(p.runWeekFeedback))assert(p.runWeekFeedback.every(v=>record(v)&&typeof v.week==='number'&&['comfortable','hard','missed'].includes(String(v.response))))
   if(Array.isArray(p.homeEquipment))assert(p.homeEquipment.every(v=>['mat','dumbbell','bench','kettlebell'].includes(String(v))))
   if(state.streakMilestonesSeen!==undefined)assert(Array.isArray(state.streakMilestonesSeen)&&state.streakMilestonesSeen.every(v=>typeof v==='number'))
-  return { format:'fitcore-backup', version:1, exportedAt:typeof data.exportedAt==='string'?data.exportedAt:'', theme:typeof data.theme==='string'?data.theme:'classic', state: { ...(state as unknown as AppState), profile: { ...(p as unknown as AppState['profile']), anthropicApiKey:'' } } }
+  return { format:'fitcore-backup', version:1, exportedAt:typeof data.exportedAt==='string'?data.exportedAt:'', theme:typeof data.theme==='string'?data.theme:'classic', state: { ...(state as unknown as AppState), profile: { ...(p as unknown as AppState['profile']), anthropicApiKey:'', geminiModel:geminiModelOrDefault(p.geminiModel) } } }
 }
 export function downloadBackup(state: AppState, theme: string) {
   const url=URL.createObjectURL(new Blob([JSON.stringify(makeBackup(state,theme),null,2)],{type:'application/json'}))

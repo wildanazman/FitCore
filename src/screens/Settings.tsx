@@ -10,6 +10,7 @@ import type { DietMode, UserProfile } from '../types'
 import './settings.css'
 import { THEMES, useTheme } from '../store/ThemeContext'
 import { BackupTransfer } from '../components/BackupTransfer'
+import { GeminiModelPicker } from '../components/GeminiModelPicker'
 
 export function Settings() {
   const { theme, setTheme } = useTheme()
@@ -74,8 +75,9 @@ export function Settings() {
         <Toggle label="Morning brief" on={profile.notif.morningBrief} onClick={() => updateProfile({ notif: { ...profile.notif, morningBrief: !profile.notif.morningBrief } })} />
         <Toggle label="Under-fuelling alert" on={profile.notif.underFuelAlert} onClick={() => updateProfile({ notif: { ...profile.notif, underFuelAlert: !profile.notif.underFuelAlert } })} />
         <Toggle label="Pre-race guidance" on={profile.notif.preRace} onClick={() => updateProfile({ notif: { ...profile.notif, preRace: !profile.notif.preRace } })} />
-        <h3>Photo analysis</h3><p>Server AI needs GEMINI_API_KEY configured on the server. This optional fallback key stays on this device.</p>
-        <Field id="settings-api-key" label="Claude fallback key"><input id="settings-api-key" type="password" placeholder="sk-ant-…" autoComplete="off" value={profile.anthropicApiKey} onChange={(e) => updateProfile({ anthropicApiKey: e.target.value })} /></Field>
+        <h3>Photo analysis</h3><p>Powered by Gemini. Your API key stays on the server, not on this device.</p>
+        <GeminiModelPicker id="settings-gemini-model" value={profile.geminiModel} onChange={geminiModel => updateProfile({ geminiModel })}/>
+        <p className="settings-help">Scans currently use Google Search for nutrition references. Search can have separate charges, and free-tier access differs between models. Changing models does not make a photo estimate a measured nutrition value.</p>
       </div></details>
 
       <section className="settings-section settings-data" hidden={category !== 'data'} aria-labelledby="settings-data-title"><div className="settings-section-head"><h2 id="settings-data-title">Your data</h2><p>Stored in this browser on this device.</p></div>
