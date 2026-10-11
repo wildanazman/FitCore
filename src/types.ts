@@ -25,6 +25,15 @@ export interface Wearables {
 }
 
 export interface UserProfile {
+  strengthCoach?: {
+    gym: boolean
+    experience: 'new' | 'regular'
+    days: number[]
+    minutes: 30 | 45 | 60
+    focus: 'balanced' | 'muscle'
+    startDate: string
+    clearance: boolean
+  }
   homeEquipment?: ('mat' | 'dumbbell' | 'bench' | 'kettlebell')[]
   name: string
   sex: Sex
@@ -163,6 +172,7 @@ export interface DietTask {
 export type SessionType = 'run' | 'strength' | 'sport' | 'rest'
 
 export interface PlanSession {
+  coachKey?: string
   /** Structured workout type; display names must not drive planner logic. */
   runKind?: 'easy' | 'long' | 'tempo' | 'interval' | 'benchmark' | 'event'
   runBrief?: { pace: string; steps: { label: string; value: string }[]; note: string }

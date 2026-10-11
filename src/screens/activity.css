@@ -44,7 +44,7 @@
 @media(prefers-reduced-motion:reduce){.activity-page .activity-library .exercise-results>button{transition: none}.activity-page .activity-library .exercise-results>button:active{transform: none}}
 .activity-page .activity-summary{margin: 16px 0 24px;padding: 16px 0;gap: 16px;border-top: 1px solid var(--app-line)}
 .activity-page .activity-summary strong{font-size: 22px;letter-spacing: -.02em}.activity-page .activity-summary span{font-size: 11px;line-height: 1.4}
-.activity-page .page-switch{display: grid;grid-template-columns: 1fr 1fr;background: var(--palette-soft);padding: 4px;gap: 4px;border-radius: 12px;margin-bottom: 28px}
+.activity-page .page-switch{display: grid;grid-template-columns: repeat(3,minmax(0,1fr));background: var(--palette-soft);padding: 4px;gap: 4px;border-radius: 12px;margin-bottom: 28px}
 .activity-page .page-switch button{min-height: 48px;font-size: 14px;font-weight: 700;color: var(--palette-muted);border-radius: 8px}
 .activity-page .page-switch button[aria-pressed=true]{background: var(--palette-surface);color: var(--palette-ink);box-shadow: 0 2px 6px #17253a0d}
 .activity-library{padding: 0!important;--home-ink: var(--palette-ink);--home-blue: var(--palette-accent);--home-blue-dark: var(--palette-hover);--home-muted: var(--palette-muted)}

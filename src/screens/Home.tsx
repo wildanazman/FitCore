@@ -15,6 +15,7 @@ import { dietDef, netCarbsOn, nowMinutes, windowState } from '../lib/diet'
 import type { DayFuel, FoodEntry } from '../types'
 import { FoodEditSheet } from './Food'
 import './home.css'
+import { CoachToday } from '../components/StrengthCoach'
 
 const ease = [0.16, 1, 0.3, 1] as const
 const spring = { type: 'spring', stiffness: 380, damping: 34 } as const
@@ -85,6 +86,7 @@ export function Home() {
     <div className="home-dashboard">
       <div className="home-primary-column">
         <div className="home-weight-checkin"><button type="button" className="home-body-link" onClick={() => nav('/body')}><span className="home-body-icon"><Icon name="monitor_weight" size={26} /></span><span className="home-body-copy"><strong>Weight check-in</strong><small>{state.weights.some(w=>w.date === date) ? 'Weight logged · view progress' : 'Log your weight'}</small></span><span className="home-body-value">{weightHidden ? <span aria-label="Weight hidden">•••</span> : <>{toDisplayWeight(dayWeight, profile.units).toFixed(1)}<small>{weightLabel}</small></>}</span></button><button type="button" className="home-weight-visibility" onClick={toggleWeightVisibility} aria-label={weightHidden ? 'Show weight' : 'Hide weight'} aria-pressed={!weightHidden}><Icon name={weightHidden ? 'visibility_off' : 'visibility'} size={21}/></button></div>
+        <CoachToday date={date}/>
         <EnergyBoard fuel={fuel} onOpenFood={() => nav(`/food?date=${date}`)} />
         <div className="home-quick-actions">
           <motion.button type="button" className="home-log-meal" onClick={() => nav(`/food?add=1&date=${date}`)} whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="restaurant" size={23} /></span><span><strong>Log a meal</strong><small>Search or scan</small></span><Icon name="add" size={21} /></motion.button>

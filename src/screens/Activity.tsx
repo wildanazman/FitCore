@@ -1,28 +1,30 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
 import { TopBar } from '../components/TopBar'
 import { ActivityComposer } from '../components/ActivityComposer'
 import { useApp } from '../store/AppContext'
-import { shortDate, timeLabel, todayISO } from '../lib/date'
+import { parseISO, shortDate, timeLabel, todayISO } from '../lib/date'
 import { Icon } from '../components/Icon'
 import { LogDatePicker } from '../components/LogDatePicker'
 import './activity.css'
+import { StrengthCoach } from '../components/StrengthCoach'
 
 export function Activity() {
   const nav = useNavigate()
+  const [params] = useSearchParams()
   const { state, removeSession, toggleSession } = useApp()
-  const [view, setView] = useState<'workout' | 'history'>('workout')
+  const [view, setView] = useState<'plan' | 'workout' | 'history'>('plan')
   const [saved, setSaved] = useState(false)
-  const [date, setDate] = useState(todayISO)
+  const [date, setDate] = useState(() => { const requested = params.get('date') ?? ''; return /^\d{4}-\d{2}-\d{2}$/.test(requested) && requested >= '1900-01-01' && todayISO(parseISO(requested)) === requested ? requested : todayISO() })
   const [removeId, setRemoveId] = useState<string | null>(null)
   const sessions = state.sessions.filter(s => s.date === date && s.type !== 'rest').sort((a,b) => (b.loggedAt ?? '').localeCompare(a.loggedAt ?? ''))
   const done = state.sessions.filter(s => s.date === date && s.completed && s.type !== 'rest')
   return <div className="activity-page"><TopBar /><header className="page-heading"><h1>Make your move.</h1><p>Home, gym or a walk outside. It all counts.</p></header>
     <details className="activity-date"><summary><span><Icon name="calendar_today" size={18} />Logging for <strong>{date === todayISO() ? 'Today' : shortDate(date)}</strong></span><span>Change date<Icon name="expand_more" size={18} /></span></summary><LogDatePicker date={date} onChange={(day) => { setDate(day); setSaved(false); setRemoveId(null) }} /></details>
     <div className="activity-summary"><div><strong>{done.reduce((n,s) => n+s.durationMin,0)} <small>min</small></strong><span>{date === todayISO() ? 'Moved today' : 'Moved this day'}</span></div><div><strong>{Math.round(done.reduce((n,s) => n+s.kcal,0))} <small>kcal</small></strong><span>Activity estimate</span></div><div><strong>{done.length}</strong><span>Activities logged</span></div></div>
-    <nav className="page-switch" aria-label="Activity views"><button type="button" aria-pressed={view === 'workout'} onClick={() => { setView('workout'); setSaved(false) }}>Find a workout</button><button type="button" aria-pressed={view === 'history'} onClick={() => setView('history')}>{date === todayISO() ? "Today's log" : 'Day’s log'}</button></nav>
+    <nav className="page-switch" aria-label="Activity views"><button type="button" aria-pressed={view === 'plan'} onClick={()=>setView('plan')}>My plan</button><button type="button" aria-pressed={view === 'workout'} onClick={() => { setView('workout'); setSaved(false) }}>Exercises</button><button type="button" aria-pressed={view === 'history'} onClick={() => setView('history')}>Activity log</button></nav>
     {saved && <p className="activity-saved" role="status"><Icon name="check_circle" size={20} />Saved to your activity log.</p>}
-    {view === 'workout' ? <ActivityComposer variant="library" date={date} onSaved={() => { setSaved(true); setView('history') }} /> : <section className="activity-journal" aria-labelledby="activity-journal-title">
+    {view === 'plan' ? <StrengthCoach date={date} onDateChange={setDate}/> : view === 'workout' ? <ActivityComposer variant="library" date={date} onSaved={() => { setSaved(true); setView('history') }} /> : <section className="activity-journal" aria-labelledby="activity-journal-title">
       <div className="activity-journal-heading"><div><h2 id="activity-journal-title">Your movement journal.</h2><p>{done.length} completed · {sessions.length - done.length} planned</p></div><button type="button" onClick={() => { setView('workout'); setSaved(false) }}><Icon name="add" size={20} />Log activity</button></div>
       {sessions.length ? <ul className="activity-journal-list">{sessions.map(session => <li key={session.id}>
         <div className="activity-journal-icon"><Icon name={session.icon ?? 'exercise'} size={24} /></div>

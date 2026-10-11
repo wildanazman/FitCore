@@ -12,7 +12,7 @@ import { RUN_TYPES, initialRunSettings, plannedRunMinutes, validRunSettings, typ
 import './exercise-library.css'
 
 /** Inline activity logger using the same catalog and calorie engine as Activity. */
-export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, variant = 'compact' }: { onSaved: () => void; date?: string; onDateChange?: (date: string) => void; variant?: 'compact' | 'library' }) {
+export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, variant = 'compact', prescription }: { onSaved: () => void; date?: string; onDateChange?: (date: string) => void; variant?: 'compact' | 'library'; prescription?: { exerciseId: string; sets: number; reps: number; rest: number; coachKey: string } }) {
   const library = variant === 'library'
   const [editing, setEditing] = useState(false)
   const [visibleCount, setVisibleCount] = useState(12)
@@ -73,6 +73,13 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
     setMinutes(value)
     if (strength || selected) setKcal(+value > 0 ? String(caloriesFromMet(weightKg, strength ? (effort === 'hard' ? 6 : 3.5) - 1 : selected!.met, +value)) : '')
   }
+  useEffect(() => {
+    if (!prescription) return
+    choose(prescription.exerciseId)
+    setSets(Array.from({ length: prescription.sets }, () => ({ reps: String(prescription.reps), holdSeconds: String(prescription.reps), weightKg: '' })))
+    setRest(String(prescription.rest))
+    // Keep actual load blank: a plan cannot know what the user lifted.
+  }, [prescription?.coachKey])
   function resetChoice() { setSelectedId(null); setName(''); setKcal(''); setTracking('time'); setIncludeEnergy(false); setRunSettings(null) }
   function toggleGear(id: EquipmentId) {
     const next = gear.includes(id) ? gear.filter(item => item !== id) : [...gear, id]
@@ -87,7 +94,7 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
     const volumeKg = loggedSets.reduce((sum, set) => sum + set.reps * set.weightKg * count * sides, 0)
     const hrTarget = runKind === 'maf_run' && runSettings ? { min: 170-profile.age+runSettings.mafAdjustment, max: 180-profile.age+runSettings.mafAdjustment } : runKind === 'zone2_run' && runSettings ? { min: Math.round(runSettings.maxHr*.6), max: Math.round(runSettings.maxHr*.7) } : undefined
     const detail = strength ? `${sets.length} ${sets.length === 1 ? 'set' : 'sets'} · ${tracking === 'hold' ? `${sets.map(set => set.holdSeconds).join('/')} sec` : `${sets.map(set => set.reps).join('/')} reps`}${weighted ? ` · ${sets.map(set => set.weightKg).join('/')} kg each × ${count}` : ' · bodyweight'}${sides === 2 ? ' · both sides' : ''} · ${includeEnergy ? 'entered calories' : 'estimated active kcal'}` : `${minutes} min actual${runSettings?.distanceKm ? ` · ${runSettings.distanceKm} km` : ''}${hrTarget ? ` · guidance ${hrTarget.min}–${hrTarget.max} bpm` : ''}${runKind && runSettings && RUN_TYPES[runKind].block ? ` · ${runSettings.rounds} × ${runSettings.work} min / ${runSettings.recovery} min easy` : ''} · manually logged`
-    addSession({ id: uid(), date, loggedAt: timestampOnDate(date), type: strength ? 'strength' : selected?.type ?? 'sport', title: name.trim(), detail, durationMin: strength && !includeEnergy ? energy.durationMin : +minutes, kcal: strength && !includeEnergy ? energy.kcal : +kcal, ...(strength ? { strengthLog: { exerciseId: selected?.id, mode: tracking as 'reps' | 'hold', implementCount: count as 1 | 2, sets: loggedSets, volumeKg, calorieEstimate: { method: includeEnergy ? 'entered' : 'sets-tempo', bodyWeightKg: weightKg, tempoSeconds: +tempo, restSeconds: +rest, sides, effort } } } : {}), ...(runKind && runSettings ? { runLog: { kind: runKind, settings: runSettings, plannedDurationMin: plannedRunMinutes(runKind, runSettings), hrTarget }, ...(runSettings.distanceKm ? { distanceKm: +runSettings.distanceKm } : {}) } : {}), completed: true, plan: 'manual', icon: selected?.icon ?? 'exercise', manual: true })
+    addSession({ id: uid(), date, ...(prescription && selectedId === prescription.exerciseId ? { coachKey: prescription.coachKey } : {}), loggedAt: timestampOnDate(date), type: strength ? 'strength' : selected?.type ?? 'sport', title: name.trim(), detail, durationMin: strength && !includeEnergy ? energy.durationMin : +minutes, kcal: strength && !includeEnergy ? energy.kcal : +kcal, ...(strength ? { strengthLog: { exerciseId: selected?.id, mode: tracking as 'reps' | 'hold', implementCount: count as 1 | 2, sets: loggedSets, volumeKg, calorieEstimate: { method: includeEnergy ? 'entered' : 'sets-tempo', bodyWeightKg: weightKg, tempoSeconds: +tempo, restSeconds: +rest, sides, effort } } } : {}), ...(runKind && runSettings ? { runLog: { kind: runKind, settings: runSettings, plannedDurationMin: plannedRunMinutes(runKind, runSettings), hrTarget }, ...(runSettings.distanceKm ? { distanceKm: +runSettings.distanceKm } : {}) } : {}), completed: true, plan: 'manual', icon: selected?.icon ?? 'exercise', manual: true })
     onSaved()
   }
 

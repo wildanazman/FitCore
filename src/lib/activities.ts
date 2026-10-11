@@ -80,6 +80,9 @@ function homeExercise(id: string, label: string, muscles: MuscleGroup[], require
 }
 
 const HOME_EXERCISES: ActivityDef[] = [
+  homeExercise('bodyweight_hinge', 'Bodyweight hip hinge', ['legs', 'glutes'], [], 'Push hips back with a neutral spine; return to standing'),
+  homeExercise('standing_core', 'Standing knee raise', ['abs'], [], 'Raise one knee at a time with controlled balance'),
+  homeExercise('db_rdl', 'Dumbbell Romanian deadlift', ['legs', 'glutes'], ['dumbbell'], 'Controlled hip hinge with dumbbells close to your legs'),
   homeExercise('pushup', 'Push-up', ['chest', 'arms'], [], 'Bodyweight horizontal press'),
   homeExercise('kneeling_pushup', 'Kneeling push-up', ['chest', 'arms'], ['mat'], 'Knee-supported horizontal press'),
   homeExercise('bench_pushup', 'Incline push-up on bench', ['chest', 'arms'], ['bench'], 'Hands on a stable bench'),
