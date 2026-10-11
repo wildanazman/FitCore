@@ -1,4 +1,4 @@
-import { verifyGoogleIdentity } from './google-auth.js'
+import { accountIdentity } from './account-session.js'
 
 export const CAMERA_DAILY_LIMIT = 4
 export function cameraDay(now = new Date()) {
@@ -6,11 +6,8 @@ export function cameraDay(now = new Date()) {
 }
 const reserveScript = `local n=tonumber(redis.call('GET',KEYS[1]) or '0'); if n>=tonumber(ARGV[1]) then return -1 end; n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],172800) end; return n`
 export async function reserveCameraScan(req) {
-  const credential = req.headers?.authorization || ''
-  if (!credential.startsWith('Bearer ')) throw Object.assign(new Error('Sign in with Google in Settings to use AI camera.'), { status: 401 })
-  let user
-  try { user = await verifyGoogleIdentity(credential.slice(7)) }
-  catch { throw Object.assign(new Error('Your Google sign-in expired. Sign in again in Settings.'), { status: 401 }) }
+  if (req.headers?.['sec-fetch-site'] === 'cross-site') throw Object.assign(new Error('Use AI camera from FitCore.'), { status: 403 })
+  const user = await accountIdentity(req)
   if (user.isAdmin) return { unlimited: true, remaining: null }
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN

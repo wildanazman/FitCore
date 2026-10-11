@@ -111,6 +111,7 @@ function normalizeDetection(value: Partial<Detection>, source: Detection['source
 async function detectWithServer(dataUrl: string, model: string): Promise<Detection> {
   const res = await fetch(apiUrl('/api/detect-food'), {
     method: 'POST',
+    credentials: 'include',
     headers: { 'content-type': 'application/json', ...googleAuthHeaders() },
     body: JSON.stringify({ image: dataUrl, provider: 'gemini', model }),
   })

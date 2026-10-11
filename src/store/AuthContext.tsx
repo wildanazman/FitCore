@@ -20,7 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [revision, setRevision] = useState(0)
   async function verify(credential: string, signal?: AbortSignal) {
-    const response = await fetch(apiUrl('/api/account'), { method: 'POST', headers: { authorization: `Bearer ${credential}` }, signal })
+    const response = await fetch(apiUrl('/api/account'), { method: 'POST', credentials: 'include', headers: { authorization: `Bearer ${credential}` }, signal })
     const result = await response.json()
     if (!response.ok || !result.user) throw new Error(result.error || 'Please sign in again.')
     return result.user as AccountUser
@@ -30,14 +30,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true); setError(null)
     async function initialise() {
       try {
-        const response = await fetch(apiUrl('/api/account'), { signal: controller.signal })
+        const response = await fetch(apiUrl('/api/account'), { credentials: 'include', cache: 'no-store', signal: controller.signal })
         if (!response.ok) throw new Error('Account connection is unavailable. Try again.')
         const config = await response.json()
         setClientId(config.clientId || null)
+        if (!controller.signal.aborted) setUser(config.user || null)
+        if (config.user) {
+          try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* Old login token is no longer needed. */ }
+          return
+        }
         let token: string | null = null
         try { token = sessionStorage.getItem(TOKEN_KEY) } catch { /* Login still works in memory. */ }
         if (token && config.clientId) {
-          try { const account = await verify(token, controller.signal); if (!controller.signal.aborted) setUser(account) }
+          try {
+            const account = await verify(token, controller.signal)
+            if (!controller.signal.aborted) setUser(account)
+            try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* Session is now held by a secure cookie. */ }
+          }
           catch (failure) {
             if (controller.signal.aborted) return
             try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* No health data touched. */ }
@@ -51,21 +60,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initialise()
     return () => controller.abort()
   }, [revision])
-  function signOut() {
-    try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* Local fitness records are kept. */ }
-    setUser(null); setError(null)
-    window.google?.accounts.id.disableAutoSelect()
+  async function signOut() {
+    setLoading(true); setError(null)
+    try {
+      const response = await fetch(apiUrl('/api/account'), { method: 'DELETE', credentials: 'include' })
+      if (!response.ok) throw new Error('Could not sign out. Check your connection and try again.')
+      try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* Local fitness records are kept. */ }
+      setUser(null)
+      window.google?.accounts.id.disableAutoSelect()
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Could not sign out.') }
+    finally { setLoading(false) }
   }
-  useEffect(() => {
-    if (!user) return
-    const timer = setTimeout(() => { signOut(); setError('Your sign-in expired. Sign in again; your local logs are still here.') }, Math.max(0, user.expiresAt - Date.now()))
-    return () => clearTimeout(timer)
-  }, [user])
   async function signIn(credential: string) {
     setLoading(true); setError(null)
     try {
       const account = await verify(credential)
-      try { sessionStorage.setItem(TOKEN_KEY, credential) } catch { /* Non-persistent login. */ }
+      try { sessionStorage.removeItem(TOKEN_KEY) } catch { /* No token stored in JavaScript storage. */ }
       setUser(account)
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Google sign-in failed. Try again.') }
     finally { setLoading(false) }

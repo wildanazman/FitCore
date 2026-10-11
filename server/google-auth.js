@@ -13,5 +13,5 @@ export async function verifyGoogleIdentity(credential) {
   // Admins must use a Google-hosted account; verified third-party email ownership can change.
   const googleOwnsEmail = payload.email.toLowerCase().endsWith('@gmail.com') || Boolean(payload.hd)
   return { id: payload.sub, email: payload.email, name: payload.name || payload.email,
-    isAdmin: googleOwnsEmail && admins.includes(payload.email.toLowerCase()), expiresAt: payload.exp * 1000 }
+    googleHosted: googleOwnsEmail, isAdmin: googleOwnsEmail && admins.includes(payload.email.toLowerCase()), expiresAt: payload.exp * 1000 }
 }

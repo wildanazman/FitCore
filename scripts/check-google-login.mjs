@@ -20,17 +20,51 @@ function token(patch = {}) {
   const signed = `${header}.${payload}`
   return `${signed}.${createSign('RSA-SHA256').update(signed).sign(privateKey).toString('base64url')}`
 }
-async function request(method, credential, origin = 'https://fit-core-five.vercel.app') {
-  const res = { setHeader() {}, end(value) { this.body = JSON.parse(value) } }
-  await handler({ method, headers: { origin, ...(credential ? { authorization: `Bearer ${credential}` } : {}) } }, res)
+async function request(method, credential, origin = 'https://fit-core-five.vercel.app', cookie) {
+  const res = { headers: {}, setHeader(name, value) { this.headers[name] = value }, end(value) { this.body = JSON.parse(value) } }
+  await handler({ method, headers: { origin, cookie, ...(credential ? { authorization: `Bearer ${credential}` } : {}) } }, res)
   return res
 }
 try {
   assert.equal((await request('GET')).body.clientId, clientId)
+  const savedFetch = globalThis.fetch
+  process.env.KV_REST_API_URL = 'https://session.fixture'
+  process.env.KV_REST_API_TOKEN = 'fixture'
+  const sessions = new Map()
+  globalThis.fetch = async (_url, options) => {
+    const [command, key, value, mode, ttl] = JSON.parse(options.body)
+    let result
+    if (command === 'SET') { assert.equal(mode, 'EX'); assert.equal(ttl, '2592000'); sessions.set(key, value); result = 'OK' }
+    if (command === 'GET') result = sessions.get(key) || null
+    if (command === 'DEL') result = Number(sessions.delete(key))
+    return { ok: true, json: async () => ({ result }) }
+  }
+  try {
   const account = await request('POST', token())
   assert.equal(account.statusCode, 200)
   assert.equal(account.body.user.isAdmin, true)
-  assert.equal((await request('POST', token({ email: 'someone@gmail.com' }))).body.user.isAdmin, false)
+  const cookie = account.headers['set-cookie'].split(';')[0]
+  assert.match(account.headers['set-cookie'], /HttpOnly; Secure; SameSite=Lax; Max-Age=2592000/)
+  const originalNow = Date.now
+  Date.now = () => originalNow() + 2 * 60 * 60 * 1000
+  try { assert.equal((await request('GET', null, undefined, cookie)).body.user.isAdmin, true) }
+  finally { Date.now = originalNow }
+  process.env.GOOGLE_ADMIN_EMAILS = ''
+  assert.equal((await request('GET', null, undefined, cookie)).body.user.isAdmin, false)
+  process.env.GOOGLE_ADMIN_EMAILS = 'owner@gmail.com'
+  globalThis.fetch = async () => { throw new Error('offline') }
+  assert.equal((await request('GET', null, undefined, cookie)).statusCode, 503)
+  assert.equal(sessions.size, 1) // Transient outages do not revoke the session.
+  globalThis.fetch = async (_url, options) => {
+    const [command, key] = JSON.parse(options.body)
+    return { ok: true, json: async () => ({ result: command === 'DEL' ? Number(sessions.delete(key)) : sessions.get(key) || null }) }
+  }
+  assert.equal((await request('DELETE', null, undefined, cookie)).statusCode, 200)
+  assert.equal((await request('GET', null, undefined, cookie)).body.user, null)
+  } finally { globalThis.fetch = savedFetch; delete process.env.KV_REST_API_URL; delete process.env.KV_REST_API_TOKEN }
+  // Remaining checks exercise Google token validation without persistent sessions.
+  const { verifyGoogleIdentity } = await import('../server/google-auth.js')
+  assert.equal((await verifyGoogleIdentity(token({ email: 'someone@gmail.com' }))).isAdmin, false)
   assert.equal((await request('POST', token({ email_verified: false }))).statusCode, 401)
   assert.equal((await request('POST', token({ aud: 'wrong-audience' }))).statusCode, 401)
   assert.equal((await request('POST', token({ iss: 'https://evil.example' }))).statusCode, 401)
@@ -68,7 +102,7 @@ try {
   assert.equal((await request('POST', token(), 'https://evil.example')).statusCode, 403)
   delete process.env.GOOGLE_LOGIN_CLIENT_ID
   assert.equal((await request('POST', token())).statusCode, 503)
-  console.log('Passed signed identity, admin allowlist, signature, audience, issuer, expiry, origin and missing-config checks. Local fixtures only; no Google calls.')
+  console.log('Passed persistent 30-day session, expired Google token independence, cookie flags, logout revocation, dynamic admin, outage retention, identity verification and camera quota checks. Local fixtures only.')
 } finally {
   OAuth2Client.prototype.getFederatedSignonCertsAsync = originalCerts
   if (originalClient === undefined) delete process.env.GOOGLE_LOGIN_CLIENT_ID; else process.env.GOOGLE_LOGIN_CLIENT_ID = originalClient
