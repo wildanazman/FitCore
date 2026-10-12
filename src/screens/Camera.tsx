@@ -13,14 +13,9 @@ import type { FoodEntry, MealSlot } from '../types'
 import './camera.css'
 import './capture-studio.css'
 import { CorrectMealComponent } from '../components/CorrectMealComponent'
+import { componentTotals,scaleMealComponent } from '../lib/mealComponents'
 
 type Phase = 'capture' | 'analyzing' | 'result' | 'edit'
-
-function componentTotals(det: Detection): Detection {
-  if(!det.items?.length || !det.items.every(item=>[item.protein,item.carbs,item.fat].every(n=>typeof n==='number'&&Number.isFinite(n))))return det
-  const sum=(key:'kcal'|'protein'|'carbs'|'fat')=>det.items!.reduce((total,item)=>total+(item[key]??0),0)
-  return {...det,kcal:sum('kcal'),protein:sum('protein'),carbs:sum('carbs'),fat:sum('fat')}
-}
 
 export function Camera() {
   const { profile, addFood, updateProfile } = useApp()
@@ -155,7 +150,9 @@ export function Camera() {
 
   function confirm() {
     if (!det) return
-    if (hasExcludedIngredients(det.name)) { setError('This food is excluded by FitCore’s halal-only food policy.'); return }
+    if(![det.kcal,det.protein,det.carbs,det.fat].every(value=>Number.isFinite(value)&&value>=0)){setError('Enter valid, non-negative nutrition values before saving.');return}
+    if(det.macrosNeedReview){setError('Review whole-meal macros before logging. Component calories were updated, but some macros are unknown.');return}
+    if (hasExcludedIngredients(det.name)||det.items?.some(item=>hasExcludedIngredients(item.name))) { setError('This food is excluded by FitCore’s halal-only food policy.'); return }
     const entry: FoodEntry = {
       id: uid(),
       name: det.name,
@@ -206,18 +203,17 @@ export function Camera() {
   const confidenceHigh = (det?.confidence ?? 0) >= 0.85
   const breakdownItems: DetectionItem[] = det?.items?.length ? det.items : det ? [{ name: det.name, kcal: det.kcal }] : []
   function changeComponent(index: number, factor: number) {
-    if (!det?.items || !det.items.every(item => [item.protein,item.carbs,item.fat].every(value => typeof value === 'number' && Number.isFinite(value)))) return
-    const items=det.items.map((item,i)=>i!==index?item:{...item,portion:undefined,grams:item.grams?item.grams*factor:undefined,kcal:item.kcal*factor,protein:item.protein!*factor,carbs:item.carbs!*factor,fat:item.fat!*factor})
+    if (!det?.items) return
+    const items=det.items.map((item,i)=>i!==index?item:scaleMealComponent(item,factor))
     setRemovedComponent(null)
-    setDet(componentTotals({...det,items}))
+    setDet(componentTotals({...det,items},true))
   }
   function replaceComponent(index:number,item:DetectionItem) {
     if(!det)return
     const items=det.items?.length?det.items:[{name:det.name,kcal:det.kcal,protein:det.protein,carbs:det.carbs,fat:det.fat}]
-    if(!items.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value)))){setError('This result has no per-food macros. Retry analysis first, or edit the whole meal estimate.');return}
-    const next=items.map((part,i)=>i===index?item:part)
+    const next=index<0?[...items,item]:items.map((part,i)=>i===index?item:part)
     setRemovedComponent(null)
-    setDet(componentTotals({...det,items:next,name:items.length===1?item.name:det.name,note:'Food corrected using a serving reference. Check the portion; reference values are not a measurement of your photo.'}))
+    setDet(componentTotals({...det,items:next,name:next.length===1?item.name:det.name,note:'Component corrected using a serving reference. Check every portion; unknown macros require whole-meal review.'},true))
     setCorrecting(null)
   }
   function removeComponent(index: number) {
@@ -231,6 +227,7 @@ export function Camera() {
       carbs: Math.max(0, det.carbs - (removed.carbs ?? 0)),
       fat: Math.max(0, det.fat - (removed.fat ?? 0)),
       note: 'Item removed. Per-food nutrients are incomplete; review the whole-meal macros before saving.',
+      macrosNeedReview:true,
     }
     setRemovedComponent({ name: removed.name, previous: det })
     setCorrecting(null)
@@ -297,7 +294,7 @@ export function Camera() {
             {phase === 'result' ? <>
               <div className="camera-result-hero"><div className="camera-result-photo">{photo && <img src={photo} alt="Meal being reviewed" />}</div><div className="camera-result-intro"><h1>{det.name}</h1><div className="camera-result-energy"><strong>{Math.round(det.kcal * servings).toLocaleString()}</strong><span>kcal estimated</span></div><p><Icon name={confidenceHigh ? 'verified' : 'info'} size={17} /> {confidenceHigh ? 'High confidence' : 'Review portion and ingredients'} · {Math.round(det.confidence * 100)}%</p></div></div>
               {error && <p className="camera-result-alert">{error}</p>}
-              <div className="camera-result-macros"><MacroChip label="Protein" v={Math.round(det.protein * servings)} /><MacroChip label="Carbs" v={Math.round(det.carbs * servings)} /><MacroChip label="Fat" v={Math.round(det.fat * servings)} /></div>
+              {det.macrosNeedReview?<div className="camera-result-alert" role="status">Calories updated. Some component macros are unknown—review whole-meal protein, carbs and fat before saving.<button type="button" onClick={()=>setPhase('edit')}>Review meal macros</button></div>:<div className="camera-result-macros"><MacroChip label="Protein" v={Math.round(det.protein * servings)} /><MacroChip label="Carbs" v={Math.round(det.carbs * servings)} /><MacroChip label="Fat" v={Math.round(det.fat * servings)} /></div>}
               <section className="camera-result-section"><h2>Log this meal</h2><p>Choose where it belongs and check the portion.</p><div className="camera-result-slots" role="group" aria-label="Meal type">{(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((slot) => <button key={slot} type="button" aria-pressed={mealSlot === slot} onClick={() => setMealSlot(slot)}>{slot}</button>)}</div><div className="camera-result-quantity"><span>Servings</span><div><button type="button" aria-label="Decrease servings" disabled={servings <= 0.5} onClick={() => setServings((s) => Math.max(0.5, Math.round((s - 0.5) * 10) / 10))}><Icon name="remove" size={20} /></button><strong>{servings.toFixed(1)}</strong><button type="button" aria-label="Increase servings" onClick={() => setServings((s) => Math.round((s + 0.5) * 10) / 10)}><Icon name="add" size={20} /></button></div></div></section>
               {breakdownItems.length > 0 && <section className="camera-result-section">
                 <h2>Inside your plate.</h2>
@@ -309,18 +306,21 @@ export function Camera() {
                   <header><div><h3>{item.name}</h3><p>{item.portion ? `${item.portion} · ` : ''}{item.grams ? `${Math.round(item.grams*servings)} g estimated` : 'Portion not measured'}</p></div><strong>{Math.round(item.kcal*servings)}<small>kcal</small></strong></header>
                   <ComponentNutrients item={item} servings={servings}/>
                   <div className="camera-component-adjust">
-                    {det.items?.every(part=>[part.protein,part.carbs,part.fat].every(value=>typeof value==='number'&&Number.isFinite(value))) && <><button type="button" aria-label={`Reduce ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,.75)}>−25%</button><button type="button" aria-label={`Increase ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,1.25)}>+25%</button></>}
+                    <button type="button" onClick={()=>setCorrecting(index)}><Icon name="edit" size={16}/>Change / serving</button>
+                    {det.items&&<><button type="button" aria-label={`Reduce ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,.75)}>−25%</button><button type="button" aria-label={`Increase ${item.name} portion by 25 percent`} onClick={()=>changeComponent(index,1.25)}>+25%</button></>}
                     {det.items && <button type="button" className="camera-component-remove" aria-label={`Remove ${item.name} from meal`} disabled={det.items.length <= 1} onClick={() => removeComponent(index)}><Icon name="delete" size={16}/>Remove</button>}
                   </div>
+                  {item.sourceLabel&&<p className="camera-component-source">{item.sourceUrl?<a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">{item.sourceLabel}</a>:item.sourceLabel}</p>}
+                  {correcting===index&&<CorrectMealComponent key={`${index}-${item.name}`} name={item.name} onApply={part=>replaceComponent(index,part)} onCancel={()=>setCorrecting(null)}/>}
                 </article>)}</div>
                 {det.items?.length === 1 && <p>Keep at least one food, or take another photo to start again.</p>}
               </section>}
-              <section className="camera-result-section camera-food-corrections"><h2>Not the right food?</h2><p>Replace a component with a local or online serving reference.</p>{correcting===null?<div>{breakdownItems.map((item,index)=><button type="button" key={index} onClick={()=>setCorrecting(index)}><span>{item.name}</span><span>Change<Icon name="edit" size={17}/></span></button>)}</div>:<CorrectMealComponent key={correcting} name={breakdownItems[correcting]?.name??det.name} onApply={item=>replaceComponent(correcting,item)} onCancel={()=>setCorrecting(null)}/>}</section>
+              <section className="camera-result-section camera-food-corrections"><button type="button" onClick={()=>setCorrecting(-1)}><Icon name="add" size={18}/>Add missing food or drink</button>{correcting===-1&&<CorrectMealComponent name="" onApply={item=>replaceComponent(-1,item)} onCancel={()=>setCorrecting(null)}/>}</section>
               {(det.assumptions || det.note) && <details className="camera-result-details"><summary>About this estimate <Icon name="expand_more" size={20} /></summary><div>{det.assumptions && <p>{det.assumptions}</p>}{det.note && <p>{det.note}</p>}</div></details>}
               <details className="camera-result-details"><summary>Analysis details <Icon name="expand_more" size={20} /></summary><div><p>Model used: {det.model ?? 'Not reported'}</p><p>Selected model: {det.requestedModel ?? 'Not reported'}</p><p>Result source: {detectionSourceLabel(det.source)}</p>{det.usage && <p>Tokens: {det.usage.inputTokens.toLocaleString()} input · {det.usage.outputTokens.toLocaleString()} output · {det.usage.thinkingTokens.toLocaleString()} thinking. Counts are for the successful response, not earlier retries or search charges.</p>}<p>{detectionUsageLabel(det.source, foodAIUsage(det.source))}</p><GeminiModelPicker id="result-gemini-model" value={profile.geminiModel} onChange={geminiModel => updateProfile({ geminiModel })}/><button type="button" onClick={retryAnalysis}>Retry with selected model</button></div></details>
-            </> : <div className="camera-result-edit"><EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => setPhase('result')} /></div>}
+            </> : <div className="camera-result-edit"><EditForm det={det} onChange={setDet} onLookup={updateDetectionFromName} onDone={() => {setDet({...det,macrosNeedReview:false});setPhase('result')}} /></div>}
           </div>
-          {phase === 'result' && <div className="camera-result-actions"><button type="button" onClick={() => setPhase('edit')}><Icon name="edit" size={20} /> Edit</button><button type="button" onClick={confirm}>Save meal <Icon name="check" size={20} /></button></div>}
+          {phase === 'result' && <div className="camera-result-actions"><button type="button" onClick={() => setPhase('edit')}><Icon name="edit" size={20} /> Edit</button><button type="button" disabled={det.macrosNeedReview} onClick={confirm}>Save meal <Icon name="check" size={20} /></button></div>}
         </div>
       )}
 
@@ -407,8 +407,9 @@ function EditForm({
 }) {
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [lookupMessage, setLookupMessage] = useState<string | null>(null)
+  const [reviewed,setReviewed]=useState<string[]>([])
   const cls = 'w-full bg-surface border border-outline-variant rounded-lg px-md py-2 text-on-surface font-data-mono focus:border-primary focus:outline-none'
-  const num = (k: 'kcal' | 'protein' | 'carbs' | 'fat') => (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...det, [k]: Math.max(0,+e.target.value || 0), items: undefined })
+  const num = (k: 'kcal' | 'protein' | 'carbs' | 'fat') => (e: React.ChangeEvent<HTMLInputElement>) => {setReviewed(e.target.value!==''?[...new Set([...reviewed,k])]:reviewed.filter(key=>key!==k));onChange({ ...det, [k]: Math.max(0,+e.target.value || 0) })}
 
   async function updateFromOnline() {
     const name = det.name.trim()
@@ -454,16 +455,17 @@ function EditForm({
       )}
       <div className="grid grid-cols-2 gap-md">
         <NumField label="Calories" value={det.kcal} onChange={num('kcal')} cls={cls} />
-        <NumField label="Protein g" value={det.protein} onChange={num('protein')} cls={cls} />
-        <NumField label="Carbs g" value={det.carbs} onChange={num('carbs')} cls={cls} />
-        <NumField label="Fat g" value={det.fat} onChange={num('fat')} cls={cls} />
+        <NumField label="Protein g" value={det.macrosNeedReview&&!reviewed.includes('protein')?'':det.protein} onChange={num('protein')} cls={cls} />
+        <NumField label="Carbs g" value={det.macrosNeedReview&&!reviewed.includes('carbs')?'':det.carbs} onChange={num('carbs')} cls={cls} />
+        <NumField label="Fat g" value={det.macrosNeedReview&&!reviewed.includes('fat')?'':det.fat} onChange={num('fat')} cls={cls} />
       </div>
-      <button onClick={onDone} className="py-3 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md mt-sm">Review meal <Icon name="arrow_forward" size={18} /></button>
+      {det.macrosNeedReview&&<p>Enter all three whole-meal macros from a reference or your own estimate. Zero is only for a true zero. Component calories stay saved.</p>}
+      <button onClick={onDone} disabled={Boolean(det.macrosNeedReview&&!['protein','carbs','fat'].every(key=>reviewed.includes(key)))} className="py-3 rounded-xl bg-lime text-on-lime font-metric-md text-metric-md mt-sm disabled:opacity-50">Review meal <Icon name="arrow_forward" size={18} /></button>
     </div>
   )
 }
 
-function NumField({ label, value, onChange, cls }: { label: string; value: number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; cls: string }) {
+function NumField({ label, value, onChange, cls }: { label: string; value: number|string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; cls: string }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">{label}</span>

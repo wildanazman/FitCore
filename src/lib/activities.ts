@@ -29,6 +29,8 @@ export interface ActivityDef {
 }
 
 const BASE_ACTIVITIES: ActivityDef[] = [
+  { id:'treadmill_walk',label:'Treadmill walk',category:'gym',type:'sport',met:3.8,icon:'directions_walk',detail:'Comfortable level walking; set a controllable speed. Use the safety clip.' },
+  { id:'treadmill_run',label:'Treadmill easy run',category:'gym',type:'run',met:8.3,icon:'directions_run',detail:'Easy conversational run, not intervals. Use the safety clip; adjust speed to your current ability.' },
   { id: 'maf_run', label: 'MAF run', category: 'run', type: 'run', met: 8.3, icon: 'cardiology', detail: 'Aerobic effort with the MAF heart-rate ceiling' },
   { id: 'zone2_run', label: 'Zone 2 run', category: 'run', type: 'run', met: 8.3, icon: 'cardiology', detail: 'Steady conversational aerobic running' },
   { id: 'fartlek_run', label: 'Fartlek', category: 'run', type: 'run', met: 8.3, icon: 'speed', detail: 'Speed play: alternate quicker and easy efforts' },
@@ -45,9 +47,9 @@ const BASE_ACTIVITIES: ActivityDef[] = [
   { id: 'jump_rope', label: 'Jump rope', category: 'cardio', type: 'sport', met: 12.3, icon: 'timer' },
   { id: 'strength_general', label: 'Gym strength session', category: 'gym', type: 'strength', met: 3.5, icon: 'fitness_center' },
   { id: 'dumbbell_row', label: 'Dumbbell workout', category: 'gym', type: 'strength', met: 3.5, icon: 'fitness_center' },
-  { id: 'bench_press', label: 'Bench press session', category: 'gym', type: 'strength', met: 3.5, icon: 'fitness_center' },
-  { id: 'squat', label: 'Squat session', category: 'gym', type: 'strength', met: 5, icon: 'fitness_center' },
-  { id: 'deadlift', label: 'Deadlift session', category: 'gym', type: 'strength', met: 5, icon: 'fitness_center' },
+  { id: 'bench_press', label: 'Barbell bench press', category: 'gym', type: 'strength', met: 3.5, icon: 'fitness_center', load: true, equipmentText: 'Barbell + bench', detail: 'Flat bench press; use a spotter or correctly set safety bars.' },
+  { id: 'squat', label: 'Barbell back squat', category: 'gym', type: 'strength', met: 5, icon: 'fitness_center', load: true, equipmentText: 'Barbell + squat rack', detail: 'Controlled squat with rack safeties; choose a range and load you can control.' },
+  { id: 'deadlift', label: 'Barbell conventional deadlift', category: 'gym', type: 'strength', met: 5, icon: 'fitness_center', load: true, equipmentText: 'Barbell + plates', detail: 'Lift from the floor with the bar close; brace, avoid jerking, and reset between reps.' },
   { id: 'gym_vigorous', label: 'Heavy lifting', category: 'gym', type: 'strength', met: 6, icon: 'fitness_center' },
   { id: 'elliptical', label: 'Elliptical', category: 'gym', type: 'sport', met: 5, icon: 'exercise' },
   { id: 'stair_machine', label: 'Stair machine', category: 'gym', type: 'sport', met: 9, icon: 'stairs' },
@@ -154,6 +156,20 @@ function gymExercise(id: string, label: string, muscles: MuscleGroup[], equipmen
   return { id: `gym_${id}`, label, muscles, equipmentText, detail, demoId, load, category: 'gym', type: 'strength', met: 3.5, icon: 'fitness_center' }
 }
 const GYM_EXERCISES: ActivityDef[] = [
+  gymExercise('sumo_deadlift', 'Barbell sumo deadlift', ['legs', 'glutes', 'back'], 'Barbell + plates', 'Wide stance floor pull; brace and keep the bar close.'),
+  gymExercise('trap_deadlift', 'Trap-bar deadlift', ['legs', 'glutes', 'back'], 'Trap bar + plates', 'Stand inside the bar, brace and lift smoothly; record total loaded bar weight.'),
+  gymExercise('front_squat', 'Barbell front squat', ['legs', 'glutes', 'abs'], 'Barbell + squat rack', 'Front-rack squat; use safeties and a stable front-rack position.'),
+  gymExercise('incline_barbell', 'Incline barbell bench press', ['chest', 'shoulders', 'arms'], 'Barbell + incline bench', 'Incline press with a spotter or safety bars.'),
+  gymExercise('close_grip_bench', 'Close-grip barbell bench press', ['chest', 'arms'], 'Barbell + bench', 'Comfortable narrower grip, wrists stacked; use a spotter or safeties.'),
+  gymExercise('barbell_overhead', 'Standing barbell overhead press', ['shoulders', 'arms'], 'Barbell + rack', 'Brace and press overhead without excessive lower-back arch.'),
+  gymExercise('barbell_curl', 'Barbell biceps curl', ['arms'], 'Barbell', 'Controlled elbow flexion without swinging your torso.'),
+  gymExercise('ez_curl', 'EZ-bar biceps curl', ['arms'], 'EZ bar', 'Use a comfortable grip; lower with control.'),
+  gymExercise('ez_skullcrusher', 'EZ-bar lying triceps extension', ['arms'], 'EZ bar + bench', 'Controlled elbow extension; use a light load and safe clearance from your face.'),
+  gymExercise('pendlay_row', 'Barbell Pendlay row', ['back', 'arms'], 'Barbell + plates', 'Each rep starts from the floor; maintain a braced torso. Learn the hinge first.'),
+  gymExercise('barbell_lunge', 'Barbell reverse lunge', ['legs', 'glutes'], 'Barbell + rack', 'Step back with control; requires confident balance under a bar.'),
+  gymExercise('landmine_press', 'Single-arm landmine press', ['shoulders', 'chest', 'arms'], 'Barbell + secured landmine attachment', 'Press along the anchored bar path; never use an unsecured bar end.'),
+  gymExercise('smith_squat', 'Smith-machine squat', ['legs', 'glutes'], 'Smith machine', 'Set safety stops and use a stance suited to the machine path.'),
+  gymExercise('hack_squat', 'Hack squat', ['legs', 'glutes'], 'Hack squat machine', 'Set the safeties; control the lowering phase.'),
   gymExercise('incline_press', 'Incline dumbbell press', ['chest', 'shoulders', 'arms'], 'Dumbbells + incline bench', 'Upper-chest pressing movement'),
   gymExercise('db_bench', 'Dumbbell bench press', ['chest', 'arms'], 'Dumbbells + bench', 'Flat-bench chest press', 'home_db_bench_press'),
   gymExercise('chest_press', 'Machine chest press', ['chest', 'arms'], 'Chest press machine', 'Seated horizontal press'),

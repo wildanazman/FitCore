@@ -25,6 +25,8 @@ export interface Wearables {
 }
 
 export interface UserProfile {
+  /** Explicit user-selected exercise order for a single calendar date. */
+  strengthWorkouts?: Record<string, string[]>
   strengthCoach?: {
     gym: boolean
     experience: 'new' | 'regular'
@@ -33,6 +35,7 @@ export interface UserProfile {
     focus: 'balanced' | 'muscle'
     split?: 'balanced' | 'muscle-days'
     techniques?: 'auto' | 'straight'
+    treadmill?: { mode: 'walk' | 'run'; minutes: 10 | 15 | 20 | 30; days: number[] }
     startDate: string
     clearance: boolean
   }
@@ -109,7 +112,7 @@ export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export interface FoodEntry {
   /** Portion represented by the stored nutrition, before the servings multiplier. */
   portion?: string
-  components?: { name:string; grams?:number; portion?:string; kcal:number; protein?:number; carbs?:number; fat?:number }[]
+  components?: { name:string; grams?:number; portion?:string; kcal:number; protein?:number; carbs?:number; fat?:number; sourceLabel?:string; sourceUrl?:string }[]
   id: string
   name: string
   emoji: string

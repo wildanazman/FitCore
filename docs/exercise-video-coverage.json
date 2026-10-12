@@ -1,9 +1,9 @@
 {
   "scope": "Named home/gym exercises, excluding mixed workout/circuit entries",
-  "total": 92,
+  "total": 106,
   "withMovingDemo": 30,
   "withPhotosOnly": 26,
-  "missingMovingDemo": 62,
+  "missingMovingDemo": 76,
   "missing": [
     {
       "id": "home_dumbbell_press",
@@ -248,6 +248,76 @@
     {
       "id": "home_kb_halo",
       "name": "Kettlebell halo",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_sumo_deadlift",
+      "name": "Barbell sumo deadlift",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_trap_deadlift",
+      "name": "Trap-bar deadlift",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_front_squat",
+      "name": "Barbell front squat",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_incline_barbell",
+      "name": "Incline barbell bench press",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_close_grip_bench",
+      "name": "Close-grip barbell bench press",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_barbell_overhead",
+      "name": "Standing barbell overhead press",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_barbell_curl",
+      "name": "Barbell biceps curl",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_ez_curl",
+      "name": "EZ-bar biceps curl",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_ez_skullcrusher",
+      "name": "EZ-bar lying triceps extension",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_pendlay_row",
+      "name": "Barbell Pendlay row",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_barbell_lunge",
+      "name": "Barbell reverse lunge",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_landmine_press",
+      "name": "Single-arm landmine press",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_smith_squat",
+      "name": "Smith-machine squat",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_hack_squat",
+      "name": "Hack squat",
       "stillPhotos": false
     },
     {

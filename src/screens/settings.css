@@ -51,3 +51,8 @@
 .settings-transfer-error { color:var(--palette-error); }
 .onboarding-restore { margin:12px 20px; color:var(--palette-ink); }
 .onboarding-restore summary { min-height:44px; padding:12px 0; font-size:13px; cursor:pointer; color:var(--palette-accent); }
+.settings-cloud { margin-block: 28px; padding-block-start: 24px; border-block-start: 1px solid var(--palette-line); }
+.settings-cloud-photos { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-block: 12px; font-size: 14px; color: var(--palette-ink); }
+.settings-cloud-photos input { width: 20px; height: 20px; accent-color: var(--palette-accent); }
+.settings-cloud .settings-help { overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; margin-block: 10px; }
+.settings-cloud button:disabled { opacity: .5; cursor: not-allowed; }

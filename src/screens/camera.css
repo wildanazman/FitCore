@@ -89,3 +89,10 @@
 .camera-correction-buttons button { min-height:48px; border-radius:8px; border:1px solid var(--palette-line); font-size:12px; }
 .camera-correction-buttons button:last-child { background:var(--palette-accent); color:var(--palette-on-accent); }
 .camera-correction button:disabled { opacity:.5; cursor:not-allowed; }
+.camera-components .camera-component-adjust { flex-wrap: wrap; }
+.camera-component-source { font-size: 14px; color: var(--palette-muted); }
+.camera-component-source a { display: inline-flex; min-height: 44px; align-items: center; color: var(--palette-accent); }
+.camera-correction-preview details { padding-block: 12px; font-size: 14px; }
+.camera-correction-preview summary { min-height: 44px; cursor: pointer; }
+.camera-correction-buttons button[aria-pressed=true] { background: var(--palette-accent); color: var(--palette-on-accent); }
+.camera-result-alert button { min-height: 44px; display: block; color: var(--palette-accent); font-weight: 700; }

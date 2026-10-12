@@ -44,6 +44,6 @@ export function GoogleAccount() {
     <h2 id="google-account-title">Your account</h2>
     {user ? <><div className="settings-google-identity"><span className="settings-avatar" aria-hidden="true">{user.name[0]?.toUpperCase()}</span><div><strong>{user.name}</strong><span>{user.email}</span><small>{user.isAdmin ? 'Administrator' : 'Google account connected'}</small></div></div><button type="button" className="settings-account-action" onClick={signOut}>Sign out</button><p>Signing out keeps your logs on this device. Anyone using this browser can still see those local logs.</p></> : <><p>Connect Google without resetting your food, weight or activity logs.</p><div ref={button} className="settings-google-button" aria-busy={loading}/>{loading && <p role="status">Connecting your account…</p>}{!loading && !clientId && !error && <p>Google login is being configured. Your local logs are unaffected.</p>}</>}
     {(error || scriptError) && <div role="alert"><p>{error || scriptError}</p><button type="button" className="settings-account-action" onClick={() => { setAttempt(value => value + 1); reload() }}>Try again</button></div>}
-    <p className="settings-account-local">Account connection only. Logs are not uploaded or synced; export a backup before changing phones.</p>
+    <p className="settings-account-local">Signing in does not upload your logs. Use Data & storage to export a file or manage cloud backup before changing phones.</p>
   </section>
 }

@@ -32,6 +32,6 @@ export function BackupTransfer({ importOnly = false }: { importOnly?: boolean })
     <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" tabIndex={-1} onChange={e=>void choose(e.target.files?.[0])} aria-label="Choose FitCore backup"/>
     {pending&&<div className="settings-import-preview"><h3>Ready to restore?</h3><p><strong>{pending.state.profile.name||'Your profile'}</strong> · {pending.state.foods.length} meals · {pending.state.weights.length} weigh-ins · {pending.state.sessions.length} activities · {pending.state.photos.length} photos · {pending.state.dietTasks.length} plan items</p><p>This replaces the profile and logs on this device. Export a backup of your current data first. API keys are not transferred.</p><div className="settings-confirm-actions"><button type="button" onClick={()=>{setPending(null);setError('')}}>Cancel</button><button type="button" className="settings-restore-confirm" onClick={confirm}>Replace & restore</button></div></div>}
     {message&&<p className="settings-transfer-message" role="status">{message}</p>}{error&&<p className="settings-transfer-error" role="alert">{error}</p>}
-    <p className="settings-help">Backup files contain personal health data and photos. Keep them private. API keys are excluded. Nothing is uploaded.</p>
+    <p className="settings-help">Backup files contain personal health data and photos. Keep them private. API keys are excluded. These file tools do not upload anything.</p>
   </div>
 }

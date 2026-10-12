@@ -13,9 +13,9 @@ import { RUN_TYPES, initialRunSettings, plannedRunMinutes, validRunSettings, typ
 import './exercise-library.css'
 
 /** Inline activity logger using the same catalog and calorie engine as Activity. */
-export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, variant = 'compact', prescription }: { onSaved: () => void; date?: string; onDateChange?: (date: string) => void; variant?: 'compact' | 'library'; prescription?: { exerciseId: string; sets: number; reps: number; rest: number; coachKey: string } }) {
+export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, variant = 'compact', prescription, customOnly = false }: { onSaved: () => void; date?: string; onDateChange?: (date: string) => void; variant?: 'compact' | 'library'; customOnly?:boolean; prescription?: { exerciseId: string; sets: number; reps: number; rest: number; coachKey: string; durationMin?:number } }) {
   const library = variant === 'library'
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(customOnly)
   const [visibleCount, setVisibleCount] = useState(12)
   const editorHeading = useRef<HTMLHeadingElement>(null)
   useEffect(() => { if (library && editing) editorHeading.current?.focus() }, [library, editing])
@@ -33,6 +33,7 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
   const [tracking, setTracking] = useState<'time' | 'reps' | 'hold'>('time')
   const [sets, setSets] = useState<SetDraft[]>([{ reps: '10', weightKg: '', holdSeconds: '30' }])
   const [implementCount, setImplementCount] = useState<1 | 2>(1)
+  const [customWeighted, setCustomWeighted] = useState(true)
   const [includeEnergy, setIncludeEnergy] = useState(false)
   const [tempo, setTempo] = useState('3')
   const [rest, setRest] = useState('60')
@@ -41,9 +42,12 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
   const [runSettings, setRunSettings] = useState<RunDraft | null>(null)
   const selected = ACTIVITIES.find((item) => item.id === selectedId)
   const runKind = selected && Object.prototype.hasOwnProperty.call(RUN_TYPES, selected.id) ? selected.id as RunKind : null
-  const weighted = selected ? selected.load ?? (requiredEquipment(selected).some(id => id === 'dumbbell' || id === 'kettlebell') || ['bench_press', 'squat', 'deadlift'].includes(selected.id)) : true
+  const weighted = selected ? selected.load ?? (requiredEquipment(selected).some(id => id === 'dumbbell' || id === 'kettlebell') || ['bench_press', 'squat', 'deadlift'].includes(selected.id)) : customWeighted
+  const totalLoad = /\b(barbell|ez bar|trap bar|smith machine)\b/i.test(selected ? equipmentLabel(selected) : name)
+  const usedCount = totalLoad ? 1 : implementCount
   const strength = tracking !== 'time'
-  const energy = estimateStrengthEnergy({ bodyWeightKg: weightKg, sets: sets.map(set => ({ reps: +set.reps || 0, holdSeconds: +set.holdSeconds || 0 })), mode: tracking === 'hold' ? 'hold' : 'reps', tempoSeconds: +tempo || 0, restSeconds: +rest || 0, sides, effort })
+  const energyKind = tracking==='hold'?'hold':!weighted?'bodyweight':selected?.id==='home_kb_swing'?'kettlebell-swing':/squat|deadlift/i.test(selected?.label??name)?'compound':'resistance'
+  const energy = estimateStrengthEnergy({ bodyWeightKg: weightKg, sets: sets.map(set => ({ reps: +set.reps || 0, holdSeconds: +set.holdSeconds || 0 })), mode: tracking === 'hold' ? 'hold' : 'reps', tempoSeconds: +tempo || 0, restSeconds: +rest || 0, sides, effort, kind:energyKind })
   const validEstimate = Number.isFinite(weightKg) && weightKg > 0 && rest !== '' && Number.isFinite(+rest) && +rest >= 0 && +rest <= 600 && (tracking === 'hold' || (tempo !== '' && Number.isFinite(+tempo) && +tempo >= 1 && +tempo <= 10)) && Number.isFinite(energy.kcal) && energy.durationMin > 0 && energy.durationMin <= 1440
   const homeFilters = category === 'home' || category === 'all'
   const muscleFilters = homeFilters || category === 'gym'
@@ -64,7 +68,7 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
     setTracking(nextTracking); setIncludeEnergy(false); setSides(1); setEffort('moderate')
     setSets([{ reps: '10', weightKg: '', holdSeconds: '30' }]); setImplementCount(1)
     setMinutes(nextTracking === 'time' ? String(+minutes || 30) : '')
-    setKcal(nextTracking === 'time' ? String(caloriesFromMet(weightKg, item.met, +minutes || 30)) : '')
+    setKcal(nextTracking === 'time' ? String(caloriesFromMet(weightKg, item.met-(item.id.startsWith('treadmill_')?1:0), +minutes || 30)) : '')
     if (Object.prototype.hasOwnProperty.call(RUN_TYPES, id)) {
       const draft = initialRunSettings(id as RunKind, profile.age), duration = plannedRunMinutes(id as RunKind, draft)
       setRunSettings(draft); setMinutes(String(duration)); setKcal(String(caloriesFromMet(weightKg, item.met, duration)))
@@ -72,11 +76,12 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
   }
   function changeMinutes(value: string) {
     setMinutes(value)
-    if (strength || selected) setKcal(+value > 0 ? String(caloriesFromMet(weightKg, strength ? (effort === 'hard' ? 6 : 3.5) - 1 : selected!.met, +value)) : '')
+    if (strength || selected) setKcal(+value > 0 ? String(caloriesFromMet(weightKg, strength ? energy.met - 1 : selected!.met-(selected!.id.startsWith('treadmill_')?1:0), +value)) : '')
   }
   useEffect(() => {
     if (!prescription) return
     choose(prescription.exerciseId)
+    if(prescription.durationMin){const item=ACTIVITIES.find(a=>a.id===prescription.exerciseId);setMinutes(String(prescription.durationMin));if(item)setKcal(String(caloriesFromMet(weightKg,Math.max(0,item.met-1),prescription.durationMin)))}
     setSets(Array.from({ length: prescription.sets }, () => ({ reps: String(prescription.reps), holdSeconds: String(prescription.reps), weightKg: '' })))
     setRest(String(prescription.rest))
     // Keep actual load blank: a plan cannot know what the user lifted.
@@ -91,7 +96,7 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
     event.preventDefault()
     if (!valid || (library && !editing)) return
     const loggedSets = sets.map(set => ({ reps: tracking === 'reps' ? +set.reps : 0, weightKg: weighted ? +set.weightKg : 0, ...(tracking === 'hold' ? { holdSeconds: +set.holdSeconds } : {}) }))
-    const count = weighted ? implementCount : 1
+    const count = weighted ? usedCount : 1
     const volumeKg = loggedSets.reduce((sum, set) => sum + set.reps * set.weightKg * count * sides, 0)
     const hrTarget = runKind === 'maf_run' && runSettings ? { min: 170-profile.age+runSettings.mafAdjustment, max: 180-profile.age+runSettings.mafAdjustment } : runKind === 'zone2_run' && runSettings ? { min: Math.round(runSettings.maxHr*.6), max: Math.round(runSettings.maxHr*.7) } : undefined
     const detail = strength ? `${sets.length} ${sets.length === 1 ? 'set' : 'sets'} · ${tracking === 'hold' ? `${sets.map(set => set.holdSeconds).join('/')} sec` : `${sets.map(set => set.reps).join('/')} reps`}${weighted ? ` · ${sets.map(set => set.weightKg).join('/')} kg each × ${count}` : ' · bodyweight'}${sides === 2 ? ' · both sides' : ''} · ${includeEnergy ? 'entered calories' : 'estimated active kcal'}` : `${minutes} min actual${runSettings?.distanceKm ? ` · ${runSettings.distanceKm} km` : ''}${hrTarget ? ` · guidance ${hrTarget.min}–${hrTarget.max} bpm` : ''}${runKind && runSettings && RUN_TYPES[runKind].block ? ` · ${runSettings.rounds} × ${runSettings.work} min / ${runSettings.recovery} min easy` : ''} · manually logged`
@@ -122,8 +127,8 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
     <label className="home-form-label">Activity name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Choose above or type your own" required maxLength={90} /></label>
     {selected && (library ? <details className="activity-guide"><summary><Icon name="play_circle" size={21} />Exercise guide<Icon name="expand_more" size={18} /></summary><ExerciseDemo key={selected.id} exerciseId={exerciseDemoId(selected)} /></details> : <ExerciseDemo key={selected.id} exerciseId={exerciseDemoId(selected)} />)}
     {runKind && runSettings && <RunSettings kind={runKind} settings={runSettings} age={profile.age} onChange={setRunSettings} />}
-    {!runKind && <div className="exercise-tracking" role="group" aria-label="Logging method">{([{ id: 'reps', label: 'Sets & reps' }, { id: 'hold', label: 'Timed holds' }, { id: 'time', label: 'Duration' }] as const).map(item => <button type="button" key={item.id} aria-pressed={tracking === item.id} onClick={() => setTracking(item.id)}>{item.label}</button>)}</div>}
-    {strength && <><StrengthSets sets={sets} onChange={setSets} mode={tracking as 'reps' | 'hold'} weighted={weighted} implementCount={implementCount} onImplementCountChange={setImplementCount} sides={sides} />
+    {!runKind && !selected?.id.startsWith('treadmill_') && <div className="exercise-tracking" role="group" aria-label="Logging method">{([{ id: 'reps', label: 'Sets & reps' }, { id: 'hold', label: 'Timed holds' }, { id: 'time', label: 'Duration' }] as const).map(item => <button type="button" key={item.id} aria-pressed={tracking === item.id} onClick={() => setTracking(item.id)}>{item.label}</button>)}</div>}
+    {strength && <>{!selected&&<label className="exercise-energy-option"><input type="checkbox" checked={customWeighted} onChange={event=>setCustomWeighted(event.target.checked)}/>Uses weights (turn off for bodyweight)</label>}<StrengthSets sets={sets} onChange={setSets} mode={tracking as 'reps' | 'hold'} weighted={weighted} implementCount={usedCount} onImplementCountChange={setImplementCount} sides={sides} totalLoad={totalLoad} />
       {!includeEnergy && <fieldset className="strength-energy"><legend>Estimated calorie burn</legend><p className="strength-volume" aria-live="polite">{validSets && validEstimate ? `≈ ${energy.kcal} active kcal · ${energy.durationMin.toFixed(1)} min estimated` : 'Complete your sets to see the estimate'}</p>
         <details className="activity-energy-details" open={library ? undefined : true}><summary>Adjust the estimate<Icon name="tune" size={18} /></summary>
         <div className="home-activity-values">{tracking === 'reps' && <label className="home-form-label">Seconds per rep<input type="number" min="1" max="10" step="0.5" value={tempo} onChange={event => setTempo(event.target.value)} /></label>}<label className="home-form-label">Rest between sets (seconds)<input type="number" min="0" max="600" value={rest} onChange={event => setRest(event.target.value)} /></label></div>

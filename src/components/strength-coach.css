@@ -58,3 +58,19 @@
 @media(max-width:600px){.coach-field-grid,.coach-progress-fields{grid-template-columns:1fr}.coach-today{align-items:flex-start;flex-direction:column}.coach-setup{padding:20px}.coach-options button{padding:14px 12px}.coach-options strong{font-size:16px}.coach-session{padding:22px}.coach-session h3{font-size:32px}}
 @media(max-width:360px){.coach-session,.coach-setup{padding:18px}.coach-session h3{font-size:29px}.coach-exercises{padding-inline:16px}.coach-exercise-top h4{font-size:18px}.coach-prescription dd{font-size:21px}.coach-row-actions{gap:8px}.coach-row-actions button{padding-inline:8px;font-size:13px}}
 @media(prefers-reduced-motion:reduce){.strength-coach button{transition:none}}
+.coach-customize { padding-block: 20px; border-block: 1px solid var(--palette-line); }
+.coach-customize h3 { font-size: 22px; margin: 0 0 8px; }
+.coach-customize p { color: var(--palette-muted); font-size: 14px; line-height: 1.5; }
+.coach-customize ol { list-style: none; padding: 0; }
+.coach-customize li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-block: 8px; border-bottom: 1px solid var(--palette-line); }
+.coach-customize li strong { min-width: 0; font-size: 16px; }
+.coach-customize li div { display: flex; flex-shrink: 0; }
+.coach-customize li button { min-width: 44px; min-height: 44px; color: var(--palette-accent); }
+.coach-customize button:disabled { opacity: .4; cursor: not-allowed; }
+.coach-customize label { display: grid; gap: 8px; font-size: 14px; }
+.coach-customize input { width: 100%; min-height: 48px; padding: 10px; border: 1px solid var(--palette-outline); border-radius: 10px; background: var(--palette-surface); color: var(--palette-ink); font-size: 16px; }
+.coach-custom-results { max-height: 320px; overflow: auto; margin-block: 12px; }
+.coach-custom-results button { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px; border-bottom: 1px solid var(--palette-line); text-align: left; }
+.coach-custom-results span { display: grid; gap: 4px; }
+.coach-custom-results small { color: var(--palette-muted); font-size: 14px; }
+.coach-customize button:focus-visible,.coach-customize input:focus-visible { outline: 2px solid var(--palette-accent); outline-offset: 2px; }

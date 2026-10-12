@@ -16,6 +16,7 @@ export interface LookupResult {
   confidence: number
   note?: string
   sourceUrl?: string
+  imageUrl?: string
   source: 'openfoodfacts' | 'usda' | 'claude' | 'gemini' | 'local'
 }
 
@@ -109,13 +110,13 @@ export async function searchFoodReferences(name: string, signal?: AbortSignal): 
     const response = await fetch(apiUrl('/api/food-catalog'), { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({mode,query:name}), signal })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error || 'Database unavailable')
-    return (Array.isArray(data.items) ? data.items : []).filter((item: any) => !hasExcludedIngredients(item.name) && [item.kcal,item.protein,item.carbs,item.fat].every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0)).map((item: any): LookupResult => ({name:item.name,serving:item.basis,kcal:item.kcal,protein:item.protein,carbs:item.carbs,fat:item.fat,source:mode==='ingredients'?'usda':'openfoodfacts',sourceUrl:item.sourceUrl,confidence:.8,note:item.note}))
+    return (Array.isArray(data.items) ? data.items : []).filter((item: any) => !hasExcludedIngredients(item.name) && [item.kcal,item.protein,item.carbs,item.fat].every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0)).map((item: any): LookupResult => ({name:item.name,serving:item.basis,kcal:item.kcal,protein:item.protein,carbs:item.carbs,fat:item.fat,source:mode==='ingredients'?'usda':'openfoodfacts',sourceUrl:item.sourceUrl,imageUrl:typeof item.imageUrl==='string'&&/^https:\/\/images\.openfoodfacts\.org\//.test(item.imageUrl)?item.imageUrl:undefined,confidence:.8,note:item.note}))
   })
   const outcomes = await Promise.allSettled(barcode ? tasks : [...tasks, lookupFood(name, signal, 'online').then(result => [result])])
   if (signal?.aborted) throw new DOMException('Search cancelled','AbortError')
   const items = outcomes.flatMap(outcome => outcome.status==='fulfilled' ? outcome.value : [])
   const seen = new Set<string>()
-  const unique = items.filter(item => { const key = `${item.name.toLowerCase()}:${item.serving}:${item.source}`; if(seen.has(key))return false;seen.add(key);return true })
+  const unique = items.filter(item => { if(!item.name||![item.kcal,item.protein,item.carbs,item.fat].every(value=>typeof value==='number'&&Number.isFinite(value)&&value>=0))return false;const key = `${item.name.toLowerCase()}:${item.serving}:${item.source}`; if(seen.has(key))return false;seen.add(key);return true })
   if (!unique.length) throw new Error('No nutrition references found. Try a generic dish name or specify ingredients and portion.')
   return unique
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -17,9 +17,9 @@ import { dayFuel } from '../lib/nutrition'
 import { dietDef, dietWarnings, nowMinutes, windowState } from '../lib/diet'
 import { slotForNow } from '../lib/foodAI'
 import { QUICK_FOODS } from '../lib/quickFoods'
-import { searchLocalFoods, type LocalFood } from '../lib/localFoods'
-import { lookupFood, searchFoodReferences, sourceLabel, type LookupResult } from '../lib/foodLookup'
-import { RESTAURANT_BRANDS, hasCompleteMacros, searchRestaurantFoods, type RestaurantBrand, type RestaurantFood } from '../lib/restaurantFoods'
+import { type LocalFood } from '../lib/localFoods'
+import { lookupFood, sourceLabel } from '../lib/foodLookup'
+import { FoodReferencePicker } from '../components/FoodReferencePicker'
 import type { DietWarning } from '../lib/diet'
 import type { FoodEntry } from '../types'
 import type { MealSlot } from '../types'
@@ -174,180 +174,19 @@ export function Food() {
 function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: { date: string; initialQuery?: string; initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
   const reduced = useReducedMotion()
   const dialogRef = useDialogFocus(onClose)
-  const [q, setQ] = useState(initialQuery.slice(0, 120))
-  const [custom, setCustom] = useState(false)
-  const [slot, setSlot] = useState<MealSlot>(initialSlot)
-  const [brand, setBrand] = useState<RestaurantBrand | null>(null)
-  const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string; sourceLabel?: string; sourceUrl?: string } | null>(null)
-  const [calorieSearch, setCalorieSearch] = useState<((query: string) => RestaurantFood[]) | null>(null)
-  useEffect(() => {
-    let active = true
-    void import('../lib/kkmFoods').then(module => {
-      if (active) setCalorieSearch(() => module.searchKKMFoods)
-    })
-    return () => { active = false }
-  }, [])
-  const [online, setOnline] = useState<LookupResult | null>(null)
-  const [onlineMatches, setOnlineMatches] = useState<LookupResult[]>([])
-  const [searching, setSearching] = useState(false)
-  const [onlineErr, setOnlineErr] = useState<string | null>(null)
-  const lookupController = useRef<AbortController | null>(null)
-  const results = brand || !q.trim() ? [] : searchLocalFoods(q, 30)
-  const restaurantResults = q.trim() || brand ? [...searchRestaurantFoods(q, brand, 45), ...(!brand && calorieSearch ? calorieSearch(q) : [])] : []
-  const noLocalMatch = q.trim().length >= 3 && results.length === 0 && restaurantResults.length === 0 && brand === null
-
-  useEffect(() => {
-    lookupController.current?.abort()
-    setOnline(null)
-    setOnlineMatches([])
-    setOnlineErr(null)
-    setSearching(false)
-    if (!noLocalMatch || custom) return
-    // Provider searches are deliberate actions, not search-as-you-type requests.
-  // Query is the trigger; result counts are derived from it.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, brand, custom, noLocalMatch])
-
-  const chooseRestaurant = (item: RestaurantFood) => {
-    if (hasCompleteMacros(item)) {
-      setCustomDefaults({ name: `${item.brand} · ${item.name}`, serving:item.serving, kcal:item.kcal, protein:item.protein, carbs:item.carbs, fat:item.fat, note:`${item.sourceLabel}. ${item.note ?? ''}`, sourceLabel:item.sourceLabel, sourceUrl:item.sourceUrl })
-      setCustom(true)
-      return
-    }
-    setCustomDefaults({ name: item.brand === 'KKM' ? item.name : `${item.brand} · ${item.name}`, kcal: item.kcal, serving:item.serving, note:item.note, sourceLabel:item.sourceLabel, sourceUrl:item.sourceUrl })
-    setCustom(true)
-  }
-
-  const searchOnline = async (name = q.trim()) => {
-    if (!name) return
-    lookupController.current?.abort()
-    const controller = new AbortController()
-    lookupController.current = controller
-    setSearching(true)
-    setOnline(null)
-    setOnlineErr(null)
-    try {
-      const found = await searchFoodReferences(name, controller.signal)
-      if (!controller.signal.aborted) { setOnline(found[0]); setOnlineMatches(found) }
-    } catch (err) {
-      if (!controller.signal.aborted) setOnlineErr(err instanceof Error ? err.message : 'Lookup failed')
-    } finally {
-      if (!controller.signal.aborted) setSearching(false)
-    }
-  }
-  return createPortal(
-    <motion.div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose} initial={reduced ? false : { opacity: 0.85 }} animate={{ opacity: 1 }}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <motion.div
-        className="relative w-full max-w-[480px] bg-ink-card rounded-t-[28px] border-t border-tile-border p-margin-mobile pb-xl max-h-[85%] flex flex-col"
-        ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="food-search-title" tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
-        initial={reduced ? false : { y: 80 }} animate={{ y: 0 }} transition={reduced ? { duration: 0 } : spring}
-      >
-        <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
-        <div className="flex items-center justify-between gap-sm mb-sm">
-          <h2 id="food-search-title" className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{custom ? 'Review portion' : 'Search food'}</h2>
-          <div className="flex items-center gap-sm">
-            {custom && <button type="button" onClick={() => { setCustomDefaults(null); setCustom(false) }} className="font-data-mono text-[12px] text-lime flex items-center gap-1"><Icon name="search" size={16} /> Search</button>}
-            <button type="button" onClick={onClose} aria-label="Close food search" className="text-on-surface-variant"><Icon name="close" size={22} /></button>
-          </div>
-        </div>
-
-        <p className="home-form-note">Logging for {date === todayISO() ? 'today' : new Date(`${date}T12:00:00`).toLocaleDateString('en-MY', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
-        <div className="food-search-slots" role="group" aria-label="Meal to log">
-          {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map((option) => <button type="button" key={option} aria-pressed={slot === option} onClick={() => setSlot(option)}>{option}</button>)}
-        </div>
-
-        {custom ? (
-          <CustomFoodForm key={customDefaults?.name ?? 'manual'} onSubmit={(food) => onPick(food, slot)} defaults={customDefaults} defaultName={customDefaults?.name ?? q} />
-        ) : (
-          <>
-            <form onSubmit={event => { event.preventDefault(); void searchOnline() }} className="flex items-center gap-2 bg-ink rounded-xl px-md py-2 mb-md">
-              <Icon name="search" className="text-on-surface-variant" size={18} />
-              <input
-                autoFocus aria-label="Search food or restaurant" value={q} onChange={(e) => setQ(e.target.value)}
-                placeholder="Food, restaurant or barcode"
-                className="flex-1 bg-transparent text-on-surface font-body-md focus:outline-none placeholder:text-on-surface-variant"
-              />
-              <button type="submit" disabled={searching || q.trim().length < 3} className="min-h-11 px-3 text-lime font-semibold disabled:opacity-50">{searching ? 'Searching…' : 'Search'}</button>
-            </form>
-            <details className="mb-sm"><summary className="text-[13px] text-on-surface-variant py-2 cursor-pointer">Browse a restaurant</summary><div className="food-brand-filters" role="group" aria-label="Filter restaurant">
-              <button type="button" aria-pressed={brand === null} onClick={() => setBrand(null)}>All</button>
-              {RESTAURANT_BRANDS.map((name) => <button type="button" key={name} aria-pressed={brand === name} onClick={() => setBrand(name)}>{name}</button>)}
-            </div></details>
-            <div className="overflow-y-auto no-scrollbar space-y-sm">
-              {!q.trim() && !brand && <p className="font-body-md text-[12px] text-on-surface-variant text-center py-md">What did you eat? Type a food name to see matches.</p>}
-              {results.length === 0 && restaurantResults.length === 0 && q.trim() && (
-                <div className="text-center py-md">
-                  <p className="font-body-md text-[12px] text-on-surface-variant">{noLocalMatch ? 'Tap Search for more food matches.' : 'Type at least 3 characters.'}</p>
-                </div>
-              )}
-              {restaurantResults.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-lime uppercase pt-sm">Published calorie references · offline</p>}
-              {restaurantResults.map((item) => (
-                <div key={`${item.sourceUrl}:${item.name}:${item.serving}:${item.kcal}`} className="food-restaurant-result">
-                  <button type="button" onClick={() => chooseRestaurant(item)} className="food-restaurant-main">
-                    <span className="food-restaurant-identity"><strong>{item.name}</strong><small>{item.brand} · {item.serving}</small></span>
-                    <span className="food-restaurant-numbers"><strong>{item.kcal === null ? 'No verified kcal' : `${item.kcal} kcal`}</strong><small>{hasCompleteMacros(item) ? `${item.protein}P · ${item.carbs}C · ${item.fat}F` : item.kcal === null ? 'Add your own values' : 'Calories only · add macros to log'}</small></span>
-                  </button>
-                  <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" className="food-restaurant-source">{item.sourceLabel} <Icon name="open_in_new" size={12} /></a>
-                  {item.note && <p className="food-restaurant-note">{item.note}</p>}
-                </div>
-              ))}
-              {results.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-on-surface-variant uppercase pt-sm">General food references</p>}
-              {results.map((f) => (
-                <Press key={f.name} onClick={() => { setCustomDefaults({name:f.name,serving:f.serving,kcal:f.kcal,protein:f.protein,carbs:f.carbs,fat:f.fat,note:f.nutritionSource}); setCustom(true) }} className="w-full rounded-[18px] bg-ink border border-tile-border p-sm flex items-center justify-between text-left cursor-pointer">
-                  <div className="flex items-center gap-md">
-                    <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
-                    <div>
-                      <div className="font-metric-md text-[14px] text-on-surface leading-tight">{f.name}</div>
-                      <div className="font-data-mono text-[11px] text-on-surface-variant">{f.serving} · {f.category}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-data-mono text-[13px] text-on-surface">{f.kcal} kcal</div>
-                    <div className="font-data-mono text-[10px] text-on-surface-variant">{f.protein}P {f.carbs}C {f.fat}F</div>
-                  </div>
-                </Press>
-              ))}
-
-              {/* Online lookup */}
-              {q.trim().length >= 3 && brand === null && (
-                <div className="pt-sm">
-                  {searching && (
-                    <div role="status" className="rounded-[18px] bg-ink border border-tile-border p-md flex items-center gap-md">
-                      <span className="w-5 h-5 rounded-full border-2 border-lime/30 border-t-lime animate-spin shrink-0" />
-                      <p className="font-body-md text-[13px] text-on-surface-variant">Searching online for “{q.trim()}” — this can take a moment…</p>
-                    </div>
-                  )}
-                  {onlineErr && !searching && (
-                    <div role="status" className="text-center py-sm"><p className="font-data-mono text-[11px] text-pink-deep">Couldn’t get a reliable online estimate. You can retry or enter nutrition manually.</p><button type="button" className="food-manual-fallback" onClick={() => { void searchOnline() }}>Retry online search</button></div>
-                  )}
-                  {online && !searching && onlineMatches.map(online => (
-                    <Press key={`${online.source}:${online.name}:${online.serving}`} onClick={() => { setCustomDefaults({ name: online.name, kcal: online.kcal, protein: online.protein, carbs: online.carbs, fat: online.fat, serving: online.serving, note: online.note }); setCustom(true) }} className="w-full rounded-[18px] bg-ink border border-lime/30 p-sm flex items-center justify-between text-left cursor-pointer">
-                      <div className="flex items-center gap-md min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={21} /></div>
-                        <div className="min-w-0">
-                          <div className="font-metric-md text-[14px] text-on-surface leading-tight truncate">{online.name}</div>
-                          <div className="font-data-mono text-[11px] text-lime">{online.serving} · {sourceLabel(online.source)} · check portion</div>
-                          {online.note && <p className="text-[11px] text-on-surface-variant mt-1">{online.note}</p>}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-data-mono text-[13px] text-on-surface">{online.kcal} kcal</div>
-                        <div className="font-data-mono text-[10px] text-on-surface-variant">{online.protein}P {online.carbs}C {online.fat}F</div>
-                      </div>
-                    </Press>
-                  ))}
-                </div>
-              )}
-              {q.trim().length > 0 && <button type="button" className="food-manual-fallback" onClick={() => { lookupController.current?.abort(); setCustomDefaults(null); setCustom(true) }}><Icon name="edit" size={17} /> Enter manually</button>}
-            </div>
-            <p className="font-data-mono text-[10px] text-on-surface-variant text-center mt-md">Restaurant values are stored offline. Menu and portions can change; check the linked source.</p>
-          </>
-        )}
-      </motion.div>
-    </motion.div>, document.body
-  )
+  const [q,setQ] = useState(initialQuery)
+  const [custom,setCustom] = useState(false)
+  const [slot,setSlot] = useState<MealSlot>(initialSlot)
+  const [customDefaults,setCustomDefaults] = useState<{name:string;kcal:number|null;protein?:number;carbs?:number;fat?:number;serving?:string;note?:string;sourceLabel?:string;sourceUrl?:string}|null>(null)
+  return createPortal(<motion.div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose} initial={reduced?false:{opacity:0}} animate={{opacity:1}}>
+    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
+    <motion.div className="relative w-full max-w-[480px] bg-ink-card rounded-t-[24px] border-t border-tile-border p-margin-mobile pb-xl max-h-[90%] flex flex-col overflow-y-auto" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="food-search-title" tabIndex={-1} onClick={e=>e.stopPropagation()} initial={reduced?false:{y:80}} animate={{y:0}} transition={reduced?{duration:0}:spring}>
+      <div className="flex items-center justify-between gap-sm mb-sm"><h2 id="food-search-title" className="text-[24px] font-bold text-on-surface">{custom?'Review portion':'Search food & drinks'}</h2><button type="button" onClick={onClose} aria-label="Close food search" className="min-h-11 min-w-11 text-on-surface-variant"><Icon name="close" size={22}/></button></div>
+      <p className="home-form-note">Logging for {date===todayISO()?'today':shortDate(date)}. Search → choose → check serving.</p>
+      <div className="food-search-slots" role="group" aria-label="Meal to log">{(['breakfast','lunch','dinner','snack'] as const).map(option=><button key={option} type="button" aria-pressed={slot===option} onClick={()=>setSlot(option)}>{option}</button>)}</div>
+      {custom?<><button type="button" className="food-manual-fallback" onClick={()=>{setCustom(false);setCustomDefaults(null)}}><Icon name="arrow_back" size={18}/>Back to results</button><CustomFoodForm key={customDefaults?.name??'manual'} onSubmit={food=>onPick(food,slot)} defaults={customDefaults} defaultName={customDefaults?.name??q}/></>:<FoodReferencePicker initialQuery={q} onPick={item=>{setQ(item.name);setCustomDefaults({name:item.name,kcal:item.kcal,serving:item.serving,protein:item.protein,carbs:item.carbs,fat:item.fat,note:item.note,sourceLabel:item.sourceLabel,sourceUrl:item.sourceUrl});setCustom(true)}} onManual={name=>{setQ(name);setCustomDefaults(null);setCustom(true)}}/>}
+    </motion.div>
+  </motion.div>,document.body)
 }
 
 function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: LocalFood) => void; defaultName: string; defaults: { name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string; sourceLabel?: string; sourceUrl?: string } | null }) {

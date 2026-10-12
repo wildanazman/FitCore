@@ -8,6 +8,8 @@ import { apiUrl } from './apiBase'
 import { googleAuthHeaders } from '../store/AuthContext'
 
 export interface DetectionItem {
+  sourceLabel?: string
+  sourceUrl?: string
   name: string
   grams?: number
   kcal: number
@@ -18,6 +20,7 @@ export interface DetectionItem {
 }
 
 export interface Detection {
+  macrosNeedReview?: boolean
   name: string
   emoji: string
   kcal: number

@@ -10,6 +10,7 @@ import type { DietMode, UserProfile } from '../types'
 import './settings.css'
 import { THEMES, useTheme } from '../store/ThemeContext'
 import { BackupTransfer } from '../components/BackupTransfer'
+import { CloudBackup } from '../components/CloudBackup'
 import { GeminiModelPicker } from '../components/GeminiModelPicker'
 import { GoogleAccount } from '../components/GoogleAccount'
 
@@ -84,12 +85,13 @@ export function Settings() {
 
       <section className="settings-section settings-data" hidden={category !== 'data'} aria-labelledby="settings-data-title"><div className="settings-section-head"><h2 id="settings-data-title">Your data</h2><p>Stored in this browser on this device.</p></div>
         <BackupTransfer/>
+        {category === 'data' && <CloudBackup/>}
         <button type="button" className="settings-export" onClick={() => downloadCSV(state)}><Icon name="download" size={22} /><span><strong>Export logs as CSV</strong><small>Food, weight and training logs. Photos and profile are not included.</small></span><Icon name="arrow_forward" size={20} /></button>
         <div className="settings-danger"><div className="settings-danger-title"><Icon name="delete_forever" size={22} /><div><h3>Clear all data</h3><p>Remove your profile, food and activity logs, weight entries, photos, plans, preferences and local AI usage from this browser.</p></div></div>
           {!confirmReset ? <button type="button" className="settings-clear-start" onClick={() => setConfirmReset(true)}>Clear all data</button> : <div className="settings-confirm"><p>This cannot be undone. Export your logs first if you want a copy. Type <strong>CLEAR</strong> to confirm.</p><label htmlFor="settings-confirm-input">Confirmation</label><input ref={confirmationRef} id="settings-confirm-input" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} autoComplete="off" spellCheck={false} placeholder="Type CLEAR" /><div className="settings-confirm-actions"><button type="button" onClick={() => { setConfirmReset(false); setConfirmation('') }}>Cancel</button><button type="button" className="settings-confirm-delete" disabled={confirmation !== 'CLEAR'} onClick={clearEverything}>Erase my data</button></div></div>}
         </div>
       </section>
-      <p className="settings-footer">FitCore · Your data stays on this device</p>
+      <p className="settings-footer">FitCore · Local-first, with optional cloud backup</p>
     </div>
   </div>
 }

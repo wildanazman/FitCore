@@ -65,7 +65,7 @@ export function coachDay(profile: UserProfile, date: string, sessions: PlanSessi
   const days = [...prefs.days].sort((a,b) => a-b)
   const index = days.indexOf(mondayIndex(date))
   const week = Math.max(0, Math.floor(daysBetween(startOfWeek(prefs.startDate), startOfWeek(date))/7))
-  const rest = index < 0 || date < prefs.startDate
+  let rest = index < 0 || date < prefs.startDate
   const split = coachSplit(profile), splitDay = split.days[index]
   const patterns: Pattern[] = rest ? [] : splitDay.patterns
   const count = prefs.minutes === 30 ? 4 : prefs.minutes === 45 ? 5 : 6
@@ -86,7 +86,7 @@ export function coachDay(profile: UserProfile, date: string, sessions: PlanSessi
   const mainLift = (pattern: Pattern) => ['push','pull','squat','hinge','shoulders','unilateral'].includes(pattern)
   exercises.sort((a,b)=>Number(mainLift(b.pattern))-Number(mainLift(a.pattern)))
   const limitedPull = !prefs.gym && !['dumbbell','kettlebell'].some(gear => profile.homeEquipment?.includes(gear as 'dumbbell'|'kettlebell'))
-  const title = rest ? 'Recovery day' : splitDay.label === 'Full body' ? limitedPull ? 'Full-body basics' : 'Full body · chest, back & legs' : splitDay.label
+  let title = rest ? 'Recovery day' : splitDay.label === 'Full body' ? limitedPull ? 'Full-body basics' : 'Full body · chest, back & legs' : splitDay.label
   const hardRun = sessions.some(s => s.date === date && s.type === 'run' && (['interval','long','tempo'].includes(s.runKind ?? '') || /interval|long|tempo|hill/i.test(s.title)))
   const yesterdayStrength = sessions.some(s => s.date === addDays(date,-1) && s.completed && s.type === 'strength')
   // Supersets are optional time-saving execution, not a promise of better hypertrophy.
@@ -105,12 +105,12 @@ export function coachDay(profile: UserProfile, date: string, sessions: PlanSessi
     ? [...exercises].reverse().find(e=>['gym_pec_deck','gym_triceps_pushdown','gym_leg_curl'].includes(e.item.id)) : undefined
   // Conservative time accounting includes warm-up, set execution, rests, transitions,
   // unilateral repetitions and an optional drop. It is an estimate, not a stopwatch.
-  function estimateMinutes() {
+  function estimateMinutes(includeDrop = true) {
     return Math.ceil((480 + exercises.reduce((seconds,e)=>{
       const unilateral=/single.arm|split squat|lunge/i.test(e.item.label)?2:1
       const work=e.held?30:15*3*unilateral
       return seconds+e.sets*work+(e.sets-1)*e.rest+45
-    },0)+(dropSet?60:0))/60)
+    },0)+(includeDrop&&dropSet?60:0))/60)
   }
   while(estimateMinutes()>prefs.minutes){
     const reducible=[...exercises].reverse().find(e=>e.sets>2 && !supersetPairs.some(pair=>pair.first===e.item.id||pair.second===e.item.id))
@@ -118,14 +118,33 @@ export function coachDay(profile: UserProfile, date: string, sessions: PlanSessi
     if(exercises.length>3){exercises.pop();continue}
     break
   }
+  const override = profile.strengthWorkouts?.[date]
+  const customized = Array.isArray(override)
+  if (customized) {
+    const selected = [...new Set(override)].slice(0,30).flatMap(id => {
+      const item = ACTIVITIES.find(a=>a.id===id && a.type==='strength' && (a.category==='gym'||a.category==='home'))
+      if (!item || (!prefs.gym && (item.category==='gym'||!canUseEquipment(item,profile.homeEquipment??[])))) return []
+      const previous = exercises.find(e=>e.item.id===id)
+      const key = `${date}:${id}`, held = /plank|wall_sit/.test(id)
+      return [{item,key,sets:previous?.sets??(prefs.experience==='new'?2:3),pattern:previous?.pattern??'core' as Pattern,reps:held?25:prefs.focus==='muscle'?10:12,held,rest:previous?.rest??120,
+        recent:sessions.filter(s=>s.completed&&s.date<date&&s.strengthLog?.exerciseId===id).sort((a,b)=>b.date.localeCompare(a.date))[0],
+        logged:sessions.find(s=>s.completed&&s.date===date&&(s.coachKey===key||s.strengthLog?.exerciseId===id))}]
+    })
+    exercises.splice(0,exercises.length,...selected)
+    rest = selected.length===0
+    title = rest ? 'Recovery day' : 'Your custom workout'
+  }
   const retainedIds=new Set(exercises.map(e=>e.item.id))
-  const validPairs=supersetPairs.filter(pair=>retainedIds.has(pair.first)&&retainedIds.has(pair.second))
-  const validDrop=dropSet&&retainedIds.has(dropSet.item.id)?dropSet.item.id:null
+  const validPairs=customized?[]:supersetPairs.filter(pair=>retainedIds.has(pair.first)&&retainedIds.has(pair.second))
+  const validDrop=!customized&&dropSet&&retainedIds.has(dropSet.item.id)?dropSet.item.id:null
   const nextSearchStart = date < prefs.startDate ? addDays(prefs.startDate,-1) : date
-  return { title, shortTitle: rest ? 'Rest' : splitDay.short, split, exercises, supersetPairs: validPairs, dropSetExercise: validDrop, estimatedMinutes: rest?0:estimateMinutes(),
-    volumeReason: prefs.experience==='new'?'Starter volume: 2 working sets to learn the movements. Warm-up sets are separate.':prefs.minutes===30?'Short session: prioritise the main lifts; accessories use less volume.':'Main lifts get 3–4 working sets; accessories and total volume stay within your time budget.',
+  const cardioPrefs=prefs.gym?prefs.treadmill:undefined
+  const cardioItem=cardioPrefs?.days.includes(mondayIndex(date))&&date>=prefs.startDate?ACTIVITIES.find(a=>a.id===`treadmill_${cardioPrefs.mode}`):undefined
+  const cardio=cardioItem&&cardioPrefs?{item:cardioItem,minutes:cardioPrefs.minutes,key:`${date}:${cardioItem.id}`,logged:sessions.find(s=>s.completed&&s.date===date&&s.coachKey===`${date}:${cardioItem.id}`)}:null
+  return { title, shortTitle: rest ? cardio?'Cardio':'Rest' : customized?'Custom':splitDay.short, customized, split, exercises, cardio, supersetPairs: validPairs, dropSetExercise: validDrop, estimatedMinutes: rest?0:estimateMinutes(!customized),
+    volumeReason: customized?'You chose this exercise order. Sets are editable when logging; review recovery and session length. Coach-selected supersets and drop sets are disabled for this custom session.':prefs.experience==='new'?'Starter volume: 2 working sets to learn the movements. Warm-up sets are separate.':prefs.minutes===30?'Short session: prioritise the main lifts; accessories use less volume.':'Main lifts get 3–4 working sets; accessories and total volume stay within your time budget.',
     rest, week, hardRun, recoveryWarning: !rest && ((days.length === 2 || !split.muscleDays && days.length === 3) && yesterdayStrength || split.tightRecovery),
-    completed: exercises.length > 0 && exercises.every(e => e.logged), gym: prefs.gym,
+    completed: (exercises.length > 0 || Boolean(cardio)) && exercises.every(e => e.logged) && (!cardio || Boolean(cardio.logged)), gym: prefs.gym,
     limitedPull: limitedPull && patterns.some(p=>p==='pull'||p==='rearDelt'), limitedExercises: !rest && exercises.length < Math.min(count,patterns.length),
     nextDate: Array.from({length:7},(_,i)=>addDays(nextSearchStart,i+1)).find(day => days.includes(mondayIndex(day)))! }
 }

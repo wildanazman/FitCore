@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { addDays, isLogDate, shortDate, startOfWeek, todayISO } from '../lib/date'
 import { coachDay, coachSplit, COACH_DAYS, validCoachDays } from '../lib/strengthCoach'
-import { HOME_EQUIPMENT, equipmentLabel } from '../lib/activities'
+import { HOME_EQUIPMENT, equipmentLabel, ACTIVITIES, canUseEquipment, activityTracking } from '../lib/activities'
 import type { UserProfile } from '../types'
 import { ActivityComposer } from './ActivityComposer'
 import { ExerciseDemo } from './ExerciseDemo'
@@ -16,7 +16,7 @@ export function CoachToday({ date }: { date: string }) {
   const { profile, state } = useApp()
   const nav = useNavigate()
   const plan = coachDay(profile, date, state.sessions)
-  return <section className="coach-today" aria-label="Coach today"><div><h2>{plan ? plan.completed ? 'Session done. Recover well.' : plan.title : 'Your strength plan'}</h2><p>{plan ? plan.rest ? `Next workout: ${shortDate(plan.nextDate)}. Easy movement is optional.` : `${plan.gym ? 'Gym' : 'Home'} · ${plan.exercises.length} exercises · sets, reps & rest ready` : 'Gym or home? Choose your equipment and training days.'}</p></div><button type="button" onClick={() => nav(`/train?plan=1&date=${date}`)}>{plan ? 'View plan' : 'Build my plan'}<Icon name="arrow_forward" size={18}/></button></section>
+  return <section className="coach-today" aria-label="Coach today"><div><h2>{plan ? plan.completed ? 'Session done. Recover well.' : plan.rest&&plan.cardio?'Treadmill day':plan.title : 'Your strength plan'}</h2><p>{plan ? plan.rest&&!plan.cardio ? `Next workout: ${shortDate(plan.nextDate)}. Easy movement is optional.` : `${plan.gym ? 'Gym' : 'Home'} · ${plan.exercises.length} strength exercises${plan.cardio?` + ${plan.cardio.minutes} min treadmill ${plan.cardio.item.id==='treadmill_walk'?'walk':'easy run'}`:' · sets, reps & rest ready'}` : 'Gym or home? Choose your equipment and training days.'}</p></div><button type="button" onClick={() => nav(`/train?plan=1&date=${date}`)}>{plan ? 'View plan' : 'Build my plan'}<Icon name="arrow_forward" size={18}/></button></section>
 }
 
 export function StrengthCoach({ date, onDateChange }: { date: string; onDateChange: (date: string) => void }) {
@@ -28,6 +28,9 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
   const [active, setActive] = useState<string | null>(null)
   const [demo, setDemo] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [customizing, setCustomizing] = useState(false)
+  const [customActivity, setCustomActivity] = useState(false)
+  const [cardioLog,setCardioLog] = useState(false)
   const plan = coachDay(profile, date, state.sessions)
   const weekStart = startOfWeek(date)
   const exercise = plan?.exercises.find(e => e.item.id === active)
@@ -35,7 +38,8 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
   const completed = plan?.exercises.filter(e => e.logged).length ?? 0
   const nextExercise = plan?.exercises.find(e => !e.logged)
   function startWorkout() {
-    if (!nextExercise || !isLogDate(date)) return
+    if (!isLogDate(date)) return
+    if (!nextExercise) {if(plan?.cardio&&!plan.cardio.logged)setCardioLog(true);return}
     setActive(nextExercise.item.id)
     const row = document.getElementById(`coach-exercise-${nextExercise.item.id}`)
     row?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
@@ -45,6 +49,7 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
     if (profile.age < 18) { setError('This starter plan is for adults. Get age-appropriate guidance from a qualified coach.'); return }
     if (!draft.clearance) { setError('Confirm you can exercise safely. If you have pain, injury or a medical restriction, get professional guidance first.'); return }
     if (!validCoachDays(draft.days,draft.split)) { setError('Choose 2–5 days. Full-body routines need a rest day between sessions—including Sunday to Monday.'); return }
+    if(draft.gym&&draft.treadmill&&!draft.treadmill.days.length){setError('Choose at least one treadmill day, or turn treadmill off.');return}
     updateProfile({ strengthCoach: { ...draft, days: [...draft.days].sort((a,b)=>a-b), startDate: profile.strengthCoach?.startDate ?? todayISO() }, homeEquipment: gear })
     setEditing(false); setActive(null); setSaved(true); setError('')
   }
@@ -55,26 +60,30 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
     <fieldset><legend>How do you want to split training?</legend><div className="coach-options">{([{id:'muscle-days',name:'Muscle days',hint:'Chest, back, legs + supporting sessions'},{id:'balanced',name:'Full body / upper-lower',hint:'Spread major muscle groups across the week'}] as const).map(option=><button type="button" key={option.id} aria-pressed={(draft.split??'muscle-days')===option.id} onClick={()=>setDraft({...draft,split:option.id})}><strong>{option.name}</strong><span>{option.hint}</span></button>)}</div><p>Muscle days are a preference, not automatically better. With only 2 days, both routines use full body.</p></fieldset>
     <fieldset><legend>Which days can you train?</legend><div className="coach-days">{COACH_DAYS.map((day,index)=><button type="button" key={day} aria-pressed={draft.days.includes(index)} onClick={()=>setDraft({...draft,days:draft.days.includes(index)?draft.days.filter(d=>d!==index):draft.days.length<5?[...draft.days,index]:draft.days})}>{day}</button>)}</div><p>Choose 2–5 days. We arrange repeat muscle sessions around your selected days, including the weekend.</p>{draft.days.length>=2&&<ul className="coach-split-preview">{coachSplit({...profile,strengthCoach:draft}).days.map(day=><li key={day.day}><span>{COACH_DAYS[day.day]}</span><strong>{day.label}</strong></li>)}</ul>}</fieldset>
     <label className="coach-technique-select">Set style<select value={draft.techniques??'auto'} onChange={e=>setDraft({...draft,techniques:e.target.value as 'auto'|'straight'})}><option value="auto">Coach-selected options</option><option value="straight">Straight sets only</option></select></label><p>Beginners use straight sets. For experienced users, optional supersets can save time; suitable machine isolation exercises may get one drop-set option. Neither is compulsory.</p>
+    {draft.gym&&<fieldset><legend>Treadmill in your gym routine</legend><label className="coach-clearance"><input type="checkbox" checked={Boolean(draft.treadmill)} onChange={event=>setDraft({...draft,treadmill:event.target.checked?{mode:'walk',minutes:10,days:[...draft.days]}:undefined})}/><span>Add optional walking or easy running</span></label>{draft.treadmill&&<><div className="coach-field-grid"><label>Activity<select value={draft.treadmill.mode} onChange={e=>setDraft({...draft,treadmill:{...draft.treadmill!,mode:e.target.value as 'walk'|'run'}})}><option value="walk">Comfortable walk</option><option value="run">Easy conversational run</option></select></label><label>Minutes per treadmill session<select value={draft.treadmill.minutes} onChange={e=>setDraft({...draft,treadmill:{...draft.treadmill!,minutes:Number(e.target.value) as 10|15|20|30}})}>{[10,15,20,30].map(n=><option key={n} value={n}>{n} min</option>)}</select></label></div><div className="coach-days">{COACH_DAYS.map((day,index)=><button type="button" key={day} aria-label={`Treadmill ${day}`} aria-pressed={draft.treadmill!.days.includes(index)} onClick={()=>setDraft({...draft,treadmill:{...draft.treadmill!,days:draft.treadmill!.days.includes(index)?draft.treadmill!.days.filter(d=>d!==index):[...draft.treadmill!.days,index]}})}>{day}</button>)}</div><p>Treadmill time is extra, not included in the strength time budget. Keep it easy; after a tiring leg day, walking or a separate day may suit you better. This is not a race-training plan.</p></>}</fieldset>}
     <label className="coach-clearance"><input type="checkbox" checked={draft.clearance} onChange={e=>setDraft({...draft,clearance:e.target.checked})}/><span>I can exercise without current pain, injury or a medical restriction that needs professional advice.</span></label>
     {error && <p role="alert">{error}</p>}<div className="coach-actions"><button className="coach-primary" type="submit">{profile.strengthCoach?'Update my plan':'Build my plan'}<Icon name="arrow_forward" size={18}/></button>{profile.strengthCoach&&<button type="button" onClick={()=>{setEditing(false);setError('')}}>Cancel</button>}</div>
   </form></section>
-  const sessionTitle = plan.rest ? 'Recovery day.' : `${plan.shortTitle === 'Full' ? 'Full-body' : plan.shortTitle === 'Shoulder' ? 'Shoulders & abs' : plan.shortTitle} day.`
+  const sessionTitle = plan.rest ? plan.cardio?'Treadmill day.':'Recovery day.' : `${plan.shortTitle === 'Full' ? 'Full-body' : plan.shortTitle === 'Shoulder' ? 'Shoulders & abs' : plan.shortTitle} day.`
   return <section className="strength-coach coach-workspace">
     <aside className="coach-week-panel" aria-label="Your training week">
       <header className="coach-heading"><div><h2>Your week.</h2><p>{plan.gym ? 'Gym' : 'Home'} · {profile.strengthCoach!.days.length} training days</p></div><button type="button" aria-label="Edit training setup" onClick={()=>{setDraft(profile.strengthCoach!);setGear(profile.homeEquipment??[]);setEditing(true)}}><Icon name="tune" size={18}/>Edit</button></header>
       <div className="coach-week-nav"><button type="button" aria-label="Previous strength week" onClick={()=>{onDateChange(addDays(date,-7));setActive(null);setSaved(false)}}><Icon name="chevron_left"/></button><span>{shortDate(weekStart)} – {shortDate(addDays(weekStart,6))}</span><button type="button" aria-label="Next strength week" onClick={()=>{onDateChange(addDays(date,7));setActive(null);setSaved(false)}}><Icon name="chevron_right"/></button></div>
-      <div className="coach-week" aria-label="Strength schedule Monday to Sunday">{COACH_DAYS.map((day,index)=>{const dayDate=addDays(weekStart,index),dayPlan=coachDay(profile,dayDate,state.sessions);return <button type="button" key={day} aria-pressed={date===dayDate} aria-label={`${day}, ${dayDate}: ${dayPlan?.rest?'Recovery':dayPlan?.title}`} onClick={()=>{onDateChange(dayDate);setActive(null);setSaved(false)}}><span>{day}</span><strong>{Number(dayDate.slice(-2))}</strong><small>{dayPlan?.completed?'Done':dayPlan?.shortTitle??'Rest'}</small></button>})}</div>
+      <div className="coach-week" aria-label="Training schedule Monday to Sunday">{COACH_DAYS.map((day,index)=>{const dayDate=addDays(weekStart,index),dayPlan=coachDay(profile,dayDate,state.sessions);return <button type="button" key={day} aria-pressed={date===dayDate} aria-label={`${day}, ${dayDate}: ${dayPlan?.rest?dayPlan.cardio?.item.label??'Recovery':dayPlan?.title}`} onClick={()=>{onDateChange(dayDate);setActive(null);setCardioLog(false);setSaved(false)}}><span>{day}</span><strong>{Number(dayDate.slice(-2))}</strong><small>{dayPlan?.completed?'Done':dayPlan?.shortTitle??'Rest'}</small></button>})}</div>
       <div className="coach-routine-meta"><span><Icon name="schedule" size={16}/>{profile.strengthCoach!.minutes} min available</span><span><Icon name="exercise" size={16}/>{profile.strengthCoach!.focus==='muscle'?'Muscle focus':'General fitness'}</span></div>
     </aside>
     <div className="coach-workout-panel">
       <section className="coach-session" aria-labelledby="coach-session-title">
-        <div className="coach-session-date"><span>{date===todayISO()?'Today':shortDate(date)}</span><span>{plan.rest?'Recovery':`${plan.exercises.length} exercises`}</span></div>
-        <h3 id="coach-session-title">{sessionTitle}</h3><p className="coach-session-focus">{plan.rest?'Rest is part of the routine.':plan.title.replace(/^Full body · /,'').replace(/^Chest/,'Chest')}</p>
-        {plan.rest ? <div className="coach-recovery"><p>No strength workout today. An easy walk or gentle mobility is optional.</p><button type="button" onClick={()=>{onDateChange(plan.nextDate);setActive(null);setSaved(false)}}>Next workout · {shortDate(plan.nextDate)}<Icon name="arrow_forward" size={18}/></button></div> : <>
+        <div className="coach-session-date"><span>{date===todayISO()?'Today':shortDate(date)}</span><span>{plan.rest?plan.cardio?`${plan.cardio.minutes} min cardio`:'Recovery':`${plan.exercises.length} exercises${plan.cardio?' + treadmill':''}`}</span></div>
+        <h3 id="coach-session-title">{sessionTitle}</h3><p className="coach-session-focus">{plan.rest?plan.cardio?'Cardio today; no strength session scheduled.':'Rest is part of the routine.':plan.title.replace(/^Full body · /,'').replace(/^Chest/,'Chest')}</p>
+        {plan.rest ? <div className="coach-recovery"><p>{plan.cardio?'Your treadmill session is below. Log only the time you actually complete.':'No strength workout today. An easy walk or gentle mobility is optional.'}</p><button type="button" onClick={()=>{onDateChange(plan.nextDate);setActive(null);setSaved(false)}}>Next strength workout · {shortDate(plan.nextDate)}<Icon name="arrow_forward" size={18}/></button></div> : <>
           <div className="coach-completion"><span>{completed} of {plan.exercises.length} logged</span><div className="coach-completion-track" aria-hidden="true">{plan.exercises.map(e=><span key={e.key} className={e.logged?'is-done':''}/>)}</div></div>
           <button type="button" className="coach-primary coach-start" disabled={plan.completed||!isLogDate(date)} onClick={startWorkout}>{plan.completed?'Workout logged':!isLogDate(date)?'Upcoming workout':completed?'Continue workout':'Start workout'}<Icon name={plan.completed?'check_circle':'arrow_forward'} size={20}/></button>
         </>}
       </section>
+      <div className="coach-row-actions"><button type="button" onClick={()=>{setCustomizing(!customizing);setCustomActivity(false)}}><Icon name="tune" size={18}/>{customizing?'Close customization':'Customize workout'}</button><button type="button" onClick={()=>{setCustomActivity(!customActivity);setCustomizing(false)}}><Icon name="add" size={18}/>{customActivity?'Close custom activity':'Log my own activity'}</button></div>
+      {customizing&&<WorkoutEditor key={date} date={date} profile={profile} ids={plan.exercises.map(e=>e.item.id)} onCancel={()=>setCustomizing(false)} onSave={ids=>{updateProfile({strengthWorkouts:{...profile.strengthWorkouts,[date]:ids}});setCustomizing(false);setActive(null);setSaved(true)}} onReset={()=>{const overrides={...profile.strengthWorkouts};delete overrides[date];updateProfile({strengthWorkouts:overrides});setCustomizing(false);setActive(null);setSaved(true)}}/>}
+      {customActivity&&<ActivityComposer key={`custom-${date}`} customOnly date={date} variant="library" onSaved={()=>{setCustomActivity(false);setSaved(true)}}/>}
       {saved&&<p role="status" className="coach-status"><Icon name="check_circle" size={18}/>Saved on this device. Your earlier logs are kept.</p>}
       {!plan.rest && <>
         <div className="coach-warmup"><Icon name="timer" size={24}/><div><strong>Warm up <span>5–8 min</span></strong><p>Lighter practice set first. Keep 2–3 reps in reserve.</p></div></div>
@@ -95,7 +104,24 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
         </li>)}</ol>
         {!isLogDate(date)&&<p className="coach-preview-note">Preview only. Log sets on the day you actually train.</p>}
       </>}
+      {plan.cardio&&<section className="coach-set-guide" aria-label="Planned treadmill session"><h3>{plan.cardio.item.label}</h3><p><strong>{plan.cardio.minutes} min</strong> · {plan.cardio.logged?'Logged':plan.rest?'Cardio-only day':'Optional after strength, or do it separately today'}</p><ul><li>Ease in and cool down within your logged duration.</li><li>Keep a comfortable conversational effort. Adjust speed to your ability; no forced pace.</li><li>Use the safety clip. Stop for pain, dizziness or unusual breathlessness.</li></ul>{plan.hardRun&&<p>A hard run is already scheduled today. Skip this extra cardio rather than doubling the running load.</p>}<p>Treadmill and lifting are logged separately. Don’t also add a duplicate whole-gym calorie total.</p><button type="button" className="coach-primary" disabled={Boolean(plan.cardio.logged)||!isLogDate(date)} onClick={()=>setCardioLog(!cardioLog)}>{plan.cardio.logged?'Treadmill logged':cardioLog?'Close treadmill log':'Log treadmill'}</button>{cardioLog&&!plan.cardio.logged&&<ActivityComposer key={plan.cardio.key} variant="library" date={date} prescription={{exerciseId:plan.cardio.item.id,sets:0,reps:0,rest:0,coachKey:plan.cardio.key,durationMin:plan.cardio.minutes}} onSaved={()=>{setCardioLog(false);setSaved(true)}}/>}</section>}
       <div className="coach-support"><details className="coach-method"><summary>How your plan works</summary><ul><li>Healthy-adult starter guidance, not a replacement for a qualified coach or rehabilitation plan.</li><li>Muscle days: 3 days = chest / back / legs; 4 adds shoulders & abs; 5 adds upper / lower top-up sessions.</li><li>With fewer muscle days, each major group may receive only one focused session weekly. Full body / upper-lower is an alternative for spreading that work.</li><li>The order checks repeat primary-muscle spacing across the week, including Sunday to Monday. Secondary-muscle fatigue and your recovery still matter.</li><li>Shorter sessions reduce volume. Beginners start with two working sets; experienced users get 2–4 depending on the lift and session budget.</li><li>Choose a load you can control. No automatic weight increases or invented starting kg.</li><li>Missing a workout is not a debt. Resume the schedule rather than doubling sessions.</li></ul><a href="https://acsm.org/resistance-training-guidelines-update-2026/" target="_blank" rel="noreferrer">ACSM resistance training guidance</a></details><StrengthProgress/></div>
     </div>
+  </section>
+}
+
+function WorkoutEditor({date,profile,ids,onSave,onCancel,onReset}:{date:string;profile:UserProfile;ids:string[];onSave:(ids:string[])=>void;onCancel:()=>void;onReset:()=>void}) {
+  const [selected,setSelected]=useState(ids)
+  const [query,setQuery]=useState('')
+  const catalog=ACTIVITIES.filter(item=>item.type==='strength'&&activityTracking(item)!=='time'&&(profile.strengthCoach?.gym?(item.category==='gym'||item.category==='home'):item.category==='home'&&canUseEquipment(item,profile.homeEquipment??[])))
+  const matches=catalog.filter(item=>!selected.includes(item.id)&&`${item.label} ${equipmentLabel(item)} ${item.muscles?.join(' ')}`.toLowerCase().includes(query.toLowerCase().trim()))
+  function move(index:number,offset:number) {const next=[...selected];[next[index],next[index+offset]]=[next[index+offset],next[index]];setSelected(next)}
+  return <section className="coach-customize" aria-label="Customize this workout"><h3>Your workout, your choice.</h3><p>Only changes {shortDate(date)}. Earlier logs stay saved. This is your chosen session, not a coach-validated split.</p>
+    <ol>{selected.map((id,index)=><li key={id}><strong>{ACTIVITIES.find(item=>item.id===id)?.label??id}</strong><div><button type="button" aria-label={`Move exercise ${index+1} up`} disabled={!index} onClick={()=>move(index,-1)}><Icon name="arrow_upward" size={18}/></button><button type="button" aria-label={`Move exercise ${index+1} down`} disabled={index===selected.length-1} onClick={()=>move(index,1)}><Icon name="arrow_downward" size={18}/></button><button type="button" aria-label={`Remove ${ACTIVITIES.find(item=>item.id===id)?.label??id} from this workout`} onClick={()=>setSelected(selected.filter(value=>value!==id))}><Icon name="close" size={18}/></button></div></li>)}</ol>
+    <label>Add or replace an exercise<input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search barbell, deadlift, chest…" maxLength={100}/></label>
+    <div className="coach-custom-results">{matches.map(item=><button type="button" key={item.id} disabled={selected.length>=30} onClick={()=>setSelected([...selected,item.id])}><span><strong>{item.label}</strong><small>{equipmentLabel(item)}</small></span><Icon name="add" size={18}/></button>)}</div>
+    {!matches.length&&<p>No matching exercise. Use “Log my own activity” for a movement outside the library.</p>}
+    <p>{selected.length}/30 exercises. Review load, recovery and time; adding exercises may exceed your session budget. Remove the old exercise and add another to replace it.</p>
+    <div className="coach-actions"><button className="coach-primary" type="button" onClick={()=>onSave(selected)}>Save this workout</button><button type="button" onClick={onCancel}>Cancel</button><button type="button" onClick={onReset}>Restore coach workout</button></div>
   </section>
 }

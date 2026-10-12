@@ -11,7 +11,8 @@ export function normalizeProduct(p) {
   const name=[text(Array.isArray(p.brands)?p.brands.join(', '):p.brands,100),text(p.product_name,200)].filter(Boolean).join(' · ')
   if(!name || !validMacros(macros) || excluded.test(`${name} ${p.ingredients_text||''} ${(p.ingredients_tags||[]).join(' ')} ${(p.allergens_tags||[]).join(' ')}`))return null
   const code=/^\d{8,14}$/.test(String(p.code))?String(p.code):''
-  return {id:`off:${code||name}`,name,...macros,basis:'100 g / ml (match the label)',unit:'g / ml',source:'Open Food Facts',sourceUrl:code?`https://world.openfoodfacts.org/product/${code}`:'https://world.openfoodfacts.org',ingredients:text(p.ingredients_text),allergens:(p.allergens_tags||[]).map(v=>text(v).replace(/^\w{2}:/,'')).join(', '),labelServing:text(p.serving_size,80),note:'Community-contributed label data. Confirm against your packet. No halal or allergen-free certification.'}
+  const imageUrl=/^https:\/\/images\.openfoodfacts\.org\//.test(p.image_front_small_url||'')?p.image_front_small_url:undefined
+  return {imageUrl,id:`off:${code||name}`,name,...macros,basis:'100 g / ml (match the label)',unit:'g / ml',source:'Open Food Facts',sourceUrl:code?`https://world.openfoodfacts.org/product/${code}`:'https://world.openfoodfacts.org',ingredients:text(p.ingredients_text),allergens:(p.allergens_tags||[]).map(v=>text(v).replace(/^\w{2}:/,'')).join(', '),labelServing:text(p.serving_size,80),note:'Community-contributed label data. Confirm against your packet. No halal or allergen-free certification.'}
 }
 export function normalizeUSDA(p) {
   const value=ids=>number((p.foodNutrients||[]).find(n=>ids.includes(Number(n.nutrientId)))?.value)
@@ -49,7 +50,7 @@ export default async function handler(req,res) {
   try {
     let raw=[],normalizer,license,notice=''
     if(b.mode==='products'||b.mode==='barcode'){
-      const fields='code,product_name,brands,nutriments,ingredients_text,ingredients_tags,allergens_tags,serving_size'
+      const fields='code,product_name,brands,nutriments,ingredients_text,ingredients_tags,allergens_tags,serving_size,image_front_small_url'
       const url=b.mode==='barcode'?`https://world.openfoodfacts.org/api/v3/product/${q}?fields=${fields}`:`https://search.openfoodfacts.org/search?${new URLSearchParams({q,page_size:'12'})}`
       const data=await read(url);raw=b.mode==='barcode'?(data.product?[data.product]:[]):data.hits||[];normalizer=normalizeProduct;license='Open Food Facts · ODbL / Database Contents License';
     }else if(b.mode==='ingredients'){

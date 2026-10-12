@@ -1,0 +1,9 @@
+# Gym treadmill and calorie estimates
+
+Gym strength-coach setup supports optional treadmill walking or easy running, 10/15/20/30 minutes and selected weekdays. It is off unless the user chooses it. Treadmill time is additional to the strength budget. Cardio-only days are supported; race goals/intervals remain in the separate running workspace. The user chooses a comfortable conversational speed, not an invented fitness-specific pace.
+
+Treadmill logging starts with the planned duration but saves the actual editable duration and calories. It uses a generic level-walk/run MET assumption with resting 1 MET removed for active calories; speed, incline, fitness and device accuracy are not measured. A matched date/activity coach key completes only that cardio session. Strength and treadmill records are separate; a duplicate whole-gym calorie log should not be added.
+
+Strength calorie estimation already updates from sets, reps/hold duration, tempo, rest, body weight, sides and effort. It now distinguishes general lifting, squat/deadlift, bodyweight, static holds and kettlebell swing using category references from the [2024 Compendium](https://pacompendium.com/conditioning-exercise/). Applying category METs to estimated work and rest intervals is an app heuristic, not a validated calorimeter or a measured per-exercise burn. External lifted kg is recorded as load/volume, not converted into calories by a kg×reps multiplier. Actual difficulty at a load must be supplied by the user; it cannot be inferred reliably from kg alone.
+
+Tests in `check-treadmill-plan.mjs` verify weekday/gym gating, independent completion, backup validation, and responsiveness of energy estimates to work/body weight/effort. Existing strength/customization checks remain applicable. No live user workout is created by tests.
