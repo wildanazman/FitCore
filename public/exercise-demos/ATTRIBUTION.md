@@ -1,5 +1,13 @@
 # Exercise demonstration media
 
+## Your Move free clips, 12 October 2026
+
+Eight visually reviewed MP4/JPEG pairs: lat pulldown (rope grip variant), seated machine chest press, mid cable crossover, cable rope triceps pushdown, leg extension, kettlebell swing, kettlebell Romanian deadlift and kettlebell goblet squat. Source and free app-use terms: https://ymove.app/free-exercise-videos . Commercial use inside apps/websites is permitted; resale or redistribution as a standalone video library is prohibited. No endorsement implied. These are not Creative Commons assets. Full frames and duration retained, resized and muted; posters extracted. Per-file source URLs and hashes are recorded in `ymove-attribution.json`.
+
+## Additional wger clips, 12 October 2026
+
+Ten added MP4/JPEG pairs retain Goulart's CC BY-SA 4.0 license. Full frames and movement duration preserved; audio removed, resized and converted to H.264 MP4. Original file URLs, reviewed exercise matches, license links and SHA-256 hashes are in `imported-attribution.json`. The source labelled Romanian deadlift actually uses dumbbells, so it is mapped only to the dumbbell exercise. A candidate overhead cable-extension clip was rejected rather than used as a pushdown. No endorsement implied. This license applies to the derived media, not unrelated application code.
+
 Retrieved 7 October 2026. No endorsement by the creators is implied.
 Each MP4, GIF and JPG below retains its original media license. These
 licenses apply to the derived media, not unrelated FitCore source code.

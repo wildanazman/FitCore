@@ -1,4 +1,5 @@
 .activity-page { --activity-gutter: 22px; min-height: 100%; padding: 0 var(--activity-gutter) 120px; background: var(--app-bg); color: var(--app-ink); font: 400 14px/1.4 'Hanken Grotesk',sans-serif; }
+.activity-page.activity-plan-view>.page-heading{margin-bottom:8px}.activity-page.activity-plan-view .activity-date{margin-bottom:10px}.activity-page.activity-plan-view .page-switch{margin-bottom:10px}.activity-plan-view .coach-workspace{gap:16px;margin-top:12px}
 .activity-page>header:first-child { margin-inline: calc(-1 * var(--activity-gutter)); padding-inline: var(--activity-gutter); margin-bottom: 26px; }
 .activity-page>.page-heading { padding: 0; margin: 0 0 25px; }
 .activity-page>.page-heading h1 { margin: 0; font: 800 var(--app-heading-size)/1.12 'Hanken Grotesk',sans-serif; letter-spacing: -.03em; overflow-wrap: anywhere; }

@@ -1,0 +1,74 @@
+[
+  {
+    "exerciseId": "gym_lat_pulldown",
+    "source": "https://ymove.app/api/free/5971eaa2-5264-49cc-99c2-1310305c5342",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "99a3bdac9f7a271eaaf64ddfddf3983b08c1397b0a4328403bece0ef3feed954",
+    "mp4Sha256": "edc8bbb24a3a8f7b40a120c87057fd61dda6c77e5520e005a3e0656422eb3525",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  },
+  {
+    "exerciseId": "gym_chest_press",
+    "source": "https://ymove.app/api/free/20cc4825-dd52-4887-99db-c492546741dc",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "4c742fea509ded9c4e4d3cefce8f753a156e7063471fa6146526267053296e1a",
+    "mp4Sha256": "91c3c2c16337555f3463b4f2e76f97fbe0bb7f816388e024039918352fbb3d3c",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  },
+  {
+    "exerciseId": "gym_cable_fly",
+    "source": "https://ymove.app/api/free/8de0e422-f771-4916-8bab-3ca29cc2abe5",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "18f1ccfc0499cc4eabd2297355e4e9a55677f1cb2d226122c7e3725a59f6d3af",
+    "mp4Sha256": "16c168c89186d662881ced7f296db7953387835ec26030335c4848036203b869",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  },
+  {
+    "exerciseId": "gym_triceps_pushdown",
+    "source": "https://ymove.app/api/free/3875dae4-14a6-4533-84d3-ef9acbadbaea",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "939b5bfc4485f0e3d28c3b8c15b816acf4954d3de170029c4bbef67355c7e23d",
+    "mp4Sha256": "c08ca8aa2fa1a3b87f22053359443dd12497db1b7835c9ececfcaa525f70a801",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  },
+  {
+    "exerciseId": "gym_leg_extension",
+    "source": "https://ymove.app/api/free/af0c3d19-5ee2-4a19-8688-f8504bb33e3c",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "df8c0b1adc8747be425cc13374aed0a34c0417d1d342bc6d2f77999502f3ce8d",
+    "mp4Sha256": "616a792943b32e20587e579f8e6c05de028face56c1226183e72d1721faa6ffb",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  },
+  {
+    "exerciseId": "home_kb_swing",
+    "source": "https://ymove.app/api/free/13263f92-5fe2-4d92-bec0-808f8b315620",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "874b0f5c5fd1b1eb486a43bafee3a8317d88ea58b13a1a9e394196b04e1544b3",
+    "mp4Sha256": "91c3e2916ea0d79d0918ad70bdc62421f5d34155004366a0099ce42d97d65378",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  },
+  {
+    "exerciseId": "home_kb_rdl",
+    "source": "https://ymove.app/api/free/e7175536-9d7d-4f5d-8d49-26c3411eac80",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "2d8e525c88a6901a7cbd50312b23bfb906639dd35c506e4c5ebb266052dbd552",
+    "mp4Sha256": "ccb6644f24e6025748cc37c2c3fb10336457eca5b43735fa806a0a18f47b4dc4",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  },
+  {
+    "exerciseId": "home_kb_goblet",
+    "source": "https://ymove.app/api/free/198d4a7d-bc23-41f8-ad67-4fe9ab876b89",
+    "author": "Your Move",
+    "license": "https://ymove.app/free-exercise-videos#licence",
+    "sourceSha256": "c161fa1de4a9a03d51d0561d54b2a43964e187b6b99b5c6865f768c4ce56051b",
+    "mp4Sha256": "fb1999a3de242c947717326ed528e847a1fdf3d8d5c8cb097870a8ba7b84ccaf",
+    "changes": "Full frame and duration retained; muted; resized to 640px high H.264 MP4; JPEG poster extracted"
+  }
+]

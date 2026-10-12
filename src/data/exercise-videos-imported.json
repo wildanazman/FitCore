@@ -1,0 +1,82 @@
+{
+  "gym_leg_press": {
+    "name": "Leg Press",
+    "video": "/exercise-demos/gym_leg_press.mp4",
+    "poster": "/exercise-demos/gym_leg_press.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/371/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "gym_leg_curl": {
+    "name": "Leg Curls (sitting)",
+    "video": "/exercise-demos/gym_leg_curl.mp4",
+    "poster": "/exercise-demos/gym_leg_curl.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/366/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "gym_seated_row": {
+    "name": "Rowing seated, narrow grip",
+    "video": "/exercise-demos/gym_seated_row.mp4",
+    "poster": "/exercise-demos/gym_seated_row.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/512/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "gym_incline_press": {
+    "name": "Incline Bench Press - Dumbbell",
+    "video": "/exercise-demos/gym_incline_press.mp4",
+    "poster": "/exercise-demos/gym_incline_press.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/537/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "gym_face_pull": {
+    "name": "Facepull",
+    "video": "/exercise-demos/gym_face_pull.mp4",
+    "poster": "/exercise-demos/gym_face_pull.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/222/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "gym_shoulder_press": {
+    "name": "Shoulder Press, Dumbbells",
+    "video": "/exercise-demos/gym_shoulder_press.mp4",
+    "poster": "/exercise-demos/gym_shoulder_press.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/567/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "gym_pullup": {
+    "name": "Pull-ups",
+    "video": "/exercise-demos/gym_pullup.mp4",
+    "poster": "/exercise-demos/gym_pullup.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/475/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "gym_hip_thrust": {
+    "name": "Hip Thrust",
+    "video": "/exercise-demos/gym_hip_thrust.mp4",
+    "poster": "/exercise-demos/gym_hip_thrust.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/294/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "home_db_triceps": {
+    "name": "Dumbbell Triceps Extension",
+    "video": "/exercise-demos/home_db_triceps.mp4",
+    "poster": "/exercise-demos/home_db_triceps.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/211/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  },
+  "home_db_rdl": {
+    "name": "Dumbbell Romanian deadlift",
+    "video": "/exercise-demos/home_db_rdl.mp4",
+    "poster": "/exercise-demos/home_db_rdl.jpg",
+    "sourceUrl": "https://wger.de/api/v2/exerciseinfo/507/",
+    "author": "Goulart",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/deed.en"
+  }
+}

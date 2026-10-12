@@ -374,3 +374,44 @@
   .home-quick-actions strong { font-size: 13px; }
   .home-quick-actions small { font-size: 11px; }
 }
+
+/* Refinement of the existing ledger, without changing its order or palette. */
+.home-page .home-welcome { align-items: center; margin-bottom: 18px; }
+.home-page .show-up { padding-bottom: 10px; margin-bottom: 16px; }
+.home-page .show-up-heading p { font-size: 13px; line-height: 1.45; }
+.home-page .show-up-week { margin-top: 2px; }
+.home-page .show-up-week>span { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; column-gap: 8px; }
+.home-page .show-up-week small { margin-top: 0; font-size: 12px; }
+.home-page .show-up-day { min-height: 58px; }
+.home-page .show-up-day>span:first-child, .home-page .show-up-day small { font-size: 12px; }
+.home-page .show-up-feedback { font-size: 12px; }
+.home-page .show-up-history summary small { font-size: 12px; }
+.home-page .coach-today { display: flex; align-items: center; flex-direction: row; gap: 14px; padding: 12px 0 18px; margin-bottom: 18px; }
+.home-page .coach-today>div { flex: 1; min-width: 0; }
+.home-page .coach-today h2 { font-size: 18px; font-weight: 800; line-height: 1.25; letter-spacing: -.02em; }
+.home-page .coach-today p { font-size: 13px; line-height: 1.45; margin-top: 6px; }
+.home-page .coach-today button { flex: none; gap: 6px; padding: 10px 12px; font-size: 13px; background: var(--palette-tint); color: var(--palette-hover); }
+.home-page .coach-today button:hover { background: var(--palette-soft); }
+.home-page .coach-today button:active { transform: translateY(1px); }
+.home-page .home-weight-checkin { margin-bottom: 4px; }
+.home-page .home-weight-checkin .home-body-link { min-height: 68px; }
+.home-page .home-section-heading h2 { font-size: 24px; }
+.home-page .home-section-heading p { font-size: 13px; line-height: 1.45; }
+.home-page .home-quick-actions>button { padding: 14px 12px; min-height: 78px; }
+.home-page .home-action-icon { width: 32px; height: 36px; }
+.home-page .home-quick-actions strong { font-size: 14px; }
+.home-page .home-quick-actions small { font-size: 12px; margin-top: 4px; }
+.home-page .home-quick-actions>button:active { background: var(--palette-tint); }
+.home-page .home-energy-top h2 { font-size: 16px; }
+.home-page .home-energy-ends { font-size: 13px; }
+.home-page .home-macro-label { font-size: 14px; }
+.home-page .home-macro-remaining, .home-page .home-macro-target { font-size: 13px; }
+.home-page .home-entry-copy>span, .home-page .home-diet-link small { font-size: 12px; line-height: 1.5; }
+.home-page .home-balance-toggle small { font-size: 12px; line-height: 1.45; }
+.home-page .home-diet-icon { background: var(--palette-tint); color: var(--palette-hover); }
+@media(max-width:360px) {
+  .home-page .coach-today { flex-wrap: wrap; }
+  .home-page .coach-today>div { flex-basis: 100%; }
+  .home-page .home-quick-actions>button { padding: 12px 9px; gap: 6px; }
+  .home-page .home-action-icon { width: 24px; }
+}

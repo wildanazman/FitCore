@@ -41,17 +41,17 @@ export function ExerciseDemo({ exerciseId }: { exerciseId: string }) {
   return <section className="exercise-demo" aria-label={`How to do ${demo?.name ?? steps?.name}`}>
     <div className="exercise-demo-heading"><h3>How to do it</h3><span>{demo ? 'Full-motion demo' : 'Two-position photo guide'}</span></div>
     {demo ? <>
-      {failed ? <p className="home-form-note" role="status">The video couldn’t play. <a href={demo.gif} target="_blank" rel="noopener noreferrer">Open the GIF instead</a>{steps ? ' or read the steps below.' : '.'}</p> : <>
+      {failed ? <p className="home-form-note" role="status">The video couldn’t play. <a href={demo.gif??demo.video} target="_blank" rel="noopener noreferrer">{demo.gif?'Open the GIF instead':'Open the video directly'}</a>{steps ? ' or read the steps below.' : '.'}</p> : <>
         <div className="exercise-demo-images" style={{ aspectRatio }} aria-busy={loading}>
           <video ref={video} src={demo.video} poster={demo.poster} muted loop playsInline preload="metadata" aria-label={`${demo.name} demonstration`} onLoadedMetadata={event => { const player = event.currentTarget; if (player.videoHeight) setAspectRatio(player.videoWidth / player.videoHeight) }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onError={() => { setFailed(true); setPlaying(false); setLoading(false) }} />
         </div>
         <div className="exercise-demo-controls">
           <button type="button" aria-pressed={playing} disabled={loading} onClick={togglePlayback}><Icon name={playing ? 'pause' : 'play_arrow'} size={19} />{loading ? 'Loading demo…' : playing ? 'Pause demo' : 'Play demo'}</button>
           <button type="button" aria-pressed={slow} onClick={() => { const next = !slow; setSlow(next); if (video.current) video.current.playbackRate = next ? 0.5 : 1 }}>{slow ? '0.5× speed' : 'Slow motion'}</button>
-          <a href={demo.gif} download={`${exerciseId}.gif`}>Download GIF</a>
+          {demo.gif&&<a href={demo.gif} download={`${exerciseId}.gif`}>Download GIF</a>}
         </div>
       </>}
-      <p className="exercise-demo-source"><a href={demo.sourceUrl} target="_blank" rel="noopener noreferrer">{demo.author}</a> · <a href={demo.licenseUrl} target="_blank" rel="noopener noreferrer">{demo.licenseUrl.includes('/by-sa/') ? 'CC BY-SA 4.0' : 'CC BY 3.0'}</a>. Resized, muted and converted to MP4 / GIF. Stop if a movement hurts.</p>
+      <p className="exercise-demo-source"><a href={demo.sourceUrl} target="_blank" rel="noopener noreferrer">{demo.author}</a> · <a href={demo.licenseUrl} target="_blank" rel="noopener noreferrer">{demo.licenseUrl.includes('ymove.app') ? 'Free app-use licence' : demo.licenseUrl.includes('/by-sa/') ? 'CC BY-SA 4.0' : 'CC BY 3.0'}</a>. Resized, muted and converted to {demo.gif?'MP4 / GIF':'MP4'}. Stop if a movement hurts.</p>
     </> : <PhotoDemo key={exerciseId} exerciseId={exerciseId} />}
     {steps && <details><summary>Read the movement steps</summary><ol>{steps.instructions.map((step, index) => <li key={index}>{step}</li>)}</ol><p className="exercise-demo-source">Steps: <a href={steps.sourceUrl} target="_blank" rel="noopener noreferrer">Free Exercise DB</a> · <a href="https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer">Public domain / Unlicense</a>.</p></details>}
   </section>

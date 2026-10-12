@@ -31,6 +31,8 @@ export interface UserProfile {
     days: number[]
     minutes: 30 | 45 | 60
     focus: 'balanced' | 'muscle'
+    split?: 'balanced' | 'muscle-days'
+    techniques?: 'auto' | 'straight'
     startDate: string
     clearance: boolean
   }

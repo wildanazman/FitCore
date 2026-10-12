@@ -1,0 +1,66 @@
+{
+  "gym_lat_pulldown": {
+    "name": "Lat Pulldown",
+    "video": "/exercise-demos/gym_lat_pulldown.mp4",
+    "poster": "/exercise-demos/gym_lat_pulldown.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  },
+  "gym_chest_press": {
+    "name": "Seated Machine Chest Press",
+    "video": "/exercise-demos/gym_chest_press.mp4",
+    "poster": "/exercise-demos/gym_chest_press.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  },
+  "gym_cable_fly": {
+    "name": "Cable Crossover (Mid)",
+    "video": "/exercise-demos/gym_cable_fly.mp4",
+    "poster": "/exercise-demos/gym_cable_fly.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  },
+  "gym_triceps_pushdown": {
+    "name": "Cable Tricep Pushdown",
+    "video": "/exercise-demos/gym_triceps_pushdown.mp4",
+    "poster": "/exercise-demos/gym_triceps_pushdown.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  },
+  "gym_leg_extension": {
+    "name": "Leg Extension",
+    "video": "/exercise-demos/gym_leg_extension.mp4",
+    "poster": "/exercise-demos/gym_leg_extension.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  },
+  "home_kb_swing": {
+    "name": "Kettlebell swing",
+    "video": "/exercise-demos/home_kb_swing.mp4",
+    "poster": "/exercise-demos/home_kb_swing.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  },
+  "home_kb_rdl": {
+    "name": "Kettlebell Romanian Deadlift",
+    "video": "/exercise-demos/home_kb_rdl.mp4",
+    "poster": "/exercise-demos/home_kb_rdl.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  },
+  "home_kb_goblet": {
+    "name": "Goblet Squat with Kettlebell",
+    "video": "/exercise-demos/home_kb_goblet.mp4",
+    "poster": "/exercise-demos/home_kb_goblet.jpg",
+    "sourceUrl": "https://ymove.app/free-exercise-videos",
+    "author": "Your Move",
+    "licenseUrl": "https://ymove.app/free-exercise-videos#licence"
+  }
+}

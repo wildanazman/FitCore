@@ -1,0 +1,103 @@
+[
+  {
+    "exerciseId": "gym_leg_press",
+    "sourceId": 371,
+    "source": "https://wger.de/media/exercise-video/371/6aae16b4-01b9-4eb4-935c-3250f84d2c59.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "a92f5677ce005b10385668c88e5cce77c57658b63f8808b8684be0a5abeaa2ef",
+    "mp4Sha256": "32b2142c1d283cbae0ad5679b0137363e62153d75de6fdbf79b89bd1afb1aa02",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "gym_leg_curl",
+    "sourceId": 366,
+    "source": "https://wger.de/media/exercise-video/366/43df4b79-d4c3-4fbf-bcb5-e0d825b84120.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "87d8c5fb1787d11942b20182fd08c0324288f9ab7a6665d949de8afa5048d244",
+    "mp4Sha256": "bb693bb4c9bd72d724a70276b593e6f792c2302eafd359ee66c73438b287540f",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "home_db_rdl",
+    "sourceId": 507,
+    "source": "https://wger.de/media/exercise-video/507/307e7276-a14d-4ea0-b579-f5b0dbc6f5af.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "0526207ce774dd9e15c5be5198c3bd5233e2d434fcabe3db67f1060af51c5d84",
+    "mp4Sha256": "76ddb8566e5ae61c091604ce7e3cff2c2305cdfdee00ac2ab651a4bb57448f2d",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster",
+    "visualReview": "Actual clip uses two dumbbells, despite barbell metadata; mapped to dumbbell RDL only."
+  },
+  {
+    "exerciseId": "gym_seated_row",
+    "sourceId": 512,
+    "source": "https://wger.de/media/exercise-video/512/fff4c294-93f0-4926-b3a2-bf59ad4afaa5.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "623708fc1e5b1fb1be2b1647a0fa044d0208b2ebea2a5ed6bf1a77e9c1e21b90",
+    "mp4Sha256": "b80243a0b57b599a0ddc73da6f676c7df6dfd844b361496b4edc1a44edd2453b",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "gym_incline_press",
+    "sourceId": 537,
+    "source": "https://wger.de/media/exercise-video/537/b9c937e9-daeb-42a9-be8e-7a77e368478c.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "4861d89988c8e8886435e62064aedd68c04484f0c4646270d182307025c3a162",
+    "mp4Sha256": "60000e246cc737db2aad6e58a068165d694b14a9a8abe71a1266e1f866ae4cd2",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "gym_face_pull",
+    "sourceId": 222,
+    "source": "https://wger.de/media/exercise-video/222/eea93fcc-6a3c-4783-8f70-0234c791a001.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "88092b7fb9e905e706267d0c86a44c946ca261875640302e1b6956f12f262864",
+    "mp4Sha256": "5c61cc04444393c636735eabc9e51728296173a6e84abb6adc38e40a2e5e0d5a",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "gym_shoulder_press",
+    "sourceId": 567,
+    "source": "https://wger.de/media/exercise-video/567/64f33c19-1d96-4b7c-af17-6c6a4941c614.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "0151a7cd43894d60c1fe1ffb34f4f4b709fc17aa6a5913c7edea4a14c9113985",
+    "mp4Sha256": "71fae3c57b887fa39e762e99c457ff6e3d6b0e04e5420caacee976f358d4e3a7",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "gym_pullup",
+    "sourceId": 475,
+    "source": "https://wger.de/media/exercise-video/475/83067ffe-ccb9-4e22-8507-5131b211ce74.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "4c459f322f506eb7bd0b51e7efd81aaf6bd1e10fc0569e182a4815dee325f1b8",
+    "mp4Sha256": "44c11bea43863da6a7e431fd2457eef908cfa1a37463ad93975f1b159e3effe6",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "gym_hip_thrust",
+    "sourceId": 294,
+    "source": "https://wger.de/media/exercise-video/294/45bacf4b-1bb6-4d47-8bd1-9f00eddd4019.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "2d9af3456d9bf47f6f52ee31c8da2af883b58acdd02b161e32d23d90ab87a26b",
+    "mp4Sha256": "ce3f1359a083889a5d502437bbbfeee9348cc4ef5069ebf0f018a74bc9b53035",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  },
+  {
+    "exerciseId": "home_db_triceps",
+    "sourceId": 211,
+    "source": "https://wger.de/media/exercise-video/211/85f6eb25-a76c-409e-9af9-497794ac0dfb.MOV",
+    "author": "Goulart",
+    "license": "https://creativecommons.org/licenses/by-sa/4.0/deed.en",
+    "sourceSha256": "3ca3071ca6e4d19e6aac1197b22977932d527c7661a2cacb0652b6d976bc80ff",
+    "mp4Sha256": "a18d00b06ea1a4f22886fbf68ad102c6df83c27f49df5211001bf7f95a63bb6e",
+    "changes": "Audio removed; full frame and duration retained; resized to 640px wide; H.264 MP4, JPEG poster"
+  }
+]

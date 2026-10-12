@@ -7,7 +7,7 @@ import { SUBWAY_SG_FOODS } from './subwaySingapore'
 export type RestaurantBrand = 'KFC' | "McDonald's" | 'Pizza Hut' | 'Subway' | 'ZUS Coffee' | 'CHAGEE' | 'Marrybrown'
 
 export interface RestaurantFood {
-  brand: RestaurantBrand
+  brand: RestaurantBrand | 'KKM'
   name: string
   serving: string
   kcal: number | null

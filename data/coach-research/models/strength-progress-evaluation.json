@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "activated_in_app": false,
+  "target": "Observed next-session machine-load percent change within 1\u201321 days",
+  "not_a_prescription": true,
+  "source": "https://osf.io/jn6ay/",
+  "license": "CC-BY-4.0",
+  "attribution": "Steele, Fisher, Giessing, Androulakis-Korakakis, Wolf, Kroeske, Reuters",
+  "source_sha256": "1897b2e555dd6124302583a6116aa5cd72f965817a5a25f74026c91461eb7ea2",
+  "audit": {
+    "raw_rows": 3675994,
+    "raw_participants": 80700,
+    "raw_missing_fraction": {
+      "memberId": 0.0,
+      "sessionNumber": 0.019757377188319675,
+      "sessionDate": 0.019757377188319675,
+      "birthMonth": 0.22882790341877599,
+      "machineId": 0.019757377188319675,
+      "exerciseWeight": 0.019757377188319675,
+      "exerciseDuration": 0.019757377188319675,
+      "Sex": 0.5857128711309104
+    },
+    "after_validity_filters": 807181,
+    "ambiguous_same_day_rows_removed": 135699,
+    "eligible_prediction_pairs": 576996,
+    "eligible_participants": 4307
+  },
+  "cutoff": "2016-04-01",
+  "split": "Disjoint participants; training/validation targets <= cutoff, test inputs > cutoff",
+  "leakage_checks": {
+    "participant_groups_disjoint": true,
+    "test_strictly_future": true
+  },
+  "selected_alpha": 100,
+  "validation_candidates": [
+    {
+      "alpha": 1,
+      "mae_percentage_points": 1.8591356886370851,
+      "rmse_percentage_points": 4.9876780296563075,
+      "bias_percentage_points": -0.02721555750371103
+    },
+    {
+      "alpha": 100,
+      "mae_percentage_points": 1.858296166301573,
+      "rmse_percentage_points": 4.98767433590026,
+      "bias_percentage_points": -0.026982311939935343
+    },
+    {
+      "alpha": 10000,
+      "mae_percentage_points": 1.818191491792196,
+      "rmse_percentage_points": 4.993097932927839,
+      "bias_percentage_points": -0.015866415896864418
+    },
+    {
+      "alpha": 100000,
+      "mae_percentage_points": 1.7249347764469296,
+      "rmse_percentage_points": 5.017807243696608,
+      "bias_percentage_points": 0.0019135093620163287
+    }
+  ],
+  "results": {
+    "train": {
+      "rows": 315090,
+      "participants": 2545,
+      "model": {
+        "mae_percentage_points": 1.934380275620901,
+        "rmse_percentage_points": 4.758360197622412,
+        "bias_percentage_points": -8.942253280308901e-15
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.4531326103375295,
+        "rmse_percentage_points": 5.033446066777894,
+        "bias_percentage_points": -0.7845186245216614
+      },
+      "training_mean": {
+        "mae_percentage_points": 1.937290992746918,
+        "rmse_percentage_points": 4.971932203373301,
+        "bias_percentage_points": -1.1545840258629956e-16
+      },
+      "repeat_previous_change": {
+        "mae_percentage_points": 2.3685641874572885,
+        "rmse_percentage_points": 7.311358528874117,
+        "bias_percentage_points": 0.12180052098441926
+      },
+      "interval90_empirical_coverage": 0.8949760385921482,
+      "actual_zero_change_fraction": 0.7824462851883589
+    },
+    "validation": {
+      "rows": 72416,
+      "participants": 584,
+      "model": {
+        "mae_percentage_points": 1.858296166301573,
+        "rmse_percentage_points": 4.98767433590026,
+        "bias_percentage_points": -0.026982311939935343
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.3742106429597114,
+        "rmse_percentage_points": 5.237174615031873,
+        "bias_percentage_points": -0.770538198147587
+      },
+      "training_mean": {
+        "mae_percentage_points": 1.8648164542457253,
+        "rmse_percentage_points": 5.180199251558894,
+        "bias_percentage_points": 0.013980426374074456
+      },
+      "repeat_previous_change": {
+        "mae_percentage_points": 2.2325182739565523,
+        "rmse_percentage_points": 7.54371021268436,
+        "bias_percentage_points": 0.11908979110338441
+      },
+      "interval90_empirical_coverage": 0.8999944763588157,
+      "actual_zero_change_fraction": 0.7863593680954485
+    },
+    "test": {
+      "rows": 16886,
+      "participants": 338,
+      "model": {
+        "mae_percentage_points": 1.7245885909062013,
+        "rmse_percentage_points": 3.5697545001498114,
+        "bias_percentage_points": 0.07764078540230629
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.1038538679738434,
+        "rmse_percentage_points": 3.706455395433319,
+        "bias_percentage_points": -0.5338545785191973
+      },
+      "training_mean": {
+        "mae_percentage_points": 1.6560739539068337,
+        "rmse_percentage_points": 3.6763627883125434,
+        "bias_percentage_points": 0.2506640460024642
+      },
+      "repeat_previous_change": {
+        "mae_percentage_points": 1.8873242620716801,
+        "rmse_percentage_points": 5.362088622531367,
+        "bias_percentage_points": 0.09156561107285444
+      },
+      "interval90_empirical_coverage": 0.9072604524458131,
+      "actual_zero_change_fraction": 0.8273717872794031
+    }
+  },
+  "test_subgroups": {
+    "leg press": {
+      "rows": 5305,
+      "model": {
+        "mae_percentage_points": 1.472254701689361,
+        "rmse_percentage_points": 3.029150359090457,
+        "bias_percentage_points": -0.04659442446021933
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.0447889166790894,
+        "rmse_percentage_points": 3.1328675695028076,
+        "bias_percentage_points": -0.6241696359852741
+      }
+    },
+    "chest press": {
+      "rows": 5861,
+      "model": {
+        "mae_percentage_points": 1.9612978197964912,
+        "rmse_percentage_points": 4.144031051104482,
+        "bias_percentage_points": 0.2169019531581891
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.1378928489442275,
+        "rmse_percentage_points": 4.278793877418989,
+        "bias_percentage_points": -0.4267200344586615
+      }
+    },
+    "pulldown": {
+      "rows": 5720,
+      "model": {
+        "mae_percentage_points": 1.716070844712031,
+        "rmse_percentage_points": 3.3930334225929353,
+        "bias_percentage_points": 0.050168422483332364
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.1237554587345517,
+        "rmse_percentage_points": 3.562754566724473,
+        "bias_percentage_points": -0.5598675475543831
+      }
+    },
+    "female": {
+      "rows": 10257,
+      "model": {
+        "mae_percentage_points": 1.8679254117260367,
+        "rmse_percentage_points": 3.7975342252320132,
+        "bias_percentage_points": 0.1906959780565338
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.1787646370079181,
+        "rmse_percentage_points": 3.939030817020117,
+        "bias_percentage_points": -0.5184877221887461
+      }
+    },
+    "male": {
+      "rows": 6629,
+      "model": {
+        "mae_percentage_points": 1.5028046459448112,
+        "rmse_percentage_points": 3.185373879103257,
+        "bias_percentage_points": -0.09728863246681593
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 0.9879450192813556,
+        "rmse_percentage_points": 3.3145875459162726,
+        "bias_percentage_points": -0.5576315954721974
+      }
+    },
+    "age_18_39": {
+      "rows": 2684,
+      "model": {
+        "mae_percentage_points": 1.6848489165535603,
+        "rmse_percentage_points": 3.231824859513146,
+        "bias_percentage_points": 0.03670634890404999
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.2651269644584056,
+        "rmse_percentage_points": 3.457620729844986,
+        "bias_percentage_points": -0.6010190237289381
+      }
+    },
+    "age_40_59": {
+      "rows": 10469,
+      "model": {
+        "mae_percentage_points": 1.7227649007813524,
+        "rmse_percentage_points": 3.6520983035725374,
+        "bias_percentage_points": 0.027197690736708018
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.0914909305852547,
+        "rmse_percentage_points": 3.792914425704347,
+        "bias_percentage_points": -0.5446871968723235
+      }
+    },
+    "age_60_90": {
+      "rows": 3733,
+      "model": {
+        "mae_percentage_points": 1.7582755713186122,
+        "rmse_percentage_points": 3.567630302142343,
+        "bias_percentage_points": 0.24853732588327826
+      },
+      "keep_same_load": {
+        "mae_percentage_points": 1.0225708785703007,
+        "rmse_percentage_points": 3.633341222156744,
+        "bias_percentage_points": -0.45518432604616693
+      }
+    }
+  },
+  "residual90_percentage_points": 3.8688082435547964,
+  "beats_persistence_on_mae_and_rmse": false,
+  "deployment_blockers": [
+    "Study machines and slow single-set protocol differ from FitCore workouts",
+    "No labels for optimal exercise selection, sets, reps, frequency or hypertrophy",
+    "Observed chosen load is not physiological readiness or safe recommended load",
+    "No causal comparison of alternative programmes; no injury-risk validation",
+    "Pooled interval calibration does not guarantee individual or subgroup coverage"
+  ]
+}

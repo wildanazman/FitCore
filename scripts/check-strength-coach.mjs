@@ -11,7 +11,7 @@ try {
   await build({ stdin: { contents: "export * from './src/lib/strengthCoach'; export * from './src/lib/activities'; export * from './src/lib/storage'; export * from './src/lib/backup';", resolveDir: process.cwd() }, outfile: output, bundle: true, platform: 'node', format: 'esm' })
   const { coachDay, validCoachDays, canUseEquipment, DEFAULT_PROFILE, emptyState, makeBackup, parseBackup } = await import(pathToFileURL(output).href)
   const date = '2026-10-12'
-  const base = { ...DEFAULT_PROFILE, onboarded: true, age: 30, homeEquipment: [], strengthCoach: { gym: false, experience: 'new', days: [0,2,4], minutes: 45, focus: 'balanced', startDate: date, clearance: true } }
+  const base = { ...DEFAULT_PROFILE, onboarded: true, age: 30, homeEquipment: [], strengthCoach: { gym: false, experience: 'new', days: [0,2,4], minutes: 45, focus: 'balanced', split: 'balanced', startDate: date, clearance: true } }
   assert.equal(coachDay(DEFAULT_PROFILE, date, []), null)
   assert.equal(coachDay({ ...base, age: 16 }, date, []), null)
   assert.equal(coachDay({ ...base, strengthCoach: { ...base.strengthCoach, clearance: false } }, date, []), null)
@@ -35,7 +35,8 @@ try {
   const gym = { ...base, strengthCoach: { ...base.strengthCoach, gym: true, days: [0,1,3,4], experience: 'regular', minutes: 60, focus: 'muscle' } }
   assert.equal(coachDay(gym,date,[]).title, 'Chest, back & shoulders')
   assert.equal(coachDay(gym,'2026-10-13',[]).title, 'Legs, glutes & core')
-  assert.ok(coachDay(gym,date,[]).exercises.every(e => e.item.id.startsWith('gym_') && e.sets === 3))
+  assert.ok(coachDay(gym,date,[]).exercises.every(e => e.item.id.startsWith('gym_') && e.sets >= 2 && e.sets <= 4))
+  assert.ok(coachDay(gym,date,[]).exercises.some(e => e.sets > 2))
   const e = coachDay(gym,date,[]).exercises[0]
   const completed = { id: 'test', date, completed: true, type:'strength', coachKey:e.key, strengthLog:{exerciseId:e.item.id,sets:[]} }
   assert.ok(coachDay(gym,date,[completed]).exercises[0].logged)

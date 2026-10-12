@@ -1,0 +1,29 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+This license applies to all files under /data (including /data/staging).
+
+You are free to:
+  - Share — copy and redistribute the material in any medium or format
+  - Adapt — remix, transform, and build upon the material
+  for any purpose, even commercially.
+
+Under the following terms:
+  - Attribution — You must give appropriate credit, e.g.:
+    "WOD data courtesy of the WodWiz Open WOD Database (github.com/wodwiz/open-wod-db)"
+    Link back where reasonably possible. Indicate if changes were made.
+    You may not suggest WodWiz endorses you or your use.
+
+No additional restrictions — you may not apply legal terms or technological
+measures that legally restrict others from doing anything the license permits.
+
+Full legal text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+---
+
+Note on scope: the underlying WOD prescriptions (movement + rep/time schemes)
+are facts/methods and not independently copyrightable (see e.g. Bikram's
+Yoga College of India v. Evolation Yoga, 803 F.3d 1032 (9th Cir. 2015); U.S.
+Copyright Office Policy Statement, 37 CFR Part 201, June 22, 2012). The
+CC-BY-4.0 license here covers this repository's specific compilation,
+structuring, and original written descriptions — not a claim of ownership
+over the workouts themselves.

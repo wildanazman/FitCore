@@ -5,6 +5,7 @@ import { isLogDate, timestampOnDate, todayISO, uid } from '../lib/date'
 import { LogDatePicker } from './LogDatePicker'
 import { Icon } from './Icon'
 import { ExerciseDemo } from './ExerciseDemo'
+import { exerciseDemoId } from '../lib/exerciseVideos'
 import { StrengthSets, type SetDraft } from './StrengthSets'
 import { estimateStrengthEnergy } from '../lib/strengthEnergy'
 import { RunSettings } from './RunSettings'
@@ -119,7 +120,7 @@ export function ActivityComposer({ onSaved, date: controlledDate, onDateChange, 
     {(!library || editing) && <>
     {library && <div className="activity-editor-heading"><button type="button" onClick={() => setEditing(false)}><Icon name="arrow_back" size={18} />Exercise library</button><h2 tabIndex={-1} ref={editorHeading}>{selected?.label ?? 'Log a custom activity'}</h2><p>{selected ? `${equipmentLabel(selected)} · ${selected.detail ?? 'Record what you completed, not what you planned.'}` : 'Give it a name, choose how to track it, and save.'}</p></div>}
     <label className="home-form-label">Activity name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="Choose above or type your own" required maxLength={90} /></label>
-    {selected && (library ? <details className="activity-guide"><summary><Icon name="play_circle" size={21} />Exercise guide<Icon name="expand_more" size={18} /></summary><ExerciseDemo key={selected.id} exerciseId={selected.demoId ?? selected.id} /></details> : <ExerciseDemo key={selected.id} exerciseId={selected.demoId ?? selected.id} />)}
+    {selected && (library ? <details className="activity-guide"><summary><Icon name="play_circle" size={21} />Exercise guide<Icon name="expand_more" size={18} /></summary><ExerciseDemo key={selected.id} exerciseId={exerciseDemoId(selected)} /></details> : <ExerciseDemo key={selected.id} exerciseId={exerciseDemoId(selected)} />)}
     {runKind && runSettings && <RunSettings kind={runKind} settings={runSettings} age={profile.age} onChange={setRunSettings} />}
     {!runKind && <div className="exercise-tracking" role="group" aria-label="Logging method">{([{ id: 'reps', label: 'Sets & reps' }, { id: 'hold', label: 'Timed holds' }, { id: 'time', label: 'Duration' }] as const).map(item => <button type="button" key={item.id} aria-pressed={tracking === item.id} onClick={() => setTracking(item.id)}>{item.label}</button>)}</div>}
     {strength && <><StrengthSets sets={sets} onChange={setSets} mode={tracking as 'reps' | 'hold'} weighted={weighted} implementCount={implementCount} onImplementCountChange={setImplementCount} sides={sides} />

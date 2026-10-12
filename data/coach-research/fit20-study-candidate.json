@@ -1,0 +1,21 @@
+{
+  "status": "downloaded-trained-evaluated-not-deployed",
+  "project": "https://osf.io/jn6ay/",
+  "paper": "https://pubmed.ncbi.nlm.nih.gov/35591809/",
+  "attribution": "James Steele, James P Fisher, Jurgen Giessing, Patroklos Androulakis-Korakakis, Milo Wolf, Bram Kroeske and Rob Reuters",
+  "license": "CC-BY-4.0",
+  "licenseVerification": "https://api.osf.io/v2/licenses/563c1cf88c5e4a3877f9e96a/",
+  "fileListing": "https://api.osf.io/v2/nodes/jn6ay/files/osfstorage/60044b2586541a06fb149a69/",
+  "filename": "fit20_final.csv",
+  "bytes": 349831841,
+  "downloadUrl": "https://osf.io/download/w3vcn/",
+  "participantsReportedByPaper": 14690,
+  "scope": "Study-specific longitudinal strength adaptation; not optimal-plan labels",
+  "schemaInspected": true,
+  "sha256": "1897b2e555dd6124302583a6116aa5cd72f965817a5a25f74026c91461eb7ea2",
+  "rawRows": 3675994,
+  "rawParticipants": 80700,
+  "modelTrainingRows": 315090,
+  "modelEvaluation": "models/strength-progress-evaluation.json",
+  "activatedInApp": false
+}

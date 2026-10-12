@@ -1,7 +1,9 @@
+import imported from '../data/exercise-videos-imported.json'
+import ymove from '../data/exercise-videos-ymove.json'
 export interface ExerciseVideo {
   name: string
   video: string
-  gif: string
+  gif?: string
   poster: string
   sourceUrl: string
   author: string
@@ -17,6 +19,8 @@ function wger(id: string, name: string, sourceId: number): ExerciseVideo {
   }
 }
 export const EXERCISE_VIDEOS: Record<string, ExerciseVideo> = {
+  ...imported,
+  ...ymove,
   home_db_bench_press: wger('home_db_bench_press', 'Dumbbell bench press', 75),
   bench_press: wger('bench_press', 'Barbell bench press', 73),
   home_db_kickback: wger('home_db_kickback', 'Dumbbell triceps kickback', 655),
@@ -35,4 +39,9 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideo> = {
     author: 'FitnessScape', sourceUrl: 'https://commons.wikimedia.org/wiki/File:Squat_-_exercise_demonstration_video.webm',
     licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
   },
+}
+// Two catalogue entries describe the same standing dumbbell RDL, not a barbell lift.
+EXERCISE_VIDEOS.home_dumbbell_rdl = EXERCISE_VIDEOS.home_db_rdl
+export function exerciseDemoId(item: { id: string; demoId?: string }) {
+  return EXERCISE_VIDEOS[item.id] ? item.id : item.demoId ?? item.id
 }

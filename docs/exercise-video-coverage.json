@@ -1,0 +1,319 @@
+{
+  "scope": "Named home/gym exercises, excluding mixed workout/circuit entries",
+  "total": 92,
+  "withMovingDemo": 30,
+  "withPhotosOnly": 26,
+  "missingMovingDemo": 62,
+  "missing": [
+    {
+      "id": "home_dumbbell_press",
+      "name": "Shoulder press",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_floor_press",
+      "name": "Dumbbell floor press",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_bodyweight_hinge",
+      "name": "Bodyweight hip hinge",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_standing_core",
+      "name": "Standing knee raise",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_pushup",
+      "name": "Push-up",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_kneeling_pushup",
+      "name": "Kneeling push-up",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_bench_pushup",
+      "name": "Incline push-up on bench",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_decline_pushup",
+      "name": "Decline push-up",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_bench_fly",
+      "name": "Dumbbell chest fly",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_squeeze_press",
+      "name": "Dumbbell squeeze press",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_kb_floor_press",
+      "name": "Kettlebell floor press",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_db_bent_row",
+      "name": "Dumbbell bent-over row",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_bench_row",
+      "name": "Bench-supported dumbbell row",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_pullover",
+      "name": "Dumbbell pullover",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_reverse_fly",
+      "name": "Dumbbell reverse fly",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_kb_row",
+      "name": "Kettlebell row",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_superman",
+      "name": "Superman",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_bird_dog",
+      "name": "Bird-dog",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_reverse_lunge",
+      "name": "Reverse lunge",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_split_squat",
+      "name": "Split squat",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_wall_sit",
+      "name": "Wall sit",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_calf_raise",
+      "name": "Standing calf raise",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_lunge",
+      "name": "Dumbbell reverse lunge",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_split_squat",
+      "name": "Dumbbell split squat",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_bulgarian_squat",
+      "name": "Bulgarian split squat",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_db_bulgarian",
+      "name": "Dumbbell Bulgarian split squat",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_kb_deadlift",
+      "name": "Kettlebell deadlift",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_glute_bridge",
+      "name": "Glute bridge",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_single_bridge",
+      "name": "Single-leg glute bridge",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_bridge",
+      "name": "Dumbbell glute bridge",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_hip_thrust",
+      "name": "Dumbbell hip thrust",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_clamshell",
+      "name": "Side-lying clamshell",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_pike_pushup",
+      "name": "Pike push-up",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_db_front_raise",
+      "name": "Dumbbell front raise",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_arnold_press",
+      "name": "Dumbbell Arnold press",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_kb_shoulder_press",
+      "name": "Kettlebell shoulder press",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_db_concentration",
+      "name": "Dumbbell concentration curl",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_kb_curl",
+      "name": "Kettlebell biceps curl",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_plank",
+      "name": "Forearm plank",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_side_plank",
+      "name": "Side plank",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_dead_bug",
+      "name": "Dead bug",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_bicycle_crunch",
+      "name": "Bicycle crunch",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_reverse_crunch",
+      "name": "Reverse crunch",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_heel_touch",
+      "name": "Heel touches",
+      "stillPhotos": true
+    },
+    {
+      "id": "home_db_russian_twist",
+      "name": "Dumbbell Russian twist",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_kb_suitcase",
+      "name": "Kettlebell suitcase carry",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_db_farmer",
+      "name": "Dumbbell farmer carry",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_db_thruster",
+      "name": "Dumbbell thruster",
+      "stillPhotos": false
+    },
+    {
+      "id": "home_kb_halo",
+      "name": "Kettlebell halo",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_pec_deck",
+      "name": "Pec deck fly",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_barbell_row",
+      "name": "Barbell bent-over row",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_db_row",
+      "name": "Single-arm dumbbell row",
+      "stillPhotos": true
+    },
+    {
+      "id": "gym_rdl",
+      "name": "Barbell Romanian deadlift",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_bulgarian",
+      "name": "Dumbbell Bulgarian split squat",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_calf_raise",
+      "name": "Machine calf raise",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_hip_abduction",
+      "name": "Hip abduction",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_cable_kickback",
+      "name": "Cable glute kickback",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_rear_delt",
+      "name": "Rear delt fly",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_cable_crunch",
+      "name": "Cable crunch",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_hanging_raise",
+      "name": "Hanging knee raise",
+      "stillPhotos": false
+    },
+    {
+      "id": "gym_plank",
+      "name": "Forearm plank",
+      "stillPhotos": true
+    },
+    {
+      "id": "gym_thruster",
+      "name": "Dumbbell thruster",
+      "stillPhotos": false
+    }
+  ]
+}

@@ -37,3 +37,6 @@ pnpm-debug.log*
 
 # ts build info
 *.tsbuildinfo
+
+# Public-study participant records stay local, never in app/release bundles
+data/coach-research/private/

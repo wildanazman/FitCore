@@ -178,14 +178,22 @@ function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: 
   const [custom, setCustom] = useState(false)
   const [slot, setSlot] = useState<MealSlot>(initialSlot)
   const [brand, setBrand] = useState<RestaurantBrand | null>(null)
-  const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string } | null>(null)
+  const [customDefaults, setCustomDefaults] = useState<{ name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string; sourceLabel?: string; sourceUrl?: string } | null>(null)
+  const [calorieSearch, setCalorieSearch] = useState<((query: string) => RestaurantFood[]) | null>(null)
+  useEffect(() => {
+    let active = true
+    void import('../lib/kkmFoods').then(module => {
+      if (active) setCalorieSearch(() => module.searchKKMFoods)
+    })
+    return () => { active = false }
+  }, [])
   const [online, setOnline] = useState<LookupResult | null>(null)
   const [onlineMatches, setOnlineMatches] = useState<LookupResult[]>([])
   const [searching, setSearching] = useState(false)
   const [onlineErr, setOnlineErr] = useState<string | null>(null)
   const lookupController = useRef<AbortController | null>(null)
   const results = brand || !q.trim() ? [] : searchLocalFoods(q, 30)
-  const restaurantResults = q.trim() || brand ? searchRestaurantFoods(q, brand, 45) : []
+  const restaurantResults = q.trim() || brand ? [...searchRestaurantFoods(q, brand, 45), ...(!brand && calorieSearch ? calorieSearch(q) : [])] : []
   const noLocalMatch = q.trim().length >= 3 && results.length === 0 && restaurantResults.length === 0 && brand === null
 
   useEffect(() => {
@@ -202,11 +210,11 @@ function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: 
 
   const chooseRestaurant = (item: RestaurantFood) => {
     if (hasCompleteMacros(item)) {
-      setCustomDefaults({ name: `${item.brand} · ${item.name}`, serving:item.serving, kcal:item.kcal, protein:item.protein, carbs:item.carbs, fat:item.fat, note:`${item.sourceLabel}. ${item.note ?? ''}` })
+      setCustomDefaults({ name: `${item.brand} · ${item.name}`, serving:item.serving, kcal:item.kcal, protein:item.protein, carbs:item.carbs, fat:item.fat, note:`${item.sourceLabel}. ${item.note ?? ''}`, sourceLabel:item.sourceLabel, sourceUrl:item.sourceUrl })
       setCustom(true)
       return
     }
-    setCustomDefaults({ name: `${item.brand} · ${item.name}`, kcal: item.kcal, serving:item.serving, note:item.note })
+    setCustomDefaults({ name: item.brand === 'KKM' ? item.name : `${item.brand} · ${item.name}`, kcal: item.kcal, serving:item.serving, note:item.note, sourceLabel:item.sourceLabel, sourceUrl:item.sourceUrl })
     setCustom(true)
   }
 
@@ -274,9 +282,9 @@ function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: 
                   <p className="font-body-md text-[12px] text-on-surface-variant">{noLocalMatch ? 'Tap Search for more food matches.' : 'Type at least 3 characters.'}</p>
                 </div>
               )}
-              {restaurantResults.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-lime uppercase pt-sm">Malaysia restaurant menu · offline</p>}
+              {restaurantResults.length > 0 && <p className="font-data-mono text-[10px] tracking-widest text-lime uppercase pt-sm">Published calorie references · offline</p>}
               {restaurantResults.map((item) => (
-                <div key={`${item.brand}:${item.name}`} className="food-restaurant-result">
+                <div key={`${item.sourceUrl}:${item.name}:${item.serving}:${item.kcal}`} className="food-restaurant-result">
                   <button type="button" onClick={() => chooseRestaurant(item)} className="food-restaurant-main">
                     <span className="food-restaurant-identity"><strong>{item.name}</strong><small>{item.brand} · {item.serving}</small></span>
                     <span className="food-restaurant-numbers"><strong>{item.kcal === null ? 'No verified kcal' : `${item.kcal} kcal`}</strong><small>{hasCompleteMacros(item) ? `${item.protein}P · ${item.carbs}C · ${item.fat}F` : item.kcal === null ? 'Add your own values' : 'Calories only · add macros to log'}</small></span>
@@ -342,7 +350,7 @@ function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: 
   )
 }
 
-function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: LocalFood) => void; defaultName: string; defaults: { name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string } | null }) {
+function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: LocalFood) => void; defaultName: string; defaults: { name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string; sourceLabel?: string; sourceUrl?: string } | null }) {
   const [name, setName] = useState(defaultName)
   const [kcal, setKcal] = useState(defaults?.kcal == null ? '' : String(defaults.kcal))
   const [protein, setProtein] = useState(defaults?.protein == null ? '' : String(defaults.protein))
@@ -371,6 +379,8 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
       protein: Math.round(p * amount * 10) / 10,
       carbs: Math.round(c * amount * 10) / 10,
       fat: Math.round(f * amount * 10) / 10,
+      nutritionSource: defaults?.sourceLabel,
+      nutritionSourceUrl: defaults?.sourceUrl,
     })
   }
 
@@ -389,7 +399,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
         <label>How many servings?<input aria-label="Number of servings" type="number" min="0.1" max="50" step="0.25" inputMode="decimal" value={quantity} onChange={event => setQuantity(event.target.value)}/></label>
         {referenceGrams > 0 && <label>Or enter weight (g)<input aria-label="Food portion weight in grams" type="number" min="1" max="2000" step="1" value={Number.isFinite(amount) ? Math.round(referenceGrams * amount) : ''} onChange={event => { const grams=Number(event.target.value);setQuantity(grams > 0 ? String(grams/referenceGrams) : '') }}/></label>}
         <div role="group" aria-label="Quick serving amount">{[0.5,1,1.5,2,3].map(value=><button key={value} type="button" aria-pressed={amount===value} onClick={()=>setQuantity(String(value))}>{value}×</button>)}</div>
-        {amount > 0 && Number.isFinite(amount) && <strong>Total: {Math.round(kcalNum * amount)} kcal · {Math.round(p * amount)} g protein</strong>}
+        {amount > 0 && Number.isFinite(amount) && <strong>Total: {Math.round(kcalNum * amount)} kcal{protein !== '' ? ` · ${Math.round(p * amount)} g protein` : ''}</strong>}
         <small>For pizza, a “1 slice” reference means 2× is two slices—not two whole pizzas.</small>
       </section>
       <p className="text-[12px] text-on-surface-variant">Nutrition below is for one reference serving.</p>
