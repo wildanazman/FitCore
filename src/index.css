@@ -64,7 +64,7 @@ body {
 
 /* Shared light-surface elevation. */
 .card-elev, .glow-soft { box-shadow: 0 5px 20px #263f6410; }
-.glow-lime { box-shadow: 0 5px 20px #2453ee20; }
+.glow-lime { box-shadow: 0 5px 20px color-mix(in srgb,var(--palette-accent) 12%,transparent); }
 .diet-hero, .home-brief { background: var(--palette-tint); }
 .home-brief-alert { background: var(--palette-error-bg); }
 

@@ -196,7 +196,7 @@ export interface PlanSession {
     sets: { reps: number; weightKg: number; holdSeconds?: number }[]
     volumeKg: number
     calorieEstimate?: {
-      method: 'entered' | 'sets-tempo'
+      method: 'entered' | 'sets-tempo' | 'duration-met'
       bodyWeightKg: number
       tempoSeconds: number
       restSeconds: number

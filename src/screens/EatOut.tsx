@@ -12,7 +12,7 @@ import './eat-out.css'
 import { RouletteSound } from '../lib/rouletteSound'
 import { loadRouletteDays, saveRouletteDays, setDaySkipped } from '../lib/rouletteDay'
 
-const colors = ['#2647cf', '#f36b55', '#ffc847', '#e6a4c8', '#388879']
+const colors = ['var(--eat-blue)', 'var(--eat-coral)', 'var(--eat-yellow)', 'var(--eat-pink)', '#388879']
 const safeLink = (url: string) => { try { const u = new URL(url); return u.protocol === 'https:' ? u.href : undefined } catch { return undefined } }
 export function EatOut() {
   const nav = useNavigate(), reduced = useReducedMotion()

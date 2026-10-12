@@ -306,6 +306,7 @@ export function FoodEditSheet({
   onDelete: () => void
 }) {
   const [draft, setDraft] = useState(entry)
+  const [editingLog, setEditingLog] = useState(false)
   const [servings, setServings] = useState(entry.servings)
   const reduced = useReducedMotion()
   const dialogRef = useDialogFocus(onClose)
@@ -367,7 +368,9 @@ export function FoodEditSheet({
           <p>Values for the selected portion. Other nutrients and % daily values are not available.</p>
         </section>
         {!!entry.components?.length && <details className="mb-md"><summary className="py-3 cursor-pointer text-on-surface">Meal components</summary>{entry.components.map((item,index)=><div key={index} className="flex justify-between gap-3 py-2 text-on-surface"><span>{item.name}</span><span>{Math.round(item.kcal * servings)} kcal</span></div>)}</details>}
-        <details className="mb-md"><summary className="py-3 cursor-pointer text-on-surface">Edit food details</summary>
+        {!editingLog&&<button type="button" className="meal-detail-edit" onClick={()=>setEditingLog(true)}><Icon name="edit" size={18}/>Edit log</button>}
+        {editingLog&&<div>
+        <details className="mb-md" open><summary className="py-3 cursor-pointer text-on-surface">Edit food details</summary>
         <label className="flex flex-col gap-1 mb-md">
           <span className="font-label-caps text-label-caps text-on-surface-variant uppercase">Food name</span>
           <input
@@ -406,9 +409,11 @@ export function FoodEditSheet({
           </div>
         </div>
         <div className="flex gap-md">
-          <Press onClick={onDelete} className="flex-1 py-3 rounded-full border border-error/40 text-error font-metric-md flex items-center justify-center gap-2"><Icon name="delete" size={18} /> Delete</Press>
-          <Press onClick={() => onSave({ name: draft.name.trim() || entry.name, emoji: draft.emoji, kcal: draft.kcal, protein: draft.protein, carbs: draft.carbs, fat: draft.fat, confidence: draft.confidence, servings })} className="flex-[2] py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2">Save <Icon name="check" size={18} /></Press>
+          <Press onClick={onDelete} disabled={lookupState==='loading'} className="flex-1 py-3 rounded-full border border-error/40 text-error font-metric-md flex items-center justify-center gap-2"><Icon name="delete" size={18} /> Delete</Press>
+          <Press disabled={lookupState==='loading'} onClick={() => onSave({ name: draft.name.trim() || entry.name, emoji: draft.emoji, kcal: draft.kcal, protein: draft.protein, carbs: draft.carbs, fat: draft.fat, confidence: draft.confidence, servings })} className="flex-[2] py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2">Save <Icon name="check" size={18} /></Press>
         </div>
+        <button type="button" className="meal-detail-edit" disabled={lookupState==='loading'} onClick={()=>{setDraft(entry);setServings(entry.servings);setLookupMessage(null);setEditingLog(false)}}>Cancel editing</button>
+        </div>}
       </motion.div>
     </motion.div>, document.body
   )

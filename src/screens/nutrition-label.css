@@ -17,3 +17,4 @@
 .meal-portion-control>div { display:flex; gap:8px; }
 .meal-portion-control button { flex:1; min-height:44px; border-radius:8px; background:var(--palette-soft); }
 .meal-portion-control button[aria-pressed=true] { background:var(--palette-accent); color:var(--palette-on-accent); }
+.meal-detail-edit { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:44px; margin:16px 0; padding:10px 14px; border-radius:10px; background:var(--palette-tint); color:var(--palette-accent); font-weight:700; }

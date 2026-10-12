@@ -42,6 +42,7 @@ export function Home() {
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refreshDay) }
   }, [today])
   const [activityOpen, setActivityOpen] = useState(false)
+  const [pastEditing, setPastEditing] = useState(false)
   const activityRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (activityOpen) activityRef.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'nearest' })
@@ -49,6 +50,8 @@ export function Home() {
   const [balanceOpen, setBalanceOpen] = useState(false)
   const [feed, setFeed] = useState<'all' | 'meal' | 'activity'>('all')
   const isToday = date === today
+  const pastDay = date < today
+  const canEditDay = isToday || (pastDay && pastEditing)
   const dayWeight = [...state.weights].filter((entry) => entry.date <= date).sort((a, b) => b.date.localeCompare(a.date))[0]?.weightKg ?? profile.startWeightKg
   const fuel = dayFuel(profile, dayWeight, date, state.foods, state.sessions)
   const foods = state.foods.filter((entry) => entry.date === date)
@@ -73,7 +76,7 @@ export function Home() {
   ].filter((entry) => feed === 'all' || entry.kind === feed).sort((a, b) => b.at.localeCompare(a.at))
   const transition = { duration: reducedMotion ? 0 : 0.24, ease }
 
-  function chooseDay(day: string) { setDate(day); setActivityOpen(false) }
+  function chooseDay(day: string) { setDate(day); setActivityOpen(false); setPastEditing(false); setSelectedFood(null) }
 
   return <div className="home-page">
     <MilestoneCelebration />
@@ -82,22 +85,23 @@ export function Home() {
     <div className="home-welcome"><div><h1>{greeting()}, {firstName}<span>.</span></h1><p>{isToday?'Your day at a glance.':`Daily log · ${shortDate(date)}`}</p></div><span className="home-goal"><Icon name={profile.goal === 'lose' ? 'trending_down' : profile.goal === 'gain' ? 'trending_up' : 'balance'} size={16} />{profile.goal === 'lose' ? 'Lose weight' : profile.goal === 'gain' ? 'Gain weight' : 'Maintain'}</span></div>
 
     <ShowUpTrail date={date} today={today} onChooseDay={chooseDay} />
+    {pastDay&&<section className="home-history-notice" aria-label="Past day log"><div><strong>{pastEditing?'Editing saved logs':`Saved log · ${shortDate(date)}`}</strong><p>{pastEditing?'Completion changes are saved immediately.':'Read-only. Saved activities keep their completed status.'}</p></div><button type="button" aria-pressed={pastEditing} onClick={()=>{setPastEditing(value=>!value);setActivityOpen(false)}}><Icon name={pastEditing?'check':'edit'} size={18}/>{pastEditing?'Done editing':'Edit this day'}</button></section>}
 
     <div className="home-dashboard">
       <div className="home-primary-column">
         <div className="home-weight-checkin"><button type="button" className="home-body-link" onClick={() => nav('/body')}><span className="home-body-icon"><Icon name="monitor_weight" size={26} /></span><span className="home-body-copy"><strong>Weight check-in</strong><small>{state.weights.some(w=>w.date === date) ? 'Weight logged · view progress' : 'Log your weight'}</small></span><span className="home-body-value">{weightHidden ? <span aria-label="Weight hidden">•••</span> : <>{toDisplayWeight(dayWeight, profile.units).toFixed(1)}<small>{weightLabel}</small></>}</span></button><button type="button" className="home-weight-visibility" onClick={toggleWeightVisibility} aria-label={weightHidden ? 'Show weight' : 'Hide weight'} aria-pressed={!weightHidden}><Icon name={weightHidden ? 'visibility_off' : 'visibility'} size={21}/></button></div>
         <CoachToday date={date}/>
-        <EnergyBoard fuel={fuel} onOpenFood={() => nav(`/food?date=${date}`)} />
-        <div className="home-quick-actions">
+        <EnergyBoard fuel={fuel} historical={pastDay} onOpenFood={() => nav(`/food?date=${date}`)} />
+        {canEditDay&&<div className="home-quick-actions">
           <motion.button type="button" className="home-log-meal" onClick={() => nav(`/food?add=1&date=${date}`)} whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="restaurant" size={23} /></span><span><strong>Log a meal</strong><small>Search or scan</small></span><Icon name="add" size={21} /></motion.button>
           <motion.button type="button" className={`home-log-activity ${activityOpen ? 'is-open' : ''}`} onClick={() => setActivityOpen((open) => !open)} aria-expanded={activityOpen} aria-controls="home-activity-composer" whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="exercise" size={23} /></span><span><strong>Log activity</strong><small>Sets or duration</small></span><Icon name={activityOpen ? 'close' : 'add'} size={21} /></motion.button>
-        </div>
+        </div>}
 
-        <AnimatePresence initial={false}>{activityOpen && <motion.div ref={activityRef} id="home-activity-composer" className="home-composer" initial={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} transition={transition}><div className="home-composer-title"><h2>Add your movement</h2><button type="button" onClick={() => setActivityOpen(false)} aria-label="Close activity form"><Icon name="close" size={20} /></button></div><ActivityComposer date={date} onSaved={() => setActivityOpen(false)} /></motion.div>}</AnimatePresence>
+        <AnimatePresence initial={false}>{canEditDay && activityOpen && <motion.div ref={activityRef} id="home-activity-composer" className="home-composer" initial={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} transition={transition}><div className="home-composer-title"><h2>Add your movement</h2><button type="button" onClick={() => setActivityOpen(false)} aria-label="Close activity form"><Icon name="close" size={20} /></button></div><ActivityComposer date={date} onSaved={() => setActivityOpen(false)} /></motion.div>}</AnimatePresence>
 
         <section className="home-nutrition" aria-labelledby="home-nutrition-title">
           <div className="home-section-heading"><h2 id="home-nutrition-title">Daily macros</h2><button type="button" onClick={() => nav(`/food?date=${date}`)} aria-label="View nutrition details"><Icon name="arrow_outward" size={20} /></button></div>
-          <div className="home-macros"><Macro label="Protein" value={fuel.protein} target={fuel.proteinTarget} color="protein" /><Macro label="Carbs" value={fuel.carbs} target={fuel.carbTarget} color="carbs" /><Macro label="Fat" value={fuel.fat} target={fuel.fatTarget} color="fat" /></div>
+          <div className="home-macros"><Macro historical={pastDay} label="Protein" value={fuel.protein} target={fuel.proteinTarget} color="protein" /><Macro historical={pastDay} label="Carbs" value={fuel.carbs} target={fuel.carbTarget} color="carbs" /><Macro historical={pastDay} label="Fat" value={fuel.fat} target={fuel.fatTarget} color="fat" /></div>
           <details className="home-macro-explanation"><summary><Icon name="info" size={18} /><span>Why these targets?</span><Icon name="expand_more" size={18} /></summary><div><p>Based on your {dayWeight.toFixed(1)} kg weight, saved protein setting and {fuel.budget.toLocaleString()} kcal daily budget.</p><ul><li><strong>Protein · {fuel.proteinTarget} g</strong><span>{dayWeight.toFixed(1)} kg × {profile.proteinPerKg} g/kg, rounded. Protein contributes about {fuel.proteinTarget * 4} kcal.</span></li><li><strong>Fat · {fuel.fatTarget} g</strong><span>{profile.dietMode === 'keto' || profile.dietMode === 'egg' ? 'Your low-carb plan assigns the remaining calories to fat after protein and your carb cap.' : '25% of your calorie budget ÷ 9 kcal per gram, rounded.'}</span></li><li><strong>Carbs · {fuel.carbTarget} g</strong><span>{profile.dietMode === 'keto' || profile.dietMode === 'egg' ? `Your selected low-carb plan uses a ${profile.netCarbCapG} g carb cap.` : 'Calories left after protein and fat ÷ 4 kcal per gram, rounded.'}</span></li></ul><p>These are planning estimates, not an exact measurement of your needs or a requirement to finish every target. Your calorie budget reflects your profile, goal and app training adjustment; a manual calorie override takes priority.</p><div className="home-macro-evidence"><strong>What does the evidence say?</strong><p>ISSN suggests 1.4–2.0 g/kg/day for most exercising adults. This app uses your saved setting, not a measured personal requirement. General adult guidance gives fat 20–35% and carbs 45–65% of calories; this app’s protein-first split can fall outside the carb range. It is not a universally optimal split.</p><p>Health conditions, pregnancy and individual training needs may require guidance from a clinician or dietitian.</p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5477153/" target="_blank" rel="noreferrer">ISSN protein position stand<Icon name="open_in_new" size={14} /></a><a href="https://www.nationalacademies.org/news/report-offers-new-eating-and-physical-activity-targets-to-reduce-chronic-disease-risk" target="_blank" rel="noreferrer">National Academies macro ranges<Icon name="open_in_new" size={14} /></a></div></div></details>
           <HomeProteinIdeas remaining={Math.max(0, fuel.proteinTarget - fuel.protein)} calorieRemaining={fuel.remaining} date={date} lowCarb={profile.dietMode === 'keto' || profile.dietMode === 'egg'} />
         </section>
@@ -116,9 +120,9 @@ export function Home() {
             {entries.length ? entries.map((entry) => <div className={`home-entry home-entry-${entry.kind}`} key={`${entry.kind}-${entry.id}`}>
               {entry.kind === 'meal' && <button type="button" className="home-meal-detail-hit" aria-label={`View nutrition facts: ${entry.title}`} onClick={() => setSelectedFood(state.foods.find(food => food.id === entry.id) ?? null)} />}
               <span className="home-entry-symbol">{entry.photo ? <img src={entry.photo} alt="" /> : <Icon name={entry.kind === 'meal' ? 'restaurant' : entry.session?.icon ?? 'exercise'} size={22} />}</span>
-              <div className="home-entry-copy"><strong>{entry.title}</strong><span>{entry.detail}{entry.kind === 'meal' || entry.session?.loggedAt ? ` · ${time(entry.at)}` : ''}</span></div>
-              {entry.session && !entry.session.manual ? <motion.button type="button" className="home-session-check" aria-label={`${entry.session.completed ? 'Mark incomplete' : 'Mark complete'}: ${entry.title}`} aria-pressed={entry.session.completed} onClick={() => toggleSession(entry.id)} whileTap={reducedMotion ? undefined : { scale: 0.9 }}><Icon name={entry.session.completed ? 'check_circle' : 'radio_button_unchecked'} size={25} fill={entry.session.completed} /></motion.button> : <span className="home-entry-energy"><strong>{entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? '—' : `${entry.kind === 'meal' ? '+' : '−'}${entry.kcal}`}</strong><small>{entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? 'not estimated' : 'kcal'}</small></span>}
-            </div>) : <div className="home-journal-empty"><h3>{feed === 'activity' ? 'No activities logged' : feed === 'meal' ? 'No meals logged' : 'No entries yet'}</h3><p>{isToday?'Add what you eat or do. Your totals update here.':`Forgot to log on ${shortDate(date)}? You can still add it.`}</p><button type="button" onClick={() => feed === 'activity' ? setActivityOpen(true) : nav(`/food?add=1&date=${date}`)}>{feed === 'activity' ? 'Add an activity' : 'Find & log a meal'}<Icon name="arrow_forward" size={17} /></button></div>}
+              <div className="home-entry-copy"><strong>{entry.title}</strong><span>{entry.detail}{pastDay&&<span className={`home-entry-status ${entry.kind==='meal'||entry.session?.completed?'is-complete':''}`}>{entry.kind==='meal'?'Logged':entry.session?.completed?'Completed':'Not logged'}</span>}{entry.kind === 'meal' || entry.session?.loggedAt ? ` · ${time(entry.at)}` : ''}</span></div>
+              {entry.session && !entry.session.manual && canEditDay ? <motion.button type="button" className="home-session-check" aria-label={`${entry.session.completed ? 'Mark incomplete' : 'Mark complete'}: ${entry.title}`} aria-pressed={entry.session.completed} onClick={() => { if(canEditDay) toggleSession(entry.id) }} whileTap={reducedMotion ? undefined : { scale: 0.9 }}><Icon name={entry.session.completed ? 'check_circle' : 'radio_button_unchecked'} size={25} fill={entry.session.completed} /></motion.button> : <span className="home-entry-energy"><strong>{entry.session && !entry.session.completed ? '—' : entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? '—' : `${entry.kind === 'meal' ? '+' : '−'}${entry.kcal}`}</strong><small>{entry.session && !entry.session.completed ? 'not logged' : entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? 'not estimated' : 'kcal'}</small></span>}
+            </div>) : <div className="home-journal-empty"><h3>{feed === 'activity' ? 'No activities logged' : feed === 'meal' ? 'No meals logged' : 'No entries yet'}</h3><p>{isToday?'Add what you eat or do. Your totals update here.':`Forgot to log on ${shortDate(date)}? You can still add it.`}</p><button type="button" onClick={() => { if(!canEditDay){setPastEditing(true);return} feed === 'activity' ? setActivityOpen(true) : nav(`/food?add=1&date=${date}`) }}>{!canEditDay?'Edit this day to add a log':feed === 'activity' ? 'Add an activity' : 'Find & log a meal'}<Icon name="arrow_forward" size={17} /></button></div>}
           </motion.div></AnimatePresence></div>
           {completed.length > 0 && <div className="home-movement-total"><Icon name="local_fire_department" size={19} /><span>{burned.toLocaleString()} kcal from {completed.length} completed activit{completed.length === 1 ? 'y' : 'ies'}</span></div>}
         </section>
@@ -126,7 +130,7 @@ export function Home() {
         <section className="home-plan" aria-labelledby="home-plan-title">
           <div className="home-section-heading"><h2 id="home-plan-title">Your daily checklist</h2><button type="button" onClick={() => nav('/diet')} aria-label="Open weekly diet plan"><Icon name="arrow_outward" size={20} /></button></div>
           <button type="button" className="home-diet-link" onClick={() => nav('/diet')}><span className="home-diet-icon"><Icon name={diet.icon} size={22} /></span><span><strong>{diet.label} plan</strong><small>{fasting ? `${fasting.phase} · ${fasting.detail}` : diet.kind === 'carb' ? `${carbRemaining} g net carbs left` : diet.tagline}</small></span><Icon name="chevron_right" size={20} /></button>
-          {tasks.length > 0 ? <><div className="home-habit-summary"><span>{doneTasks} of {tasks.length} planned actions complete</span><span>{Math.round(doneTasks / tasks.length * 100)}%</span></div><div className="home-habit-list">{tasks.slice(0, 3).map((task) => <label key={task.id} className={task.completed ? 'is-done' : ''}><input type="checkbox" checked={task.completed} onChange={() => toggleDietTask(task.id)} /><span className="home-habit-check"><Icon name="check" size={15} /></span><span>{task.title}</span></label>)}</div>{tasks.length > 3 && <button type="button" className="home-text-link" onClick={() => nav('/diet')}>See all {tasks.length} actions<Icon name="arrow_forward" size={16} /></button>}</> : <button type="button" className="home-create-plan" onClick={() => nav('/diet')}><Icon name="add" size={18} />Build your weekly plan<span>One small promise at a time.</span></button>}
+          {tasks.length > 0 ? <><div className="home-habit-summary"><span>{doneTasks} of {tasks.length} planned actions complete</span><span>{Math.round(doneTasks / tasks.length * 100)}%</span></div><div className="home-habit-list">{tasks.slice(0, 3).map((task) => <label key={task.id} className={task.completed ? 'is-done' : ''}><input type="checkbox" checked={task.completed} disabled={!canEditDay} onChange={() => { if(canEditDay) toggleDietTask(task.id) }} /><span className="home-habit-check"><Icon name="check" size={15} /></span><span>{task.title}</span></label>)}</div>{tasks.length > 3 && <button type="button" className="home-text-link" onClick={() => nav('/diet')}>See all {tasks.length} actions<Icon name="arrow_forward" size={16} /></button>}</> : <button type="button" className="home-create-plan" onClick={() => nav('/diet')}><Icon name="add" size={18} />Build your weekly plan<span>One small promise at a time.</span></button>}
         </section>
 
         {!weightHidden && <WeightFeedback date={date}/>}
@@ -136,12 +140,12 @@ export function Home() {
   </div>
 }
 
-function EnergyBoard({ fuel, onOpenFood }: { fuel: DayFuel; onOpenFood: () => void }) {
+function EnergyBoard({ fuel, onOpenFood, historical=false }: { fuel: DayFuel; onOpenFood: () => void; historical?:boolean }) {
   const reducedMotion = useReducedMotion()
   const pct = percent(fuel.consumed, fuel.budget)
   return <section className={`home-energy ${fuel.remaining < 0 ? 'is-over' : ''}`} aria-labelledby="home-energy-title">
-    <div className="home-energy-top"><h2 id="home-energy-title">Calorie budget</h2><button type="button" onClick={onOpenFood} aria-label="Open food log"><Icon name="arrow_outward" size={21} /></button></div>
-    <div className="home-energy-reading"><HomeNumber value={Math.abs(fuel.remaining)} /><div><span>kcal</span><strong>{fuel.remaining >= 0 ? 'remaining' : 'over target'}</strong></div></div>
+    <div className="home-energy-top"><h2 id="home-energy-title">{historical?'Calories logged':'Calorie budget'}</h2><button type="button" onClick={onOpenFood} aria-label="Open food log"><Icon name="arrow_outward" size={21} /></button></div>
+    <div className="home-energy-reading"><HomeNumber value={historical?fuel.consumed:Math.abs(fuel.remaining)} /><div><span>kcal</span><strong>{historical?'recorded':fuel.remaining >= 0 ? 'remaining' : 'over target'}</strong></div></div>
     <div className="home-energy-meter" role="progressbar" aria-label="Daily food budget used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-valuetext={`${fuel.consumed} of ${fuel.budget} kcal eaten`}>
       <div className="home-energy-ticks" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} />)}</div>
       <motion.div className="home-energy-fill" initial={false} animate={{ scaleX: pct / 100 }} transition={reducedMotion ? { duration: 0 } : { ...spring, stiffness: 170 }} />
@@ -152,12 +156,12 @@ function EnergyBoard({ fuel, onOpenFood }: { fuel: DayFuel; onOpenFood: () => vo
   </section>
 }
 
-function Macro({ label, value, target, color }: { label: string; value: number; target: number; color: string }) {
+function Macro({ label, value, target, color, historical=false }: { label: string; value: number; target: number; color: string; historical?:boolean }) {
   const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0
   const safeTarget = Number.isFinite(target) ? Math.max(0, target) : 0
   const progress = safeTarget > 0 ? Math.min(100, safeValue / safeTarget * 100) : 0
   const difference = Math.round(Math.abs(safeTarget - safeValue))
-  return <div className={`home-macro home-macro-${color}`}><span className="home-macro-label">{label}</span><div className="home-macro-ring" role="progressbar" aria-label={`${label} target`} aria-valuemin={0} aria-valuemax={safeTarget || 100} aria-valuenow={safeTarget > 0 ? Math.min(safeValue, safeTarget) : 0} aria-valuetext={`${safeValue} of ${safeTarget} grams${safeValue > safeTarget ? `, ${difference} grams over target` : ''}`}><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle className="home-macro-ring-track" cx="50" cy="50" r="42" /><circle className="home-macro-ring-fill" cx="50" cy="50" r="42" pathLength="100" strokeDasharray={`${progress} 100`} transform="rotate(-90 50 50)" opacity={progress > 0 ? 1 : 0} /></svg><strong><HomeNumber value={safeValue} /><small>g</small></strong></div><span className="home-macro-target">of {safeTarget} g</span><span className="home-macro-remaining">{safeTarget === 0 ? 'No target set' : safeValue > safeTarget ? `${difference} g over` : difference === 0 ? 'Target reached' : `${difference} g left`}</span></div>
+  return <div className={`home-macro home-macro-${color}`}><span className="home-macro-label">{label}</span><div className="home-macro-ring" role="progressbar" aria-label={`${label} target`} aria-valuemin={0} aria-valuemax={safeTarget || 100} aria-valuenow={safeTarget > 0 ? Math.min(safeValue, safeTarget) : 0} aria-valuetext={`${safeValue} of ${safeTarget} grams${safeValue > safeTarget ? `, ${difference} grams over target` : ''}`}><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle className="home-macro-ring-track" cx="50" cy="50" r="42" /><circle className="home-macro-ring-fill" cx="50" cy="50" r="42" pathLength="100" strokeDasharray={`${progress} 100`} transform="rotate(-90 50 50)" opacity={progress > 0 ? 1 : 0} /></svg><strong><HomeNumber value={safeValue} /><small>g</small></strong></div><span className="home-macro-target">of {safeTarget} g</span><span className="home-macro-remaining">{historical?'Logged':safeTarget === 0 ? 'No target set' : safeValue > safeTarget ? `${difference} g over` : difference === 0 ? 'Target reached' : `${difference} g left`}</span></div>
 }
 
 function HomeNumber({ value }: { value: number }) {

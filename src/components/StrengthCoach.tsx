@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { addDays, isLogDate, shortDate, startOfWeek, todayISO } from '../lib/date'
 import { coachDay, coachSplit, COACH_DAYS, validCoachDays } from '../lib/strengthCoach'
 import { HOME_EQUIPMENT, equipmentLabel, ACTIVITIES, canUseEquipment, activityTracking } from '../lib/activities'
-import type { UserProfile } from '../types'
+import type { UserProfile, PlanSession } from '../types'
 import { ActivityComposer } from './ActivityComposer'
 import { ExerciseDemo } from './ExerciseDemo'
 import { StrengthProgress } from './StrengthProgress'
+import { WorkoutRunner } from './WorkoutRunner'
 import { exerciseDemoId } from '../lib/exerciseVideos'
 import { Icon } from './Icon'
 import './strength-coach.css'
@@ -28,9 +29,13 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
   const [active, setActive] = useState<string | null>(null)
   const [demo, setDemo] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [finished, setFinished] = useState<PlanSession | null>(null)
+  const finishRef = useRef<HTMLElement>(null)
+  useEffect(()=>{if(finished){finishRef.current?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});finishRef.current?.focus({preventScroll:true})}},[finished])
   const [customizing, setCustomizing] = useState(false)
   const [customActivity, setCustomActivity] = useState(false)
   const [cardioLog,setCardioLog] = useState(false)
+  const [running,setRunning] = useState(false)
   const plan = coachDay(profile, date, state.sessions)
   const weekStart = startOfWeek(date)
   const exercise = plan?.exercises.find(e => e.item.id === active)
@@ -40,10 +45,7 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
   function startWorkout() {
     if (!isLogDate(date)) return
     if (!nextExercise) {if(plan?.cardio&&!plan.cardio.logged)setCardioLog(true);return}
-    setActive(nextExercise.item.id)
-    const row = document.getElementById(`coach-exercise-${nextExercise.item.id}`)
-    row?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
-    document.getElementById(`coach-log-${nextExercise.item.id}`)?.focus({ preventScroll: true })
+    setActive(null);setFinished(null);setRunning(true)
   }
   function build() {
     if (profile.age < 18) { setError('This starter plan is for adults. Get age-appropriate guidance from a qualified coach.'); return }
@@ -64,6 +66,7 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
     <label className="coach-clearance"><input type="checkbox" checked={draft.clearance} onChange={e=>setDraft({...draft,clearance:e.target.checked})}/><span>I can exercise without current pain, injury or a medical restriction that needs professional advice.</span></label>
     {error && <p role="alert">{error}</p>}<div className="coach-actions"><button className="coach-primary" type="submit">{profile.strengthCoach?'Update my plan':'Build my plan'}<Icon name="arrow_forward" size={18}/></button>{profile.strengthCoach&&<button type="button" onClick={()=>{setEditing(false);setError('')}}>Cancel</button>}</div>
   </form></section>
+  if(running) return <WorkoutRunner plan={plan} date={date} onExit={()=>setRunning(false)}/>
   const sessionTitle = plan.rest ? plan.cardio?'Treadmill day.':'Recovery day.' : `${plan.shortTitle === 'Full' ? 'Full-body' : plan.shortTitle === 'Shoulder' ? 'Shoulders & abs' : plan.shortTitle} day.`
   return <section className="strength-coach coach-workspace">
     <aside className="coach-week-panel" aria-label="Your training week">
@@ -84,7 +87,8 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
       <div className="coach-row-actions"><button type="button" onClick={()=>{setCustomizing(!customizing);setCustomActivity(false)}}><Icon name="tune" size={18}/>{customizing?'Close customization':'Customize workout'}</button><button type="button" onClick={()=>{setCustomActivity(!customActivity);setCustomizing(false)}}><Icon name="add" size={18}/>{customActivity?'Close custom activity':'Log my own activity'}</button></div>
       {customizing&&<WorkoutEditor key={date} date={date} profile={profile} ids={plan.exercises.map(e=>e.item.id)} onCancel={()=>setCustomizing(false)} onSave={ids=>{updateProfile({strengthWorkouts:{...profile.strengthWorkouts,[date]:ids}});setCustomizing(false);setActive(null);setSaved(true)}} onReset={()=>{const overrides={...profile.strengthWorkouts};delete overrides[date];updateProfile({strengthWorkouts:overrides});setCustomizing(false);setActive(null);setSaved(true)}}/>}
       {customActivity&&<ActivityComposer key={`custom-${date}`} customOnly date={date} variant="library" onSaved={()=>{setCustomActivity(false);setSaved(true)}}/>}
-      {saved&&<p role="status" className="coach-status"><Icon name="check_circle" size={18}/>Saved on this device. Your earlier logs are kept.</p>}
+      {finished?.date===date&&<section className="coach-finish" ref={finishRef} tabIndex={-1} role="status"><Icon name="check_circle" size={32}/><div><h3>{plan.completed?'Workout complete.':'Exercise complete.'}</h3><strong>{finished.title}</strong><p>{finished.strengthLog?.sets.length} sets completed · {finished.durationMin.toFixed(1)} min · ≈ {Math.round(finished.kcal)} active kcal</p><p>{completed} of {plan.exercises.length} exercises completed. {plan.completed?'Take a moment to recover.':'Your progress is saved.'}</p></div>{!plan.completed&&<button type="button" className="coach-primary" onClick={()=>{setFinished(null);startWorkout()}}>Next exercise<Icon name="arrow_forward" size={18}/></button>}<button type="button" aria-label="Dismiss completion" onClick={()=>setFinished(null)}><Icon name="close" size={20}/></button></section>}
+      {saved&&!finished&&<p role="status" className="coach-status"><Icon name="check_circle" size={18}/>Saved on this device. Your earlier logs are kept.</p>}
       {!plan.rest && <>
         <div className="coach-warmup"><Icon name="timer" size={24}/><div><strong>Warm up <span>5–8 min</span></strong><p>Lighter practice set first. Keep 2–3 reps in reserve.</p></div></div>
         <p className="coach-volume-note">{plan.volumeReason} Session estimate: about {plan.estimatedMinutes} min.</p>
@@ -96,11 +100,12 @@ export function StrengthCoach({ date, onDateChange }: { date: string; onDateChan
         <div className="coach-exercises-heading"><h3>Your exercises</h3><span>In workout order</span></div>
         <ol className="coach-exercises">{plan.exercises.map((e,index)=><li id={`coach-exercise-${e.item.id}`} key={e.key} className={e.logged?'is-logged':''}>
           <div className="coach-exercise-top"><span className="coach-exercise-number" aria-hidden="true">{e.logged?<Icon name="check" size={18}/>:index+1}</span><div><h4>{e.item.label}</h4><p>{equipmentLabel(e.item)} <span>{e.item.muscles?.join(' / ')}</span></p></div>{e.logged&&<span className="coach-done">Logged</span>}</div>
-          <dl className="coach-prescription"><div><dt>Sets</dt><dd>{e.sets}</dd></div><div><dt>{e.held?'Hold (sec)':'Reps'}</dt><dd>{e.held?'20–30':repRange}</dd></div><div><dt>Rest (sec)</dt><dd>{e.rest}</dd></div></dl>
+          <dl className="coach-prescription"><div><dt>{e.logged?'Completed sets':'Planned sets'}</dt><dd>{e.logged?.strengthLog?.sets.length??e.sets}</dd></div><div><dt>{e.held?'Hold (sec)':'Reps'}</dt><dd>{e.logged?.strengthLog?e.logged.strengthLog.sets.map(s=>e.held?s.holdSeconds:s.reps).join(' / '):e.held?'20–30':repRange}</dd></div><div><dt>{e.logged?'Active kcal ≈':'Rest (sec)'}</dt><dd>{e.logged?Math.round(e.logged.kcal):e.rest}</dd></div></dl>
+          {e.logged&&<p className="coach-last"><strong>Completed</strong> {e.logged.detail}</p>}
           {e.recent?.strengthLog&&<p className="coach-last"><strong>Last time</strong> {e.recent.strengthLog.sets.map(s=>e.held?`${s.holdSeconds}s`:`${s.reps} reps${s.weightKg>0?` at ${s.weightKg} kg${e.recent!.strengthLog!.implementCount===2?' each':''}`:''}`).join(' / ')}. {e.recent.strengthLog.sets.every(s=>s.reps >= (profile.strengthCoach!.focus === 'muscle' ? 12 : 15))?'If all sets still left 2–3 reps in reserve without pain, try the smallest available load increase next time. Otherwise repeat the load.':'Repeat a comfortable load; add reps before adding weight.'}</p>}
           <div className="coach-row-actions"><button type="button" onClick={()=>setDemo(demo===e.item.id?null:e.item.id)}><Icon name="play_circle" size={18}/>{demo===e.item.id?'Hide technique':'Technique'}</button><button id={`coach-log-${e.item.id}`} type="button" disabled={Boolean(e.logged)||!isLogDate(date)} onClick={()=>setActive(active===e.item.id?null:e.item.id)}>{e.logged?'Logged':active===e.item.id?'Close log':'Log sets'}<Icon name={e.logged?'check':'add'} size={18}/></button></div>
           {demo===e.item.id&&<div className="coach-technique"><p>{e.item.detail}</p><ExerciseDemo key={e.item.id} exerciseId={exerciseDemoId(e.item)}/></div>}
-          {exercise?.item.id===e.item.id&&<ActivityComposer key={e.key} variant="library" date={date} prescription={{exerciseId:e.item.id,sets:e.sets,reps:e.reps,rest:e.rest,coachKey:e.key}} onSaved={()=>{setActive(null);setSaved(true)}}/>}
+          {exercise?.item.id===e.item.id&&<ActivityComposer key={e.key} variant="library" date={date} prescription={{exerciseId:e.item.id,sets:e.sets,reps:e.reps,rest:e.rest,coachKey:e.key}} onSaved={session=>{setActive(null);setSaved(true);setFinished(session??null)}}/>}
         </li>)}</ol>
         {!isLogDate(date)&&<p className="coach-preview-note">Preview only. Log sets on the day you actually train.</p>}
       </>}

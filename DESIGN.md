@@ -11,7 +11,7 @@ colors:
   line: "#dfe5ef"
   selected: "#e8eeff"
   surface-muted: "#e8edf5"
-  citrus: "#e6fa78"
+  citrus: "#eab845"
   success: "#145e54"
   success-surface: "#def4ed"
   error: "#b53b35"
@@ -194,6 +194,10 @@ Daily actions come before advanced explanations. A selected day changes the ledg
 - Motion that follows a change in user state.
 
 ## Colors
+
+### Current default: FitCore Blue+
+
+The user restored the original blue/white foundation and rejected coral. Cobalt remains the action/navigation/capture hue, chalk and white remain the ground and surfaces, and navy carries text. Movement, check-in and rest use blue tints. Gold adds recognition to streak awards, achievement badges and milestone progress; measurement highlights use gold too. Layout, typography and workout functions are unchanged. Makan Mana inherits blue, white and gold under classic. Alternate themes retain their palettes. Authoritative roles live in `src/store/themes.css`.
 
 ### Primary
 

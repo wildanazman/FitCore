@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import './themes.css'
 
 export const THEMES = [
-  { id: 'classic', name: 'FitCore Blue', description: 'The original. Crisp & focused.', colors: ['#f4f6fa', '#ffffff', '#2453ee'] },
+  { id: 'classic', name: 'FitCore Blue+', description: 'Original blue & white, with a touch of coral.', colors: ['#ffffff', '#2453ee', '#ffab82'] },
   { id: 'volt', name: 'Midnight Volt', description: 'Black canvas. Electric lime.', colors: ['#101310', '#1c211b', '#d5f66b'] },
   { id: 'rose', name: 'Rose Studio', description: 'Soft rose. Confident pink.', colors: ['#fcf5f8', '#ffffff', '#b52062'] },
   { id: 'dream', name: 'Daydream', description: 'Airy lavender. A calmer rhythm.', colors: ['#f6f4fc', '#ffffff', '#7151bd'] },
@@ -16,6 +16,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme
     document.documentElement.style.colorScheme = theme === 'volt' || theme === 'ocean' ? 'dark' : 'light'
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme==='classic'?'#f4f6fa':THEMES.find(item=>item.id===theme)!.colors[0])
     try { localStorage.setItem('fitcore-theme', theme) } catch { /* Theme still works without persistence. */ }
   }, [theme])
   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>

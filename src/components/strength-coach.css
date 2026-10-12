@@ -74,3 +74,17 @@
 .coach-custom-results span { display: grid; gap: 4px; }
 .coach-custom-results small { color: var(--palette-muted); font-size: 14px; }
 .coach-customize button:focus-visible,.coach-customize input:focus-visible { outline: 2px solid var(--palette-accent); outline-offset: 2px; }
+.coach-finish { display:flex; align-items:center; flex-wrap:wrap; gap:16px; padding:20px; margin:20px 0; border-radius:16px; background:var(--palette-tint); color:var(--app-ink); animation: workout-confirm 360ms cubic-bezier(.16,1,.3,1); }
+.coach-finish > .icon { color:var(--palette-accent); }
+.coach-finish > div { flex:1; min-width:180px; }
+.coach-finish h3 { margin:0 0 6px; font-size:22px; }
+.coach-finish p { margin:6px 0 0; font-size:14px; }
+.coach-finish > button:last-child { min-width:44px; min-height:44px; }
+@keyframes workout-confirm { from { transform:scale(.98); opacity:.6; } to { transform:scale(1); opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .coach-finish { animation:none; } }
+.coach-prescription dd { overflow-wrap:anywhere; }
+.coach-live-log .activity-editor-heading { background:var(--palette-surface); color:var(--palette-ink); padding:0; }
+.coach-live-log .activity-editor-heading p { color:var(--palette-muted); }
+.coach-live-log { padding:16px; border-radius:12px; background:var(--palette-soft); }
+.coach-live-log .strength-set-row .set-done { color:var(--palette-accent); background:var(--palette-tint); }
+.coach-live-log .strength-set-row .set-done[aria-pressed="true"] { color:var(--palette-on-accent); background:var(--palette-accent); }

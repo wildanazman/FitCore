@@ -1,4 +1,4 @@
-/* Shared FitCore workspace: chalk, cobalt, clear task hierarchy. */
+/* Shared FitCore workspace: semantic palette, clear task hierarchy. */
 :root { --app-bg: var(--palette-bg); --app-ink: var(--palette-ink); --app-muted: var(--palette-muted); --app-blue: var(--palette-accent); --app-line: var(--palette-line); --home-blue: var(--palette-accent); --home-blue-dark: var(--palette-hover); --home-ink: var(--palette-ink); --home-muted: var(--palette-muted); }
 :root { --app-heading-size: 30px; --app-support-size: 13px; }
 @media(max-width:390px) { :root { --app-heading-size: 28px; } }

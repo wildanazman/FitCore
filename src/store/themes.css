@@ -1,12 +1,50 @@
 /* Semantic palette: components own layout; themes only supply these roles. */
 :root, :root[data-theme="classic"] {
-  --palette-bg:#f4f6fa; --palette-surface:#fff; --palette-ink:#17253a; --palette-muted:#627089;
-  --palette-accent:#2453ee; --palette-hover:#1740cc; --palette-on-accent:#fff;
-  --palette-line:#dfe5ef; --palette-outline:#ccd6e7; --palette-tint:#e8eeff; --palette-soft:#e8edf5;
-  --palette-strong:#17253a; --palette-on-strong:#fff; --palette-highlight:#e6fa78;
+  /* Blue/white foundation; gold is reserved for recognition. */
+  --core-bg:#f4f6fa; --core-surface:#fff; --core-ink:#17253a; --core-muted:#627089;
+  --core-accent:#2453ee; --core-hover:#1740cc; --core-line:#dfe5ef; --core-tint:#e8eeff; --core-soft:#e8edf5;
+  --palette-bg:var(--core-bg); --palette-surface:var(--core-surface); --palette-ink:var(--core-ink); --palette-muted:var(--core-muted);
+  --palette-accent:var(--core-accent); --palette-hover:var(--core-hover); --palette-on-accent:#fff;
+  --palette-line:var(--core-line); --palette-outline:#ccd6e7; --palette-tint:var(--core-tint); --palette-soft:var(--core-soft);
+  --palette-strong:#17253a; --palette-on-strong:#fff; --palette-highlight:#eab845;
+  --palette-warm:var(--core-hover); --palette-warm-bg:var(--core-tint);
+  --palette-gold:#eab845; --palette-on-gold:#45320d; --palette-gold-ink:#78570d; --palette-gold-bg:#fff3d3;
+  --palette-gold-on-blue:#ffe09a;
+  --palette-capture:var(--core-accent); --palette-on-capture:#fff;
   --palette-success:#145e54; --palette-success-bg:#def4ed; --palette-error:#b53b35; --palette-error-bg:#fff1f0;
   --palette-scheme:light;
 }
+/* Main palette reaches the previously route-local restaurant experience too. */
+html[data-theme="classic"] .eat-out-page {
+  --eat-blue:var(--core-accent); --eat-coral:var(--core-accent); --eat-yellow:var(--palette-gold); --eat-pink:var(--core-tint);
+  --palette-bg:var(--core-bg); --palette-surface:var(--core-surface); --palette-ink:var(--core-ink); --palette-muted:var(--core-muted);
+  --palette-line:var(--core-line); --palette-soft:var(--core-soft); --palette-tint:var(--core-tint);
+  --palette-accent:var(--core-accent); --palette-hover:var(--core-hover);
+}
+html[data-theme="classic"] .eat-out-primary:hover:not(:disabled) { background:var(--core-hover); }
+html[data-theme="classic"] .home-log-activity .home-action-icon,
+html[data-theme="classic"] .home-entry-activity .home-entry-energy strong,
+html[data-theme="classic"] .home-movement-total { color:var(--palette-warm); }
+html[data-theme="classic"] .home-entry-activity .home-entry-symbol { background:var(--palette-warm-bg); color:var(--palette-warm); }
+html[data-theme="classic"] .home-macro-fat { --macro:#8b52bd; }
+html[data-theme="classic"] .home-weight-checkin { background:var(--palette-warm-bg); border-color:var(--core-line); }
+html[data-theme="classic"] .home-weight-checkin .home-body-icon { color:var(--palette-warm); }
+html[data-theme="classic"] .home-log-activity { background:var(--palette-warm-bg); border-color:var(--core-line); }
+html[data-theme="classic"] .workout-rest { background:var(--palette-warm-bg); }
+/* Gold supports recognition and energy progress; blue still owns actions. */
+html[data-theme="classic"] .home-page .show-up-awards { background:var(--palette-gold-bg); color:var(--palette-gold-ink); }
+html[data-theme="classic"] .show-up-heading h2>.material-symbols-outlined { color:var(--palette-gold-ink); }
+html[data-theme="classic"] .achievement-feature-badge,
+html[data-theme="classic"] .is-earned .achievement-collect-badge { background:var(--palette-gold); color:var(--palette-on-gold); }
+html[data-theme="classic"] .achievement-collection li.is-earned { border-color:var(--palette-gold); }
+html[data-theme="classic"] .achievement-next progress::-webkit-progress-value { background:var(--palette-gold-ink); }
+html[data-theme="classic"] .achievement-next progress::-moz-progress-bar { background:var(--palette-gold-ink); }
+/* Capture shares the main blue action role across all entry points. */
+html[data-theme="classic"] .home-dock-camera,
+html[data-theme="classic"] .food-entry-methods .food-capture { background:var(--palette-capture); color:var(--palette-on-capture); border-color:var(--palette-capture); }
+html[data-theme="classic"] .home-dock-camera { box-shadow:0 9px 24px color-mix(in srgb,var(--palette-capture) 18%,transparent); }
+html[data-theme="classic"] .capture-shutter { border-color:var(--palette-capture); }
+html[data-theme="classic"] .capture-shutter>span { background:var(--palette-capture); color:var(--palette-on-capture); }
 :root[data-theme="volt"] {
   --palette-bg:#101310; --palette-surface:#1c211b; --palette-ink:#f1f5eb; --palette-muted:#b0bba7;
   --palette-accent:#d5f66b; --palette-hover:#e1ff88; --palette-on-accent:#1c2607;
@@ -55,6 +93,9 @@ html[data-theme] .home-energy:not(.is-over) .home-energy-message { border-color:
 html[data-theme] .home-energy-ticks i { background:color-mix(in srgb,var(--palette-on-accent) 18%,transparent); }
 html[data-theme] .home-energy-top button:hover { background:color-mix(in srgb,var(--palette-on-accent) 15%,transparent); }
 html[data-theme] .home-energy-fill { background:var(--palette-on-accent); }
+html[data-theme="classic"] .home-energy:not(.is-over) .home-energy-reading>span:first-child,
+html[data-theme="classic"] .home-energy:not(.is-over) .home-energy-emblem { color:var(--palette-gold-on-blue); }
+html[data-theme="classic"] .home-energy .home-energy-fill { background:var(--palette-gold-on-blue); opacity:1; }
 html[data-theme] .home-energy-unit { color:var(--palette-on-accent); }
 html[data-theme] .home-energy.is-over { color:var(--palette-on-strong); }
 html[data-theme] .home-energy.is-over h2, html[data-theme] .home-energy.is-over .home-energy-reading>div>span,
