@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, useDragControls, useReducedMotion } from 'framer-motion'
 import { useDialogFocus } from '../components/useDialogFocus'
 import { useApp } from '../store/AppContext'
 import { TopBar } from '../components/TopBar'
@@ -310,6 +310,21 @@ export function FoodEditSheet({
   const [servings, setServings] = useState(entry.servings)
   const reduced = useReducedMotion()
   const dialogRef = useDialogFocus(onClose)
+  const dragControls = useDragControls()
+  const [viewport, setViewport] = useState(() => ({ height: window.visualViewport?.height ?? window.innerHeight, top: window.visualViewport?.offsetTop ?? 0 }))
+  useEffect(() => {
+    const visible = window.visualViewport
+    const update = () => setViewport({ height: visible?.height ?? window.innerHeight, top: visible?.offsetTop ?? 0 })
+    visible?.addEventListener('resize', update)
+    visible?.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
+    update()
+    return () => {
+      visible?.removeEventListener('resize', update)
+      visible?.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [])
   const [lookupState, setLookupState] = useState<'idle' | 'loading' | 'error'>('idle')
   const [lookupMessage, setLookupMessage] = useState<string | null>(null)
 
@@ -340,17 +355,21 @@ export function FoodEditSheet({
   }
 
   return createPortal(
-    <motion.div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose} initial={reduced ? false : { opacity: 0.85 }} animate={{ opacity: 1 }}>
+    <motion.div className="fixed inset-x-0 z-[70] flex items-end justify-center" style={{ top: viewport.top, height: viewport.height }} onClick={onClose} onTouchStart={event => event.stopPropagation()} onTouchMove={event => event.stopPropagation()} initial={reduced ? false : { opacity: 0.85 }} animate={{ opacity: 1 }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div
-        className="relative w-full max-w-[480px] max-h-[90dvh] overflow-y-auto bg-ink-card rounded-t-[28px] border-t border-tile-border p-margin-mobile pb-xl"
+        className="relative flex min-h-0 w-full max-w-[480px] flex-col overflow-hidden bg-ink-card rounded-t-[28px] border-t border-tile-border"
+        style={{ maxHeight: viewport.height * 0.9, touchAction: 'auto' }}
         ref={dialogRef} role="dialog" aria-modal="true" aria-label={`Meal details: ${entry.name}`} tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         initial={reduced ? false : { y: 80 }} animate={{ y: 0 }} exit={reduced ? undefined : { y: 80 }} transition={reduced ? { duration: 0 } : spring}
-        drag="y" dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.2}
+        drag="y" dragListener={false} dragControls={dragControls} dragConstraints={{ top: 0, bottom: 0 }} dragElastic={0.2}
         onDragEnd={(_, info) => { if (info.offset.y > 120) onClose() }}
       >
-        <div className="w-12 h-1.5 bg-outline-variant rounded-full mx-auto mb-md" />
+        <div className="flex h-8 shrink-0 items-center justify-center" style={{ touchAction: 'none' }} onPointerDown={event => dragControls.start(event)} aria-hidden="true">
+          <div className="h-1.5 w-12 rounded-full bg-outline-variant" />
+        </div>
+        <div className="meal-edit-scroll min-h-0 overflow-y-auto overscroll-contain p-margin-mobile" style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}>
         <button type="button" onClick={onClose} className="ml-auto flex min-h-11 items-center gap-2 text-on-surface" aria-label="Close meal details"><Icon name="close" size={22}/></button>
         <div className="flex items-center gap-md mb-lg">
           <div className="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={23} /></div>
@@ -414,6 +433,7 @@ export function FoodEditSheet({
         </div>
         <button type="button" className="meal-detail-edit" disabled={lookupState==='loading'} onClick={()=>{setDraft(entry);setServings(entry.servings);setLookupMessage(null);setEditingLog(false)}}>Cancel editing</button>
         </div>}
+        </div>
       </motion.div>
     </motion.div>, document.body
   )
