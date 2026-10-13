@@ -16,6 +16,7 @@ import type { DayFuel, FoodEntry } from '../types'
 import { FoodEditSheet } from './Food'
 import './home.css'
 import { CoachToday } from '../components/StrengthCoach'
+import './home-premium.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
 const spring = { type: 'spring', stiffness: 380, damping: 34 } as const
@@ -90,12 +91,13 @@ export function Home() {
     <div className="home-dashboard">
       <div className="home-primary-column">
         <div className="home-weight-checkin"><button type="button" className="home-body-link" onClick={() => nav('/body')}><span className="home-body-icon"><Icon name="monitor_weight" size={26} /></span><span className="home-body-copy"><strong>Weight check-in</strong><small>{state.weights.some(w=>w.date === date) ? 'Weight logged · view progress' : 'Log your weight'}</small></span><span className="home-body-value">{weightHidden ? <span aria-label="Weight hidden">•••</span> : <>{toDisplayWeight(dayWeight, profile.units).toFixed(1)}<small>{weightLabel}</small></>}</span></button><button type="button" className="home-weight-visibility" onClick={toggleWeightVisibility} aria-label={weightHidden ? 'Show weight' : 'Hide weight'} aria-pressed={!weightHidden}><Icon name={weightHidden ? 'visibility_off' : 'visibility'} size={21}/></button></div>
-        <CoachToday date={date}/>
         <EnergyBoard fuel={fuel} historical={pastDay} onOpenFood={() => nav(`/food?date=${date}`)} />
         {canEditDay&&<div className="home-quick-actions">
           <motion.button type="button" className="home-log-meal" onClick={() => nav(`/food?add=1&date=${date}`)} whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="restaurant" size={23} /></span><span><strong>Log a meal</strong><small>Search or scan</small></span><Icon name="add" size={21} /></motion.button>
           <motion.button type="button" className={`home-log-activity ${activityOpen ? 'is-open' : ''}`} onClick={() => setActivityOpen((open) => !open)} aria-expanded={activityOpen} aria-controls="home-activity-composer" whileTap={reducedMotion ? undefined : { scale: 0.975 }} transition={spring}><span className="home-action-icon"><Icon name="exercise" size={23} /></span><span><strong>Log activity</strong><small>Sets or duration</small></span><Icon name={activityOpen ? 'close' : 'add'} size={21} /></motion.button>
         </div>}
+
+        <CoachToday date={date}/>
 
         <AnimatePresence initial={false}>{canEditDay && activityOpen && <motion.div ref={activityRef} id="home-activity-composer" className="home-composer" initial={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: reducedMotion ? 'auto' : 0, opacity: 0 }} transition={transition}><div className="home-composer-title"><h2>Add your movement</h2><button type="button" onClick={() => setActivityOpen(false)} aria-label="Close activity form"><Icon name="close" size={20} /></button></div><ActivityComposer date={date} onSaved={() => setActivityOpen(false)} /></motion.div>}</AnimatePresence>
 
@@ -144,11 +146,10 @@ function EnergyBoard({ fuel, onOpenFood, historical=false }: { fuel: DayFuel; on
   const reducedMotion = useReducedMotion()
   const pct = percent(fuel.consumed, fuel.budget)
   return <section className={`home-energy ${fuel.remaining < 0 ? 'is-over' : ''}`} aria-labelledby="home-energy-title">
-    <div className="home-energy-top"><h2 id="home-energy-title">{historical?'Calories logged':'Calorie budget'}</h2><button type="button" onClick={onOpenFood} aria-label="Open food log"><Icon name="arrow_outward" size={21} /></button></div>
-    <div className="home-energy-reading"><HomeNumber value={historical?fuel.consumed:Math.abs(fuel.remaining)} /><div><span>kcal</span><strong>{historical?'recorded':fuel.remaining >= 0 ? 'remaining' : 'over target'}</strong></div></div>
+    <div className="home-energy-top"><h2 id="home-energy-title"><Icon name="restaurant" size={18}/>{historical?'Calories logged':'Calorie budget'}</h2><button type="button" onClick={onOpenFood} aria-label="Open food log"><Icon name="arrow_outward" size={21} /></button></div>
+    <div className="home-energy-reading"><HomeNumber value={historical?fuel.consumed:Math.abs(fuel.remaining)} /><div><span>kcal</span><strong>{historical?'recorded':fuel.remaining >= 0 ? 'remaining' : 'over target'}</strong></div><span className="home-energy-percent"><strong>{pct}<small>%</small></strong><span>used</span></span></div>
     <div className="home-energy-meter" role="progressbar" aria-label="Daily food budget used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-valuetext={`${fuel.consumed} of ${fuel.budget} kcal eaten`}>
-      <div className="home-energy-ticks" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} />)}</div>
-      <motion.div className="home-energy-fill" initial={false} animate={{ scaleX: pct / 100 }} transition={reducedMotion ? { duration: 0 } : { ...spring, stiffness: 170 }} />
+      <div className="home-energy-ticks" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <i key={index} className={index < Math.round(pct / 100 * 36) ? 'is-filled' : undefined} />)}</div>
       <motion.span className="home-energy-marker" initial={false} animate={{ left: `${pct}%` }} transition={reducedMotion ? { duration: 0 } : { ...spring, stiffness: 170 }}><span /></motion.span>
     </div>
     <div className="home-energy-ends"><span><strong><HomeNumber value={fuel.consumed} /></strong> eaten</span><span><strong>{fuel.budget.toLocaleString()}</strong> kcal budget</span></div>

@@ -17,7 +17,22 @@ export function CoachToday({ date }: { date: string }) {
   const { profile, state } = useApp()
   const nav = useNavigate()
   const plan = coachDay(profile, date, state.sessions)
-  return <section className="coach-today" aria-label="Coach today"><div><h2>{plan ? plan.completed ? 'Session done. Recover well.' : plan.rest&&plan.cardio?'Treadmill day':plan.title : 'Your strength plan'}</h2><p>{plan ? plan.rest&&!plan.cardio ? `Next workout: ${shortDate(plan.nextDate)}. Easy movement is optional.` : `${plan.gym ? 'Gym' : 'Home'} · ${plan.exercises.length} strength exercises${plan.cardio?` + ${plan.cardio.minutes} min treadmill ${plan.cardio.item.id==='treadmill_walk'?'walk':'easy run'}`:' · sets, reps & rest ready'}` : 'Gym or home? Choose your equipment and training days.'}</p></div><button type="button" onClick={() => nav(`/train?plan=1&date=${date}`)}>{plan ? 'View plan' : 'Build my plan'}<Icon name="arrow_forward" size={18}/></button></section>
+  const next = plan?.exercises.find(exercise => !exercise.logged)
+  const resting = plan?.rest && !plan.cardio
+  return <section className={`coach-today ${plan?.completed ? 'is-complete' : ''}`} aria-label="Coach today">
+    <div className="coach-today-main">
+      <span className="coach-today-emblem"><Icon name={plan?.completed ? 'check_circle' : resting ? 'self_improvement' : 'exercise'} size={25}/></span>
+      <div className="coach-today-copy">
+        <p className="coach-today-context">{date===todayISO()?"Today’s training":`Training · ${shortDate(date)}`}</p>
+        <h2>{plan ? plan.completed ? 'Session complete' : plan.rest&&plan.cardio?'Treadmill day':plan.title : 'Your strength plan'}</h2>
+        <p className="coach-today-meta">{plan ? resting ? `Next workout ${shortDate(plan.nextDate)}` : `${plan.gym?'Gym':'Home'} · ${plan.exercises.length} exercises${plan.estimatedMinutes?` · ~${plan.estimatedMinutes} min`:''}${plan.cardio?` + ${plan.cardio.minutes} min cardio`:''}` : 'A routine that fits your week.'}</p>
+      </div>
+    </div>
+    <div className="coach-today-footer">
+      <div className="coach-today-next">{plan?.completed ? <><span>Nice work today</span><strong>Give yourself time to recover.</strong></> : next ? <><span>Up next</span><strong>{next.item.label}</strong><small>{next.sets} sets · {next.reps} {next.held?'sec':'reps'}</small></> : <><span>{resting?'Recovery':'Your routine'}</span><strong>{resting?'Easy movement, if you feel like it.':plan?.cardio?`${plan.cardio.minutes} min ${plan.cardio.item.label.toLowerCase()}`:'Choose your equipment and training days.'}</strong></>}</div>
+      <button type="button" onClick={() => nav(`/train?plan=1&date=${date}`)}>{plan ? 'View plan' : 'Build plan'}<Icon name="arrow_forward" size={18}/></button>
+    </div>
+  </section>
 }
 
 export function StrengthCoach({ date, onDateChange }: { date: string; onDateChange: (date: string) => void }) {
