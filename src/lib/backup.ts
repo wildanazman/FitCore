@@ -58,6 +58,7 @@ export function parseBackup(raw: string): Backup {
       if(key==='photos')assert(typeof entry.dataUrl==='string' && /^data:image\/(jpeg|png|webp);base64,/.test(entry.dataUrl))
       if(key==='weights')assert(Number(entry.weightKg)>0)
       if(key==='foods')assert(['breakfast','lunch','dinner','snack'].includes(String(entry.slot)))
+      if(key==='foods'&&entry.missingMacros!==undefined)assert(Array.isArray(entry.missingMacros)&&entry.missingMacros.every(field=>['protein','carbs','fat'].includes(String(field))))
       if(entry.components!==undefined)assert(Array.isArray(entry.components)&&entry.components.every(item=>record(item)&&typeof item.name==='string'&&typeof item.kcal==='number'&&['protein','carbs','fat','grams'].every(k=>item[k]===undefined||typeof item[k]==='number')))
       for(const field of ['photo','nutritionSource','nutritionSourceUrl','foodEntryId','completedAt','source'])if(entry[field]!==undefined)assert(typeof entry[field]==='string')
       if(key==='sessions') {

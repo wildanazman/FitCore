@@ -132,6 +132,8 @@ export interface FoodEntry {
   photo?: string
   nutritionSource?: string
   nutritionSourceUrl?: string
+  /** Numeric zeros for these fields are storage placeholders, not measured zero values. */
+  missingMacros?: ('protein' | 'carbs' | 'fat')[]
 }
 
 export interface WeightEntry {

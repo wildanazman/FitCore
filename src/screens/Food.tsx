@@ -43,6 +43,7 @@ export function Food() {
   const dayWeight = [...state.weights].filter(entry => entry.date <= today).sort((a, b) => b.date.localeCompare(a.date))[0]?.weightKg ?? profile.startWeightKg
   const fuel = dayFuel(profile, dayWeight, today, state.foods, state.sessions)
   const todayFoods = state.foods.filter((f) => f.date === today).sort((a, b) => b.loggedAt.localeCompare(a.loggedAt))
+  const incompleteNutrition = todayFoods.filter(food => food.missingMacros?.length).length
   const calPct = fuel.budget ? Math.min(100, (fuel.consumed / fuel.budget) * 100) : 0
 
   const def = dietDef(profile.dietMode)
@@ -64,7 +65,7 @@ export function Food() {
 
   const addLocal = (f: LocalFood, slot: MealSlot) => {
     if (hasExcludedIngredients(f.name)) return
-    addFood({ id: uid(), name: f.name, emoji: f.emoji, portion:f.serving, date: today, loggedAt: timestampOnDate(today), slot, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: 1, confidence: f.nutritionSource ? 0.8 : 1, nutritionSource: f.nutritionSource, nutritionSourceUrl: f.nutritionSourceUrl })
+    addFood({ id: uid(), name: f.name, emoji: f.emoji, portion:f.serving, date: today, loggedAt: timestampOnDate(today), slot, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, missingMacros: f.missingMacros, servings: 1, confidence: f.nutritionSource ? 0.8 : 1, nutritionSource: f.nutritionSource, nutritionSourceUrl: f.nutritionSourceUrl })
     closeSearch()
   }
 
@@ -87,7 +88,7 @@ export function Food() {
       <Reveal>
         <section className="food-score" aria-label="Daily calorie summary">
           <div className="food-score-top"><span>{Math.round(calPct)}% USED</span></div>
-          <div className="food-score-main"><div><span>{fuel.remaining < 0 ? 'OVER TARGET' : 'LEFT TO EAT'}</span><strong>{Math.abs(fuel.remaining).toLocaleString()}</strong><small>KCAL</small></div><div className="food-score-ring" style={{ background: `conic-gradient(var(--palette-accent) ${calPct}%, var(--palette-line) ${calPct}%)` }}><div><Icon name="restaurant" size={26} /></div></div></div>
+          <div className="food-score-main"><div><span>{fuel.remaining < 0 ? 'OVER TARGET' : 'LEFT TO EAT'}</span><strong>{Math.abs(fuel.remaining).toLocaleString()}<small>kcal</small></strong></div><div className="food-score-context"><strong>{todayFoods.length}</strong><span>{todayFoods.length===1?'meal logged':'meals logged'}</span></div></div>
           <div className="food-score-rule" />
           <div className="food-score-bottom"><div><span>EATEN</span><strong>{fuel.consumed.toLocaleString()}</strong></div><div><span>DAILY TARGET</span><strong>{fuel.budget.toLocaleString()}</strong></div></div>
           <div className="food-score-track" role="progressbar" aria-label={`${fuel.consumed} of ${fuel.budget} calories eaten`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(calPct)}><span style={{ width: `${calPct}%` }} /></div>
@@ -107,12 +108,12 @@ export function Food() {
       {/* Log */}
       <Reveal>
         <div>
-          <div className="food-editorial-heading"><h2>{today === todayISO() ? 'Today’s meals' : `${shortDate(today)} meals`}</h2></div>
+          <div className="food-editorial-heading food-log-heading"><h2>{today === todayISO() ? 'Today’s meals' : `${shortDate(today)} meals`}</h2><button type="button" onClick={()=>setSearchOpen(true)}><Icon name="add" size={18}/>Add meal</button></div>
           <div className="space-y-sm mt-sm">
-            {todayFoods.length === 0 && <p className="font-body-md text-body-md text-on-surface-variant text-center py-md">No meals logged yet. Capture one or find a food above.</p>}
+            {todayFoods.length === 0 && <div className="food-log-empty"><Icon name="restaurant" size={28}/><strong>Your first meal starts here.</strong><p>Search a food or scan your plate. Check the portion before saving.</p><button type="button" onClick={()=>setSearchOpen(true)}>Find a food<Icon name="arrow_forward" size={18}/></button></div>}
             {todayFoods.map((f, i) => (
               <motion.div key={f.id} initial={reduced ? false : { opacity: 0.85, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={reduced ? { duration: 0 } : { delay: i * 0.04, ...spring }}>
-                <Press as="button" onClick={() => setEditing(f)} className="w-full text-left rounded-[20px] bg-ink-card border border-tile-border p-sm flex items-center justify-between cursor-pointer">
+                <Press as="button" onClick={() => setEditing(f)} className="food-log-row w-full text-left rounded-[20px] bg-ink-card border border-tile-border p-sm flex items-center justify-between cursor-pointer">
                   <div className="flex items-center gap-md">
                     {f.photo ? <img src={f.photo} alt="" className="w-11 h-11 rounded-xl object-cover" /> : <div className="w-11 h-11 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={22} /></div>}
                     <div>
@@ -122,7 +123,7 @@ export function Food() {
                   </div>
                   <div className="text-right">
                     <div className="font-data-mono text-[13px] text-on-surface">{Math.round(f.kcal * f.servings)} kcal</div>
-                    <div className="font-data-mono text-[11px] text-lime">{Math.round(f.protein * f.servings)}g Pro</div>
+                    <div className="font-data-mono text-[11px] text-on-surface-variant">{f.missingMacros?.includes('protein') ? f.missingMacros.length===3?'Calories only':'Protein unavailable' : `${Math.round(f.protein * f.servings)} g protein`}</div>
                   </div>
                 </Press>
               </motion.div>
@@ -133,6 +134,7 @@ export function Food() {
 
       {/* Macro cards */}
       <Reveal><section className="food-macro-section"><div className="food-editorial-heading"><h2>Your nutrition</h2></div><div className="food-macros"><MacroCard label="Protein" v={fuel.protein} t={fuel.proteinTarget} /><MacroCard label="Carbs" v={fuel.carbs} t={fuel.carbTarget} /><MacroCard label="Fat" v={fuel.fat} t={fuel.fatTarget} /></div></section></Reveal>
+      {incompleteNutrition>0&&<p className="food-nutrition-notice" role="status">Macros are incomplete for {incompleteNutrition} {incompleteNutrition===1?'meal':'meals'}. Their calories count; missing nutrients are not included in these totals.</p>}
 
       {/* Quick add */}
       <Reveal><ProteinIdeas target={fuel.proteinTarget} eaten={fuel.protein} /></Reveal>
@@ -178,10 +180,11 @@ function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: 
   const [custom,setCustom] = useState(false)
   const [slot,setSlot] = useState<MealSlot>(initialSlot)
   const [customDefaults,setCustomDefaults] = useState<{name:string;kcal:number|null;protein?:number;carbs?:number;fat?:number;serving?:string;note?:string;sourceLabel?:string;sourceUrl?:string}|null>(null)
+  useEffect(()=>{if(custom){dialogRef.current?.scrollTo({top:0});dialogRef.current?.querySelector<HTMLElement>('#food-search-title')?.focus({preventScroll:true})}},[custom,dialogRef])
   return createPortal(<motion.div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose} initial={reduced?false:{opacity:0}} animate={{opacity:1}}>
     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-    <motion.div className="relative w-full max-w-[480px] bg-ink-card rounded-t-[24px] border-t border-tile-border p-margin-mobile pb-xl max-h-[90%] flex flex-col overflow-y-auto" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="food-search-title" tabIndex={-1} onClick={e=>e.stopPropagation()} initial={reduced?false:{y:80}} animate={{y:0}} transition={reduced?{duration:0}:spring}>
-      <div className="flex items-center justify-between gap-sm mb-sm"><h2 id="food-search-title" className="text-[24px] font-bold text-on-surface">{custom?'Review portion':'Search food & drinks'}</h2><button type="button" onClick={onClose} aria-label="Close food search" className="min-h-11 min-w-11 text-on-surface-variant"><Icon name="close" size={22}/></button></div>
+    <motion.div className="food-search-sheet relative w-full max-w-[480px] bg-ink-card rounded-t-[24px] border-t border-tile-border p-margin-mobile pb-xl max-h-[90%] overflow-y-auto overscroll-contain" style={{touchAction:'pan-y',WebkitOverflowScrolling:'touch'}} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="food-search-title" tabIndex={-1} onClick={e=>e.stopPropagation()} onTouchStart={e=>e.stopPropagation()} onTouchMove={e=>e.stopPropagation()} initial={reduced?false:{y:80}} animate={{y:0}} transition={reduced?{duration:0}:spring}>
+      <div className="flex items-center justify-between gap-sm mb-sm"><h2 id="food-search-title" tabIndex={-1} className="text-[24px] font-bold text-on-surface">{custom?'Review portion':'Search food & drinks'}</h2><button type="button" onClick={onClose} aria-label="Close food search" className="min-h-11 min-w-11 text-on-surface-variant"><Icon name="close" size={22}/></button></div>
       <p className="home-form-note">Logging for {date===todayISO()?'today':shortDate(date)}. Search → choose → check serving.</p>
       <div className="food-search-slots" role="group" aria-label="Meal to log">{(['breakfast','lunch','dinner','snack'] as const).map(option=><button key={option} type="button" aria-pressed={slot===option} onClick={()=>setSlot(option)}>{option}</button>)}</div>
       {custom?<><button type="button" className="food-manual-fallback" onClick={()=>{setCustom(false);setCustomDefaults(null)}}><Icon name="arrow_back" size={18}/>Back to results</button><CustomFoodForm key={customDefaults?.name??'manual'} onSubmit={food=>onPick(food,slot)} defaults={customDefaults} defaultName={customDefaults?.name??q}/></>:<FoodReferencePicker initialQuery={q} onPick={item=>{setQ(item.name);setCustomDefaults({name:item.name,kcal:item.kcal,serving:item.serving,protein:item.protein,carbs:item.carbs,fat:item.fat,note:item.note,sourceLabel:item.sourceLabel,sourceUrl:item.sourceUrl});setCustom(true)}} onManual={name=>{setQ(name);setCustomDefaults(null);setCustom(true)}}/>}
@@ -205,7 +208,8 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
   // Auto-fill kcal from macros if the user leaves it blank.
   const fromMacros = Math.round(p * 4 + c * 4 + f * 9)
   const kcalNum = Number(kcal) || fromMacros
-  const valid = name.trim().length > 0 && !hasExcludedIngredients(name) && kcalNum > 0 && Number.isFinite(amount) && amount > 0 && amount <= 50 && (!defaults || (protein !== '' && carbs !== '' && fat !== ''))
+  const missingMacros = (['protein','carbs','fat'] as const).filter((_,index)=>[protein,carbs,fat][index].trim()==='')
+  const valid = name.trim().length > 0 && !hasExcludedIngredients(name) && Number.isFinite(kcalNum) && kcalNum > 0 && [kcal,protein,carbs,fat].every(value=>value.trim()===''||(Number.isFinite(Number(value))&&Number(value)>=0)) && Number.isFinite(amount) && amount > 0 && amount <= 50
 
   const save = () => {
     if (!valid) return
@@ -218,17 +222,18 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
       protein: Math.round(p * amount * 10) / 10,
       carbs: Math.round(c * amount * 10) / 10,
       fat: Math.round(f * amount * 10) / 10,
+      missingMacros,
       nutritionSource: defaults?.sourceLabel,
       nutritionSourceUrl: defaults?.sourceUrl,
     })
   }
 
   return (
-    <div className="space-y-md overflow-y-auto no-scrollbar">
+    <div className="food-portion-review space-y-md">
       <label className="block">
         <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Food name</span>
         <input
-          autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          autoFocus={!defaults} value={name} onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Mi Sedaap Goreng"
           className="mt-1 w-full bg-ink border border-tile-border rounded-xl px-md py-2 text-on-surface font-body-md focus:border-lime focus:outline-none"
         />
@@ -239,16 +244,17 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
         {referenceGrams > 0 && <label>Or enter weight (g)<input aria-label="Food portion weight in grams" type="number" min="1" max="2000" step="1" value={Number.isFinite(amount) ? Math.round(referenceGrams * amount) : ''} onChange={event => { const grams=Number(event.target.value);setQuantity(grams > 0 ? String(grams/referenceGrams) : '') }}/></label>}
         <div role="group" aria-label="Quick serving amount">{[0.5,1,1.5,2,3].map(value=><button key={value} type="button" aria-pressed={amount===value} onClick={()=>setQuantity(String(value))}>{value}×</button>)}</div>
         {amount > 0 && Number.isFinite(amount) && <strong>Total: {Math.round(kcalNum * amount)} kcal{protein !== '' ? ` · ${Math.round(p * amount)} g protein` : ''}</strong>}
-        <small>For pizza, a “1 slice” reference means 2× is two slices—not two whole pizzas.</small>
+        {/pizza|slice/i.test(defaults?.serving??'')&&<small>A “1 slice” reference means 2× is two slices—not two whole pizzas.</small>}
       </section>
       <p className="text-[12px] text-on-surface-variant">Nutrition below is for one reference serving.</p>
-      <div className="grid grid-cols-2 gap-sm">
-        <NumInput label="Calories (kcal)" value={kcal} onChange={setKcal} placeholder={fromMacros ? String(fromMacros) : '0'} />
+      <NumInput label="Calories (kcal)" value={kcal} onChange={setKcal} placeholder={fromMacros ? String(fromMacros) : 'Enter calories'} />
+      <details className="food-optional-macros" open={missingMacros.length===0?true:undefined}><summary>Protein, carbs & fat <span>{missingMacros.length?'Optional':'Available'}</span></summary><p>Leave unavailable values blank. Only enter 0 if the source states zero.</p><div className="grid grid-cols-3 gap-sm">
         <NumInput label="Protein (g)" value={protein} onChange={setProtein} />
         <NumInput label="Carbs (g)" value={carbs} onChange={setCarbs} />
         <NumInput label="Fat (g)" value={fat} onChange={setFat} />
-      </div>
-      {defaults && <p className="font-body-md text-[12px] text-on-surface-variant">{defaults.protein == null ? 'Some nutrition values are missing. Enter them from a label or your own estimate; zero is only for a true zero.' : 'Online values are estimates, not a measurement of your portion. Check and adjust before logging.'} {defaults.note}</p>}
+      </div></details>
+      {missingMacros.length>0&&<p className="food-nutrition-notice">You can log this food with calories. Missing macros stay unavailable, not zero.</p>}
+      {defaults && <details className="food-reference-note"><summary>{defaults.sourceLabel??'Food reference'} · source & notes</summary>{defaults.note&&<p>{defaults.note}</p>}{defaults.sourceUrl&&<a href={defaults.sourceUrl} target="_blank" rel="noopener noreferrer">View source</a>}</details>}
       {fromMacros > 0 && !kcal && (
         <p className="font-data-mono text-[11px] text-lime">Calories auto-filled from macros: {fromMacros} kcal (edit above to override).</p>
       )}
@@ -261,7 +267,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
   )
 }
 
-function NumInput({ label, value, onChange, placeholder = '0' }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function NumInput({ label, value, onChange, placeholder = 'Not supplied' }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <label className="block bg-ink border border-tile-border rounded-xl px-md py-2">
       <span className="font-label-caps text-[10px] uppercase text-on-surface-variant">{label}</span>
@@ -343,6 +349,9 @@ export function FoodEditSheet({
         protein: result.protein,
         carbs: result.carbs,
         fat: result.fat,
+        missingMacros: [],
+        nutritionSource: sourceLabel(result.source),
+        nutritionSourceUrl: result.sourceUrl,
         confidence: result.confidence,
       }))
       setServings(1)
@@ -375,7 +384,7 @@ export function FoodEditSheet({
           <div className="w-12 h-12 rounded-xl bg-lime/10 flex items-center justify-center text-lime"><Icon name="restaurant" size={23} /></div>
           <div>
             <h2 className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{draft.name}</h2>
-            <p className="font-data-mono text-[12px] text-on-surface-variant">{Math.round(draft.kcal * servings)} kcal - {Math.round(draft.protein * servings)}g protein</p>
+            <p className="font-data-mono text-[12px] text-on-surface-variant">{Math.round(draft.kcal * servings)} kcal{!draft.missingMacros?.includes('protein')&&` · ${Math.round(draft.protein * servings)} g protein`}</p>
           </div>
         </div>
         <section className="meal-nutrition-label" aria-label="Nutrition facts">
@@ -383,7 +392,9 @@ export function FoodEditSheet({
           <p>{shortDate(entry.date)} · {servings.toFixed(1)} × {entry.portion ?? 'saved portion'}</p>
           <p>{draft.confidence < 1 ? 'Estimated nutrition · not a laboratory-tested label' : 'Based on the saved food reference'}</p>
           <div className="meal-label-calories"><span>Calories</span><strong>{Math.round(draft.kcal * servings)}</strong></div>
-          <dl>{([['Total Fat',draft.fat],['Total Carbohydrate',draft.carbs],['Protein',draft.protein]] as const).map(([name,value])=><div key={name}><dt>{name}</dt><dd>{Math.round(value * servings)} g</dd></div>)}</dl>
+          <dl>{([['Total Fat',draft.fat,'fat'],['Total Carbohydrate',draft.carbs,'carbs'],['Protein',draft.protein,'protein']] as const).filter(([, ,key])=>!draft.missingMacros?.includes(key)).map(([name,value])=><div key={name}><dt>{name}</dt><dd>{Math.round(value * servings)} g</dd></div>)}</dl>
+          {!!draft.missingMacros?.length&&<p>Some macros were not supplied by this reference. Calories are recorded; unavailable nutrients are not counted as zero.</p>}
+          {draft.nutritionSource&&<p>{draft.nutritionSource}{draft.nutritionSourceUrl&&<> · <a href={draft.nutritionSourceUrl} target="_blank" rel="noopener noreferrer">Source</a></>}</p>}
           <p>Values for the selected portion. Other nutrients and % daily values are not available.</p>
         </section>
         {!!entry.components?.length && <details className="mb-md"><summary className="py-3 cursor-pointer text-on-surface">Meal components</summary>{entry.components.map((item,index)=><div key={index} className="flex justify-between gap-3 py-2 text-on-surface"><span>{item.name}</span><span>{Math.round(item.kcal * servings)} kcal</span></div>)}</details>}
@@ -429,7 +440,7 @@ export function FoodEditSheet({
         </div>
         <div className="flex gap-md">
           <Press onClick={onDelete} disabled={lookupState==='loading'} className="flex-1 py-3 rounded-full border border-error/40 text-error font-metric-md flex items-center justify-center gap-2"><Icon name="delete" size={18} /> Delete</Press>
-          <Press disabled={lookupState==='loading'} onClick={() => onSave({ name: draft.name.trim() || entry.name, emoji: draft.emoji, kcal: draft.kcal, protein: draft.protein, carbs: draft.carbs, fat: draft.fat, confidence: draft.confidence, servings })} className="flex-[2] py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2">Save <Icon name="check" size={18} /></Press>
+          <Press disabled={lookupState==='loading'} onClick={() => onSave({ name: draft.name.trim() || entry.name, emoji: draft.emoji, kcal: draft.kcal, protein: draft.protein, carbs: draft.carbs, fat: draft.fat, missingMacros:draft.missingMacros, nutritionSource:draft.nutritionSource, nutritionSourceUrl:draft.nutritionSourceUrl, confidence: draft.confidence, servings })} className="flex-[2] py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2">Save <Icon name="check" size={18} /></Press>
         </div>
         <button type="button" className="meal-detail-edit" disabled={lookupState==='loading'} onClick={()=>{setDraft(entry);setServings(entry.servings);setLookupMessage(null);setEditingLog(false)}}>Cancel editing</button>
         </div>}

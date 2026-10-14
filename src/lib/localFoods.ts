@@ -33,6 +33,7 @@ export interface LocalFood {
   aka?: string[]
   nutritionSource?: string
   nutritionSourceUrl?: string
+  missingMacros?: ('protein' | 'carbs' | 'fat')[]
 }
 
 const CURATED_LOCAL_FOODS: LocalFood[] = [

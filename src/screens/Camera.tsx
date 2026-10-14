@@ -57,7 +57,7 @@ export function Camera() {
       setCameraReady(false)
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: facing }, aspectRatio: { ideal: orientation === 'portrait' ? 3/4 : 4/3 }, width: { ideal: 1280 }, height: { ideal: 1920 } },
+          video: { facingMode: { ideal: facing }, aspectRatio: { ideal: orientation === 'portrait' ? 3/4 : 4/3 }, width: { ideal: orientation === 'portrait' ? 960 : 1280 }, height: { ideal: orientation === 'portrait' ? 1280 : 960 } },
           audio: false,
         })
         if (cancelled) {
@@ -137,14 +137,25 @@ export function Camera() {
       return
     }
     const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth || 1280
-    canvas.height = video.videoHeight || 720
+    // Camera constraints are suggestions: crop exactly like the cover-fit viewfinder.
+    const sourceWidth = video.videoWidth
+    const sourceHeight = video.videoHeight
+    if (!sourceWidth || !sourceHeight) {
+      setCameraError('Camera is still warming up. Try again in a second.')
+      return
+    }
+    const ratio = orientation === 'portrait' ? 3 / 4 : 4 / 3
+    const cropWidth = Math.min(sourceWidth, sourceHeight * ratio)
+    const cropHeight = cropWidth / ratio
+    const scale = Math.min(1, 1280 / Math.max(cropWidth, cropHeight))
+    canvas.width = Math.max(1, Math.round(cropWidth * scale))
+    canvas.height = Math.max(1, Math.round(cropHeight * scale))
     const ctx = canvas.getContext('2d')
     if (!ctx) {
       setCameraError('Could not capture this frame. Add a photo instead.')
       return
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    ctx.drawImage(video, (sourceWidth - cropWidth) / 2, (sourceHeight - cropHeight) / 2, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height)
     await analyzePhoto(canvas.toDataURL('image/jpeg', 0.86))
   }
 
