@@ -5,7 +5,7 @@ import { activityById, caloriesFromMet, metForRun } from './activities'
 
 export const RACE_OPTIONS: { id: RaceType; label: string; km: number; weeks: number; presets: number[] }[] = [
   { id: '5k', label: '5K', km: 5, weeks: 8, presets: [20, 25, 30, 35] },
-  { id: '10k', label: '10K', km: 10, weeks: 10, presets: [45, 50, 60, 70] },
+  { id: '10k', label: '10K', km: 10, weeks: 8, presets: [45, 50, 60, 70] },
   { id: 'half-marathon', label: 'Half marathon', km: 21.1, weeks: 14, presets: [105, 120, 150, 180] },
   { id: 'marathon', label: 'Marathon', km: 42.2, weeks: 18, presets: [180, 240, 270, 300] },
 ]
@@ -52,7 +52,7 @@ export function minimumPlanWeeks(p:UserProfile) {
   const experienced=p.runExperience==='regular'
   if(p.raceType==='marathon')return experienced&&(p.runWeeklyKm??0)>=50&&p.bestRunDistanceKm>=25?12:16
   if(p.raceType==='half-marathon')return experienced&&(p.runWeeklyKm??0)>=30&&p.bestRunDistanceKm>=14?8:12
-  return p.raceType==='10k'?10:8
+  return 8
 }
 export function planWeeks(p: UserProfile) {
   if (p.raceDate && p.planStartDate) return Math.max(1, Math.min(52, Math.ceil((daysBetween(p.planStartDate, p.raceDate)+1)/7)))
@@ -91,6 +91,28 @@ export function raceDateForPlanStart(start: string, weeks: number) { return addD
 export function planPhase(week: number, weeks: number) {
   return week >= weeks-1 ? 'Taper & sharpen' : week <= Math.max(2,Math.floor(weeks*.25)) ? 'Build your base' : week <= Math.floor(weeks*.65) ? 'Develop endurance' : 'Race-specific practice'
 }
+/** Original FitCore workload policy, informed by published run/recover/peak/taper
+ * structures. These numerical bounds are heuristics, not Nike's algorithm. */
+export function runningBlock(p:UserProfile) {
+  const weeks=planWeeks(p),cap=planCapability(p)
+  const foundation=Boolean(p.runBaseOnly||weeks<minimumPlanWeeks(p)||cap.assessment.capacityWarning||(p.raceType==='half-marathon'&&(p.runWeeklyKm??0)<12)||(p.raceType==='marathon'&&(p.runWeeklyKm??0)<25))
+  const taperWeeks=foundation?0:p.raceType==='marathon'?3:p.raceType==='half-marathon'?2:1
+  const buildWeeks=Math.max(1,weeks-taperWeeks)
+  const ceiling=p.raceType==='5k'?8:p.raceType==='10k'?13:p.raceType==='half-marathon'?20:32
+  const entry=Math.max(1,Math.min(cap.bestKm,ceiling*.7))
+  const target=Math.min(ceiling,entry*Math.pow(1.08,Math.max(0,buildWeeks-1)))
+  const rate=buildWeeks>1?Math.pow(target/entry,1/(buildWeeks-1)):1
+  return {foundation,taperWeeks,buildWeeks,ceiling,entry,target,weeks: Array.from({length:weeks},(_,week)=>{
+    const feedback=[...(p.runWeekFeedback??[])].filter(f=>f.week<week).sort((a,b)=>b.week-a.week)[0]
+    const progress=feedback&&feedback.response!=='comfortable'?Math.min(week,Math.max(0,feedback.week)):week
+    const taper=week>=buildWeeks
+    // The final build week is the endurance peak; cutbacks cannot move it earlier.
+    const cutback=!taper&&(week+1)%4===0&&week!==buildWeeks-1
+    const taperFraction=taper?Math.max(.35,1-(week-buildWeeks+1)*.2):1
+    const longKm=(taper?target:Math.min(target,entry*Math.pow(rate,Math.min(progress,buildWeeks-1))))*(cutback?.8:1)*taperFraction
+    return {longKm,taper,cutback}
+  })}
+}
 function selectedWeekdays(p: UserProfile) {
   const days = [...new Set(p.runPreferredDays)].filter(d => Number.isInteger(d) && d>=0 && d<=6).sort((a,b)=>a-b).slice(0,trainingDays(p))
   for (const d of [1,3,5,6,0,4,2]) if(days.length < trainingDays(p) && !days.includes(d)) days.push(d)
@@ -122,11 +144,13 @@ function qualityWorkout(p:UserProfile,week:number,cap:ReturnType<typeof weekCapa
     return { title:'Easy Run · optional strides',detail:`${min} min conversational run/walk. If comfortable: 4 × 15 sec relaxed strides, 60–90 sec walking recovery. Never sprint.`,min,km:min*60/cap.easyPace,zone:'Easy' }
   }
   if ((week+1)%4===0) {
-    const km=cap.assessment.benchmarkKm<=10?cap.assessment.benchmarkKm:10
-    const pace=cap.assessment.benchmarkPace*Math.pow(km/cap.assessment.benchmarkKm,.06),min=20+km*pace/60
-    return {title:`Benchmark Run · ${km}K progress check`,detail:`10 min easy warm-up → ${km} km controlled timed run → 10 min easy cool-down. Record the result; skip if tired or unwell.`,min,km:km+20*60/cap.easyPace,zone:'Benchmark'}
+    return {title:'Recovery Run · lighter week',detail:'25 min relaxed conversational running. No timed test required. Keep this week easy; update your benchmark separately when recovered.',min:25,km:25*60/cap.easyPace,zone:'Easy'}
   }
   // Warm-up, repetitions, jog recoveries and cool-down are included in every total.
+  if(week%3===2){
+    const reps=Math.min(8,4+Math.floor(week/3)),min=20+reps*3
+    return {title:'Fartlek Run · controlled speed play',detail:`10 min easy warm-up → ${reps} × (1 min controlled faster running near ${formatPace(cap.intervalPace)} + 2 min easy jog) → 10 min easy cool-down. Slow down if effort is too high. Total ≈ ${min} min.`,min,km:20*60/cap.easyPace+reps*(60/cap.intervalPace+120/cap.easyPace),zone:'Intervals'}
+  }
   const tempo = week%2===1
   let reps:number,workMin:number,recoveryMin:number,title:string,pace:number
   if (tempo) {
@@ -157,31 +181,28 @@ export function generatePlan(p: UserProfile,weightKg:number): PlanSession[] {
   if (!p.planStartDate || !p.sports.includes('running')) return []
   const start=p.planStartDate,weeks=planWeeks(p),last=p.raceDate ?? addDays(start,weeks*7-1)
   if (daysBetween(start,last)<0 || daysBetween(start,last)>365) return []
-  const baseCap=planCapability(p),days=selectedWeekdays(p),longDay=days.includes(5)?5:days[days.length-1]
-  const foundation=Boolean(p.runBaseOnly||weeks<minimumPlanWeeks(p)||baseCap.assessment.capacityWarning||(p.raceType==='half-marathon'&&(p.runWeeklyKm??15)<12)||(p.raceType==='marathon'&&(p.runWeeklyKm??30)<25))
+  const days=selectedWeekdays(p),longDay=days.includes(5)?5:days[days.length-1]
+  const block=runningBlock(p),foundation=block.foundation
   const qualityDay=days.find(d=>d!==longDay && Math.min(Math.abs(d-longDay),7-Math.abs(d-longDay))>=2)
-  const peak=p.raceType==='5k'?8:p.raceType==='10k'?13:p.raceType==='half-marathon'?21:32
-  const initial=Math.min(peak,Math.max(1,baseCap.bestKm))
+  const initial=block.entry
   const out:PlanSession[]=[]
   for(let offset=0;offset<=daysBetween(start,last);offset++) {
     const date=addDays(start,offset),week=Math.floor(offset/7),day=mondayIndex(date)
-    const cap=weekCapability(p,week),remaining=daysBetween(date,last),taper=!foundation&&week>=weeks-(p.raceType==='marathon'?3:p.raceType==='half-marathon'?2:1)
+    const cap=weekCapability(p,week),remaining=daysBetween(date,last),{taper,cutback,longKm}=block.weeks[week]
     if(p.raceDate && date===p.raceDate) { out.push(runningSession(date,`${raceLabel(p.raceType)} event`,`${cap.raceKm} km. ${p.runGoalTimeMin ? `Goal ${cap.selectedGoalLabel}; ${formatPace(p.runGoalTimeMin*60/cap.raceKm)} is the required average, not a promise.` : 'Start controlled; finish comfortably.'}`,cap.raceKm*cap.targetPace/60,cap.raceKm,weightKg,'Event'));continue }
     const recentDays=p.runRecentDaysPerWeek
     const dayCount=recentDays!==undefined&&recentDays>0?Math.min(days.length,Math.max(2,recentDays+1+Math.floor(week/3))):days.length
     const priorityDays=[longDay,...(qualityDay!==undefined?[qualityDay]:[]),...days.filter(d=>d!==longDay&&d!==qualityDay)].slice(0,dayCount)
     if(!priorityDays.includes(day))continue
     if(p.raceDate && remaining<=2) { if(remaining===2)out.push(runningSession(date,'Easy Run · pre-race shakeout','15 min easy. Rest the day before your event.',15,15*60/cap.easyPace,weightKg,'Easy'));continue }
-    const cutback=(week+1)%4===0
-    const longKm=Math.min(peak,initial*Math.pow(1.08,Math.min(week,foundation?weeks-1:weeks-2)))*(cutback?.8:1)*(taper?.65:1)
     if(day===longDay) {
       const km=Math.round(longKm*10)/10,min=km*cap.easyPace/60
       out.push(runningSession(date,'Long Run',`${km} km conversational run/walk${p.runBenchmarkKnown?` · guide ${formatPace(cap.easyPace)}`:''}. Keep it easy; walk breaks are welcome.`,min,km,weightKg,'Easy','long'))
-      out[out.length-1].runBrief={pace:cap.known?formatPace(cap.easyPace):'Conversational',steps:[{label:'Distance',value:`${km} km`},{label:'Effort',value:'Full sentences · walk breaks OK'}],note:taper?'Taper: shorter, not faster.':cutback?'Recovery week: reduce distance.':'Build endurance, not speed.'}
-    } else if(day===qualityDay && !taper) {
+      out[out.length-1].runBrief={pace:cap.known?formatPace(cap.easyPace):'Conversational',steps:[{label:'Distance',value:`${km} km`},{label:'Effort',value:'Full sentences · walk breaks OK'}],note:taper?'Taper: reduce fatigue before race day; do not chase pace.':cutback?'Recovery week: absorb the previous training.':'Purpose: build endurance at a comfortable effort.'}
+    } else if(day===qualityDay && !taper && !foundation) {
       const q=qualityWorkout(p,week,cap);out.push(runningSession(date,q.title,q.detail,q.min,q.km,weightKg,q.zone))
       const parts=q.detail.split(' → ')
-      out[out.length-1].runBrief={pace:q.zone==='Benchmark'?'Controlled timed run':q.zone==='Easy'?(cap.known?formatPace(cap.easyPace):'Conversational'):formatPace(q.title.includes('goal-pace')?cap.selectedGoalPace!:q.zone==='Tempo'?p.raceType==='marathon'?Math.max(cap.tempoPace,cap.targetPace):cap.tempoPace:p.raceType==='5k'?cap.intervalPace:cap.tempoPace),steps:parts.length===3?[{label:'Warm-up',value:`10 min easy · ${cap.known?formatPace(cap.easyPace):'talk pace'}`},{label:'Main set',value:parts[1].replace(/ \(.*?\)/g,'')},{label:'Cool-down',value:'10 min easy'}]:[{label:'Run',value:`${Math.round(q.min)} min easy`},{label:'Optional strides',value:'4 × 15 sec · 60–90 sec walking recovery'}],note:q.zone==='Benchmark'?'Enter this result below to recalibrate future weeks.':cap.assessment.difficulty==='unrealistic'?'Conditional pace target. Repeat the week if effort is too hard.':'Controlled effort. Slow down in heat or fatigue.'}
+      out[out.length-1].runBrief={pace:q.zone==='Benchmark'?'Controlled timed run':q.zone==='Easy'?(cap.known?formatPace(cap.easyPace):'Conversational'):formatPace(q.title.includes('goal-pace')?cap.selectedGoalPace!:q.title.startsWith('Fartlek')?cap.intervalPace:q.zone==='Tempo'?p.raceType==='marathon'?Math.max(cap.tempoPace,cap.targetPace):cap.tempoPace:p.raceType==='5k'?cap.intervalPace:cap.tempoPace),steps:parts.length===3?[{label:'Warm-up',value:`10 min easy · ${cap.known?formatPace(cap.easyPace):'talk pace'}`},{label:'Main set',value:parts[1]},{label:'Cool-down',value:'10 min easy'}]:[{label:'Run',value:`${Math.round(q.min)} min easy`},{label:'Effort',value:cutback?'Relaxed; no timed test this recovery week':'Conversational; strides only if comfortable'}],note:q.zone==='Easy'?'Purpose: recover and build comfortable running volume.':q.title.startsWith('Fartlek')?'Purpose: practise changing gears without sprinting.':q.zone==='Tempo'?'Purpose: sustain controlled effort; do not race the workout.':'Purpose: develop speed with easy recoveries. Slow down in heat or fatigue.'}
     } else {
       const min=Math.min(45,Math.max(15,initial*cap.easyPace/60*.55+(week*1.5)))*(taper?.7:cutback?.8:1)
       out.push(runningSession(date,'Easy Run',`${Math.round(min)} min at conversational effort${p.runBenchmarkKnown?` · guide ${formatPace(cap.easyPace)}`:''}. Finish feeling you could do more.`,min,min*60/cap.easyPace,weightKg,'Easy'))
@@ -217,15 +238,43 @@ export function generatePlan(p: UserProfile,weightKg:number): PlanSession[] {
       s.runBrief={pace:cap.known?formatPace(cap.easyPace):'Conversational',steps:[{label:'Run',value:`${s.durationMin} min · ≈ ${s.distanceKm} km`},{label:'Effort',value:'Full sentences · walk breaks OK'}],note:isLong?'Longest easy session this week. Starting mileage limits its distance.':'Build easy volume first; run/walk is welcome.'}
     }
   }
+  // Validate the assembled taper against actual, already budgeted build work.
+  // Independent weekly multipliers must never create a rebound before the event.
+  if(block.taperWeeks) {
+    const runsInWeek=(week:number)=>out.filter(s=>Math.floor(daysBetween(start,s.date)/7)===week&&s.zone!=='Event')
+    const build=runsInWeek(block.buildWeeks-1)
+    const anchorTotal=build.reduce((sum,s)=>sum+(s.distanceKm??0),0)
+    const anchorLong=Math.max(0,...build.filter(s=>s.runKind==='long').map(s=>s.distanceKm??0))
+    let previousTotal=anchorTotal,previousLong=anchorLong
+    for(let week=block.buildWeeks;week<weeks;week++) {
+      const runs=runsInWeek(week),fraction=block.weeks[week].longKm/block.target
+      const total=runs.reduce((sum,s)=>sum+(s.distanceKm??0),0)
+      const totalLimit=Math.min(previousTotal,anchorTotal*fraction)
+      for(const s of runs) {
+        const before=s.distanceKm??0
+        let km=before*Math.min(1,totalLimit/Math.max(.01,total))
+        if(s.runKind==='long')km=Math.min(km,previousLong,anchorLong*fraction)
+        if(km<before) {
+          s.distanceKm=Math.round(km*100)/100
+          const pace=weekCapability(p,week).easyPace
+          s.durationMin=Math.max(1,Math.round(s.distanceKm*pace/60))
+          s.kcal=Math.round(weightKg*s.distanceKm*1.03)
+        }
+        s.runBrief={pace:weekCapability(p,week).known?formatPace(weekCapability(p,week).easyPace):'Conversational',steps:[{label:'Run',value:`${s.durationMin} min · ≈ ${s.distanceKm} km`},{label:'Effort',value:'Relaxed, full sentences; walk breaks OK'}],note:'Taper: less volume to arrive recovered. No make-up mileage or forced faster pace.'}
+      }
+      previousTotal=runs.reduce((sum,s)=>sum+(s.distanceKm??0),0)
+      previousLong=Math.max(0,...runs.filter(s=>s.runKind==='long').map(s=>s.distanceKm??0))
+    }
+  }
   // Expose a usable range for every scheduled run, including warm-up/recovery.
   // Widths are FitCore coaching heuristics, not physiological zone measurements.
   for(const session of out) {
+    session.kcal=Math.round(weightKg*(session.distanceKm??0)*1.03)
     const week=Math.floor(daysBetween(start,session.date)/7),cap=weekCapability(p,week)
-    if(!cap.known)continue
-    const easy=formatPaceRange(cap.easyPace,30)
-    if(!session.runBrief)session.runBrief={pace:session.zone==='Event'?formatPaceRange(cap.targetPace,10):easy,steps:[{label:'Distance',value:`${session.distanceKm} km`}],note:'Suggested range, not a performance guarantee.'}
+    const easy=cap.known?formatPaceRange(cap.easyPace,30):'Conversational'
+    if(!session.runBrief)session.runBrief={pace:session.zone==='Event'&&cap.known?formatPaceRange(cap.targetPace,10):easy,steps:[{label:'Distance',value:`${session.distanceKm} km`}],note:'Suggested range, not a performance guarantee.'}
     const brief=session.runBrief
-    if(session.zone==='Benchmark')brief.pace=`Start near ${formatPaceRange(cap.assessment.benchmarkPace*Math.pow((cap.assessment.benchmarkKm<=10?cap.assessment.benchmarkKm:10)/cap.assessment.benchmarkKm,.06),15)}`
+    if(cap.known&&session.zone==='Benchmark')brief.pace=`Start near ${formatPaceRange(cap.assessment.benchmarkPace*Math.pow((cap.assessment.benchmarkKm<=10?cap.assessment.benchmarkKm:10)/cap.assessment.benchmarkKm,.06),15)}`
     else {
       const paceMatch=brief.pace.match(/^(\d+):(\d{2})\/km$/)
       if(paceMatch)brief.pace=formatPaceRange(Number(paceMatch[1])*60+Number(paceMatch[2]),session.zone==='Easy'?30:session.zone==='Tempo'?15:10)
@@ -244,9 +293,17 @@ export function evaluateRunningPlan(p:UserProfile,sessions:PlanSession[]) {
   const minimumWeeks=minimumPlanWeeks(p),tooShort=planWeeks(p)<minimumWeeks
   const needsBase=Boolean(p.runBaseOnly||tooShort||assessRunning(p).capacityWarning||peakKm<expectedPeak)
   const missingLoad=p.runWeeklyKm===undefined||p.runRecentDaysPerWeek===undefined||!p.runExperience
-  const reason=missingLoad?'Recent weekly mileage, frequency and experience are missing.':tooShort?`This profile needs at least ${minimumWeeks} weeks for the selected block.`:needsBase?`This block peaks at ${peakKm.toFixed(1)} km long. It does not yet support the app’s ${expectedPeak} km endurance preparation checkpoint for ${raceLabel(p.raceType)}.`:null
+  const block=runningBlock(p),checks:string[]=[]
+  const weeks=Array.from({length:planWeeks(p)},(_,week)=>sessions.filter(s=>s.zone!=='Event'&&p.planStartDate&&Math.floor(daysBetween(p.planStartDate,s.date)/7)===week))
+  for(let week=block.buildWeeks;week<weeks.length;week++)if(week>0){
+    const sum=(runs:PlanSession[])=>runs.reduce((n,s)=>n+(s.distanceKm??0),0)
+    const long=(runs:PlanSession[])=>Math.max(0,...runs.filter(s=>s.runKind==='long').map(s=>s.distanceKm??0))
+    if(sum(weeks[week])>sum(weeks[week-1])+.1||long(weeks[week])>long(weeks[week-1])+.1)checks.push('The taper increases workload; review this block before using it.')
+  }
+  if(sessions.some(s=>!Number.isFinite(s.distanceKm)||s.distanceKm!<0||!Number.isFinite(s.durationMin)||s.durationMin<=0))checks.push('A session has invalid distance or duration.')
+  const reason=missingLoad?'Recent weekly mileage, frequency and experience are missing.':tooShort?`This profile needs at least ${minimumWeeks} weeks for the selected block.`:needsBase?`This block peaks at ${peakKm.toFixed(1)} km long. It does not yet support the app’s ${expectedPeak} km endurance preparation checkpoint for ${raceLabel(p.raceType)}.`:checks[0]??null
   return {needsBase,missingLoad,minimumWeeks,tooShort,peakKm,peakWeek:peak&&p.planStartDate?Math.floor(daysBetween(p.planStartDate,peak.date)/7)+1:null,expectedPeak,reason,
-    status:missingLoad?'Incomplete runner profile':needsBase?'Base-building · not race-ready':'Race build · readiness still needs review'}
+    checks,status:missingLoad?'Incomplete runner profile':needsBase?'Base-building · not race-ready':checks.length?'Plan needs review':'Race build · readiness still needs review'}
 }
 export function sessionsForWeek(sessions:PlanSession[],anchor:string) {
   const start=startOfWeek(anchor),end=addDays(start,7)

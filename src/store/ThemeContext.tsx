@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import './themes.css'
 
 export const THEMES = [
-  { id: 'classic', name: 'FitCore Blue+', description: 'Original blue & white, with a touch of coral.', colors: ['#ffffff', '#2453ee', '#ffab82'] },
+  { id: 'classic', name: 'FitCore Blue+', description: 'Original blue & white, with gold highlights.', colors: ['#ffffff', '#2453ee', '#eab845'] },
   { id: 'volt', name: 'Midnight Volt', description: 'Black canvas. Electric lime.', colors: ['#101310', '#1c211b', '#d5f66b'] },
   { id: 'rose', name: 'Rose Studio', description: 'Soft rose. Confident pink.', colors: ['#fcf5f8', '#ffffff', '#b52062'] },
   { id: 'dream', name: 'Daydream', description: 'Airy lavender. A calmer rhythm.', colors: ['#f6f4fc', '#ffffff', '#7151bd'] },

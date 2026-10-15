@@ -25,6 +25,15 @@ export interface Wearables {
 }
 
 export interface UserProfile {
+  /** Overrides affect only one date; completed exercise logs remain authoritative. */
+  strengthDaySettings?: Record<string, {
+    minutes?: 30 | 45 | 60; lighter?: boolean; swaps?: Record<string, string>
+    venue?: 'gym' | 'home'; equipment?: ('mat' | 'dumbbell' | 'bench' | 'kettlebell')[]
+    prescriptions?: Record<string, { sets: number; reps: number; rest: number }>
+    title?: string; movedFrom?: string; templateDate?: string; postponedTo?: string; skipCardio?: boolean
+    cardio?: { mode: 'walk' | 'run'; minutes: 10 | 15 | 20 | 30 }
+  }>
+  strengthFeedback?: { date: string; effort: 'easy' | 'right' | 'hard'; pain: boolean; exerciseIds: string[] }[]
   /** Explicit user-selected exercise order for a single calendar date. */
   strengthWorkouts?: Record<string, string[]>
   strengthCoach?: {
@@ -179,6 +188,8 @@ export interface DietTask {
 export type SessionType = 'run' | 'strength' | 'sport' | 'rest'
 
 export interface PlanSession {
+  /** Self-reported workout completion without measured sets/time/calories. */
+  completionOnly?: boolean
   coachKey?: string
   /** Structured workout type; display names must not drive planner logic. */
   runKind?: 'easy' | 'long' | 'tempo' | 'interval' | 'benchmark' | 'event'

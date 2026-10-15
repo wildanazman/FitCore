@@ -1,9 +1,12 @@
 import type { PlanSession, UserProfile } from '../types'
 import { ACTIVITIES, canUseEquipment, type ActivityDef } from './activities'
 import { addDays, daysBetween, mondayIndex, parseISO, startOfWeek, todayISO } from './date'
+import { quickWorkoutKey } from './quickWorkout'
+import { coachProfileForDate, swapCandidates } from './workoutAdaptation'
 
 export const COACH_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 type Pattern = 'push' | 'pull' | 'squat' | 'hinge' | 'shoulders' | 'core' | 'arms' | 'chestFly' | 'rearDelt' | 'biceps' | 'triceps' | 'unilateral' | 'calves' | 'lateral'
+type CoachExercise = {item:ActivityDef;key:string;sets:number;pattern:Pattern;reps:number;held:boolean;rest:number;recent?:PlanSession;logged?:PlanSession}
 const choices: Record<Pattern, { gym: string[]; home: string[] }> = {
   push: { gym: ['gym_chest_press', 'gym_db_bench'], home: ['home_db_bench_press', 'home_floor_press', 'home_kb_floor_press', 'home_bench_pushup', 'home_kneeling_pushup', 'home_pushup'] },
   pull: { gym: ['gym_lat_pulldown', 'gym_seated_row'], home: ['home_bench_row', 'home_db_bent_row', 'home_kb_row', 'home_bird_dog'] },
@@ -60,17 +63,18 @@ export function coachExercise(pattern: Pattern, profile: UserProfile, variant = 
   return eligible[Math.min(variant, Math.max(0, eligible.length - 1))]
 }
 export function coachDay(profile: UserProfile, date: string, sessions: PlanSession[]) {
+  profile=coachProfileForDate(profile,date)
   const prefs = profile.strengthCoach
   if (!prefs || !validCoachDays(prefs.days,prefs.split) || !prefs.clearance || profile.age < 18 || todayISO(parseISO(prefs.startDate)) !== prefs.startDate || todayISO(parseISO(date)) !== date) return null
   const days = [...prefs.days].sort((a,b) => a-b)
-  const index = days.indexOf(mondayIndex(date))
+  const index = days.indexOf(mondayIndex(profile.strengthDaySettings?.[date]?.templateDate??profile.strengthDaySettings?.[date]?.movedFrom??date))
   const week = Math.max(0, Math.floor(daysBetween(startOfWeek(prefs.startDate), startOfWeek(date))/7))
   let rest = index < 0 || date < prefs.startDate
   const split = coachSplit(profile), splitDay = split.days[index]
   const patterns: Pattern[] = rest ? [] : splitDay.patterns
   const count = prefs.minutes === 30 ? 4 : prefs.minutes === 45 ? 5 : 6
   const used = new Set<string>()
-  const exercises = patterns.slice(0,count).flatMap((pattern) => {
+  const exercises:CoachExercise[] = patterns.slice(0,count).flatMap((pattern) => {
     const item = Array.from({length:6},(_,variant)=>coachExercise(pattern,profile,variant)).find(candidate=>candidate&&!used.has(candidate.id))
     if (!item || used.has(item.id)) return []
     used.add(item.id)
@@ -134,17 +138,56 @@ export function coachDay(profile: UserProfile, date: string, sessions: PlanSessi
     rest = selected.length===0
     title = rest ? 'Recovery day' : 'Your custom workout'
   }
+  const settings = profile.strengthDaySettings?.[date]
+  let adapted = Boolean(settings?.venue)
+  for(const exercise of exercises){
+    const prescription=settings?.prescriptions?.[exercise.item.id]
+    if(prescription&&!exercise.logged)Object.assign(exercise,prescription)
+  }
+  if(settings?.title&&!rest)title=settings.title
+  for (const exercise of exercises) {
+    const replacement = settings?.swaps?.[exercise.item.id]
+    if (!replacement || exercise.logged) continue
+    const item = swapCandidates(exercise.item.id,profile,exercises.map(e=>e.item.id)).find(a=>a.id===replacement)
+    if (!item) continue
+    exercise.item=item; exercise.key=`${date}:${item.id}`
+    exercise.recent=sessions.filter(s=>s.completed&&s.date<date&&s.strengthLog?.exerciseId===item.id).sort((a,b)=>b.date.localeCompare(a.date))[0]
+    exercise.logged=sessions.find(s=>s.completed&&s.date===date&&(s.coachKey===exercise.key||s.strengthLog?.exerciseId===item.id))
+    adapted=true
+  }
+  // A routine edit/reset must not hide work already saved through the coach.
+  for(const logged of sessions.filter(s=>s.completed&&s.date===date&&s.strengthLog&&s.coachKey===`${date}:${s.strengthLog.exerciseId}`)) {
+    if(exercises.some(e=>e.item.id===logged.strengthLog!.exerciseId))continue
+    const item=ACTIVITIES.find(a=>a.id===logged.strengthLog!.exerciseId)
+    if(!item)continue
+    const held=logged.strengthLog!.mode==='hold'
+    exercises.push({item,key:logged.coachKey!,sets:logged.strengthLog!.sets.length,pattern:'core',reps:held?25:10,held,rest:120,recent:undefined,logged})
+    adapted=true
+  }
+  if(rest&&exercises.length){rest=false;title='Your logged workout'}
+  // Never remove completed work when adjusting this day's remaining workload.
+  if(settings?.lighter) for(const exercise of exercises) if(!exercise.logged){exercise.sets=Math.min(exercise.sets,2);adapted=true}
+  if(settings?.minutes && settings.minutes < prefs.minutes) {
+    while(estimateMinutes(false)>settings.minutes){
+      const reducible=[...exercises].reverse().find(e=>!e.logged&&e.sets>2)
+      if(reducible){reducible.sets--;adapted=true;continue}
+      const removable=[...exercises].reverse().find(e=>!e.logged&&exercises.indexOf(e)>=3)
+      if(removable){exercises.splice(exercises.indexOf(removable),1);adapted=true;continue}
+      break
+    }
+  }
   const retainedIds=new Set(exercises.map(e=>e.item.id))
-  const validPairs=customized?[]:supersetPairs.filter(pair=>retainedIds.has(pair.first)&&retainedIds.has(pair.second))
-  const validDrop=!customized&&dropSet&&retainedIds.has(dropSet.item.id)?dropSet.item.id:null
+  const validPairs=customized||adapted?[]:supersetPairs.filter(pair=>retainedIds.has(pair.first)&&retainedIds.has(pair.second))
+  const validDrop=!customized&&!adapted&&dropSet&&retainedIds.has(dropSet.item.id)?dropSet.item.id:null
   const nextSearchStart = date < prefs.startDate ? addDays(prefs.startDate,-1) : date
-  const cardioPrefs=prefs.gym?prefs.treadmill:undefined
+  const cardioPrefs=!settings?.skipCardio&&prefs.gym?(settings?.cardio?{...settings.cardio,days:[mondayIndex(date)]}:prefs.treadmill):undefined
   const cardioItem=cardioPrefs?.days.includes(mondayIndex(date))&&date>=prefs.startDate?ACTIVITIES.find(a=>a.id===`treadmill_${cardioPrefs.mode}`):undefined
   const cardio=cardioItem&&cardioPrefs?{item:cardioItem,minutes:cardioPrefs.minutes,key:`${date}:${cardioItem.id}`,logged:sessions.find(s=>s.completed&&s.date===date&&s.coachKey===`${date}:${cardioItem.id}`)}:null
-  return { title, shortTitle: rest ? cardio?'Cardio':'Rest' : customized?'Custom':splitDay.short, customized, split, exercises, cardio, supersetPairs: validPairs, dropSetExercise: validDrop, estimatedMinutes: rest?0:estimateMinutes(!customized),
-    volumeReason: customized?'You chose this exercise order. Sets are editable when logging; review recovery and session length. Coach-selected supersets and drop sets are disabled for this custom session.':prefs.experience==='new'?'Starter volume: 2 working sets to learn the movements. Warm-up sets are separate.':prefs.minutes===30?'Short session: prioritise the main lifts; accessories use less volume.':'Main lifts get 3–4 working sets; accessories and total volume stay within your time budget.',
+  const quickComplete = sessions.find(s=>s.completed&&s.completionOnly&&s.date===date&&s.coachKey===quickWorkoutKey(date))
+  return { title, shortTitle: rest ? cardio?'Cardio':'Rest' : customized?'Custom':splitDay?.short??'Workout', customized, adapted, split, exercises, cardio, supersetPairs: validPairs, dropSetExercise: validDrop, estimatedMinutes: rest?0:estimateMinutes(!customized&&!adapted),
+    volumeReason: customized?'You chose this exercise order. Review recovery and session length. Coach-selected supersets and drop sets are disabled.':prefs.experience==='new'?'Starter volume: 2 working sets to learn the movements. Warm-up sets are separate.':`This session uses ${exercises.reduce((n,e)=>n+e.sets,0)} working sets across ${exercises.length} exercises, balanced against your ${prefs.minutes}-minute time budget.`,
     rest, week, hardRun, recoveryWarning: !rest && ((days.length === 2 || !split.muscleDays && days.length === 3) && yesterdayStrength || split.tightRecovery),
-    completed: (exercises.length > 0 || Boolean(cardio)) && exercises.every(e => e.logged) && (!cardio || Boolean(cardio.logged)), gym: prefs.gym,
+    quickComplete, completed: Boolean(quickComplete) || (exercises.length > 0 || Boolean(cardio)) && exercises.every(e => e.logged) && (!cardio || Boolean(cardio.logged)), gym: prefs.gym,
     limitedPull: limitedPull && patterns.some(p=>p==='pull'||p==='rearDelt'), limitedExercises: !rest && exercises.length < Math.min(count,patterns.length),
-    nextDate: Array.from({length:7},(_,i)=>addDays(nextSearchStart,i+1)).find(day => days.includes(mondayIndex(day)))! }
+    nextDate: Array.from({length:21},(_,i)=>addDays(nextSearchStart,i+1)).find(day => profile.strengthWorkouts?.[day] ? profile.strengthWorkouts[day].length>0 : days.includes(mondayIndex(day)))??addDays(nextSearchStart,7) }
 }

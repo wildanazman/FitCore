@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { useApp } from '../store/AppContext'
@@ -13,7 +13,8 @@ import { shortDate, todayISO } from '../lib/date'
 import { dayFuel, tdee, toDisplayWeight, weightUnit } from '../lib/nutrition'
 import { dietDef, netCarbsOn, nowMinutes, windowState } from '../lib/diet'
 import type { DayFuel, FoodEntry } from '../types'
-import { FoodEditSheet } from './Food'
+import { RouteLoading } from '../components/Startup'
+const FoodEditSheet = lazy(() => import('./Food').then(m => ({ default: m.FoodEditSheet })))
 import './home.css'
 import { CoachToday } from '../components/StrengthCoach'
 import './home-premium.css'
@@ -124,7 +125,7 @@ export function Home() {
               {entry.kind === 'meal' && <button type="button" className="home-meal-detail-hit" aria-label={`View nutrition facts: ${entry.title}`} onClick={() => setSelectedFood(state.foods.find(food => food.id === entry.id) ?? null)} />}
               <span className="home-entry-symbol">{entry.photo ? <img src={entry.photo} alt="" /> : <Icon name={entry.kind === 'meal' ? 'restaurant' : entry.session?.icon ?? 'exercise'} size={22} />}</span>
               <div className="home-entry-copy"><strong>{entry.title}</strong><span>{entry.detail}{pastDay&&<span className={`home-entry-status ${entry.kind==='meal'||entry.session?.completed?'is-complete':''}`}>{entry.kind==='meal'?'Logged':entry.session?.completed?'Completed':'Not logged'}</span>}{entry.kind === 'meal' || entry.session?.loggedAt ? ` · ${time(entry.at)}` : ''}</span></div>
-              {entry.session && !entry.session.manual && canEditDay ? <motion.button type="button" className="home-session-check" aria-label={`${entry.session.completed ? 'Mark incomplete' : 'Mark complete'}: ${entry.title}`} aria-pressed={entry.session.completed} onClick={() => { if(canEditDay) toggleSession(entry.id) }} whileTap={reducedMotion ? undefined : { scale: 0.9 }}><Icon name={entry.session.completed ? 'check_circle' : 'radio_button_unchecked'} size={25} fill={entry.session.completed} /></motion.button> : <span className="home-entry-energy"><strong>{entry.session && !entry.session.completed ? '—' : entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? '—' : `${entry.kind === 'meal' ? '+' : '−'}${entry.kcal}`}</strong><small>{entry.session && !entry.session.completed ? 'not logged' : entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? 'not estimated' : 'kcal'}</small></span>}
+              {entry.session && !entry.session.manual && canEditDay ? <motion.button type="button" className="home-session-check" aria-label={`${entry.session.completed ? 'Mark incomplete' : 'Mark complete'}: ${entry.title}`} aria-pressed={entry.session.completed} onClick={() => { if(canEditDay) toggleSession(entry.id) }} whileTap={reducedMotion ? undefined : { scale: 0.9 }}><Icon name={entry.session.completed ? 'check_circle' : 'radio_button_unchecked'} size={25} fill={entry.session.completed} /></motion.button> : <span className="home-entry-energy"><strong>{entry.session?.completionOnly || entry.session && !entry.session.completed ? '—' : entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? '—' : `${entry.kind === 'meal' ? '+' : '−'}${entry.kcal}`}</strong><small>{entry.session?.completionOnly?'not recorded':entry.session && !entry.session.completed ? 'not logged' : entry.session?.strengthLog && !entry.session.strengthLog.calorieEstimate && entry.kcal === 0 ? 'not estimated' : 'kcal'}</small></span>}
             </div>) : <div className="home-journal-empty"><h3>{feed === 'activity' ? 'No activities logged' : feed === 'meal' ? 'No meals logged' : 'No entries yet'}</h3><p>{isToday?'Add what you eat or do. Your totals update here.':`Forgot to log on ${shortDate(date)}? You can still add it.`}</p><button type="button" onClick={() => { if(!canEditDay){setPastEditing(true);return} feed === 'activity' ? setActivityOpen(true) : nav(`/food?add=1&date=${date}`) }}>{!canEditDay?'Edit this day to add a log':feed === 'activity' ? 'Add an activity' : 'Find & log a meal'}<Icon name="arrow_forward" size={17} /></button></div>}
           </motion.div></AnimatePresence></div>
           {completed.length > 0 && <div className="home-movement-total"><Icon name="local_fire_department" size={19} /><span>{burned.toLocaleString()} kcal from {completed.length} completed activit{completed.length === 1 ? 'y' : 'ies'}</span></div>}
@@ -137,7 +138,7 @@ export function Home() {
         </section>
 
         {!weightHidden && <WeightFeedback date={date}/>}
-        {selectedFood && <FoodEditSheet key={selectedFood.id} entry={selectedFood} onClose={() => setSelectedFood(null)} onSave={patch => { updateFood(selectedFood.id, patch); setSelectedFood(null) }} onDelete={() => { removeFood(selectedFood.id); setSelectedFood(null) }}/>} 
+        {selectedFood && <Suspense fallback={<RouteLoading />}><FoodEditSheet key={selectedFood.id} entry={selectedFood} onClose={() => setSelectedFood(null)} onSave={patch => { updateFood(selectedFood.id, patch); setSelectedFood(null) }} onDelete={() => { removeFood(selectedFood.id); setSelectedFood(null) }}/></Suspense>} 
       </div>
     </div>
   </div>

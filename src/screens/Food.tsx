@@ -20,6 +20,7 @@ import { QUICK_FOODS } from '../lib/quickFoods'
 import { type LocalFood } from '../lib/localFoods'
 import { lookupFood, sourceLabel } from '../lib/foodLookup'
 import { FoodReferencePicker } from '../components/FoodReferencePicker'
+import { foodHistory } from '../lib/foodHistory'
 import type { DietWarning } from '../lib/diet'
 import type { FoodEntry } from '../types'
 import type { MealSlot } from '../types'
@@ -158,7 +159,7 @@ export function Food() {
           </div>
         </div>
       </Reveal>
-      {searchOpen && <SearchSheet date={today} initialQuery={searchParams.get('q') ?? ''} initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
+      {searchOpen && <SearchSheet date={today} balance={{remaining:fuel.remaining,proteinRemaining:Math.max(0,fuel.proteinTarget-fuel.protein),partial:incompleteNutrition>0}} initialQuery={searchParams.get('q') ?? ''} initialSlot={selectedSlot} onClose={closeSearch} onPick={addLocal} />}
       {chatImportOpen && <ChatFoodImport initialSlot={selectedSlot} onClose={() => setChatImportOpen(false)} onSave={addChatEstimate} />}
 
       {editing && (
@@ -173,12 +174,17 @@ export function Food() {
   )
 }
 
-function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: { date: string; initialQuery?: string; initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
+type MealBalance = { remaining:number; proteinRemaining:number; partial:boolean }
+function SearchSheet({ date, balance, initialQuery = '', initialSlot, onClose, onPick }: { date: string; balance:MealBalance; initialQuery?: string; initialSlot: MealSlot; onClose: () => void; onPick: (f: LocalFood, slot: MealSlot) => void }) {
+  const {state}=useApp()
   const reduced = useReducedMotion()
   const dialogRef = useDialogFocus(onClose)
   const [q,setQ] = useState(initialQuery)
   const [custom,setCustom] = useState(false)
   const [slot,setSlot] = useState<MealSlot>(initialSlot)
+  const [source,setSource] = useState<'search'|'recent'|'frequent'>('search')
+  const [historyQuery,setHistoryQuery] = useState('')
+  const history=source==='search'?[]:foodHistory(state.foods,source,date).filter(({food})=>!hasExcludedIngredients(food.name)&&food.name.toLowerCase().includes(historyQuery.toLowerCase().trim()))
   const [customDefaults,setCustomDefaults] = useState<{name:string;kcal:number|null;protein?:number;carbs?:number;fat?:number;serving?:string;note?:string;sourceLabel?:string;sourceUrl?:string}|null>(null)
   useEffect(()=>{if(custom){dialogRef.current?.scrollTo({top:0});dialogRef.current?.querySelector<HTMLElement>('#food-search-title')?.focus({preventScroll:true})}},[custom,dialogRef])
   return createPortal(<motion.div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={onClose} initial={reduced?false:{opacity:0}} animate={{opacity:1}}>
@@ -187,12 +193,15 @@ function SearchSheet({ date, initialQuery = '', initialSlot, onClose, onPick }: 
       <div className="flex items-center justify-between gap-sm mb-sm"><h2 id="food-search-title" tabIndex={-1} className="text-[24px] font-bold text-on-surface">{custom?'Review portion':'Search food & drinks'}</h2><button type="button" onClick={onClose} aria-label="Close food search" className="min-h-11 min-w-11 text-on-surface-variant"><Icon name="close" size={22}/></button></div>
       <p className="home-form-note">Logging for {date===todayISO()?'today':shortDate(date)}. Search → choose → check serving.</p>
       <div className="food-search-slots" role="group" aria-label="Meal to log">{(['breakfast','lunch','dinner','snack'] as const).map(option=><button key={option} type="button" aria-pressed={slot===option} onClick={()=>setSlot(option)}>{option}</button>)}</div>
-      {custom?<><button type="button" className="food-manual-fallback" onClick={()=>{setCustom(false);setCustomDefaults(null)}}><Icon name="arrow_back" size={18}/>Back to results</button><CustomFoodForm key={customDefaults?.name??'manual'} onSubmit={food=>onPick(food,slot)} defaults={customDefaults} defaultName={customDefaults?.name??q}/></>:<FoodReferencePicker initialQuery={q} onPick={item=>{setQ(item.name);setCustomDefaults({name:item.name,kcal:item.kcal,serving:item.serving,protein:item.protein,carbs:item.carbs,fat:item.fat,note:item.note,sourceLabel:item.sourceLabel,sourceUrl:item.sourceUrl});setCustom(true)}} onManual={name=>{setQ(name);setCustomDefaults(null);setCustom(true)}}/>}
+      {custom?<><button type="button" className="food-manual-fallback" onClick={()=>{setCustom(false);setCustomDefaults(null)}}><Icon name="arrow_back" size={18}/>Back to results</button><CustomFoodForm key={customDefaults?.name??'manual'} balance={balance} onSubmit={food=>onPick(food,slot)} defaults={customDefaults} defaultName={customDefaults?.name??q}/></>:<>
+        <div className="food-history-tabs" role="group" aria-label="Food search source">{(['search','recent','frequent'] as const).map(value=><button key={value} type="button" aria-pressed={source===value} onClick={()=>setSource(value)}>{value==='search'?'Search foods':value==='recent'?'Recent':'Frequent'}</button>)}</div>
+        {source==='search'?<FoodReferencePicker initialQuery={q} onPick={item=>{setQ(item.name);setCustomDefaults({name:item.name,kcal:item.kcal,serving:item.serving,protein:item.protein,carbs:item.carbs,fat:item.fat,note:item.note,sourceLabel:item.sourceLabel,sourceUrl:item.sourceUrl});setCustom(true)}} onManual={name=>{setQ(name);setCustomDefaults(null);setCustom(true)}}/>:<section className="food-history"><label>Find in your saved meals<input type="search" value={historyQuery} onChange={e=>setHistoryQuery(e.target.value)} placeholder="Search your history"/></label><p>{source==='recent'?'Your latest logged portions.':'Your most frequently logged portions.'} Select one to review before adding.</p>{history.length===0?<div className="food-history-empty"><Icon name="history" size={26}/><strong>{historyQuery?'No matching saved meals.':'Your meals will appear here.'}</strong><p>{historyQuery?'Try another name or search the food database.':'Log a meal once, then reuse the same portion next time.'}</p><button type="button" onClick={()=>setSource('search')}>Search foods</button></div>:history.map(({food,count})=><button type="button" key={food.id} className="food-history-row" onClick={()=>{setQ(food.name);setCustomDefaults({name:food.name,kcal:food.kcal*food.servings,protein:food.missingMacros?.includes('protein')?undefined:food.protein*food.servings,carbs:food.missingMacros?.includes('carbs')?undefined:food.carbs*food.servings,fat:food.missingMacros?.includes('fat')?undefined:food.fat*food.servings,serving:food.servings===1?food.portion??'1 saved portion':`${food.servings} × ${food.portion??'saved portion'}`,sourceLabel:food.nutritionSource??'Your saved food log',sourceUrl:food.nutritionSourceUrl,note:'Copied from your log. Check today’s portion before saving.'});setCustom(true)}}><span><strong>{food.name}</strong><small>{food.servings!==1?`${food.servings} × `:''}{food.portion??'1 saved portion'}</small><small>{source==='frequent'?`Logged ${count} ${count===1?'time':'times'}`:shortDate(food.date)}{food.missingMacros?.length?' · Partial nutrition':''}</small></span><span><strong>{Math.round(food.kcal*food.servings)} kcal</strong><Icon name="chevron_right" size={18}/></span></button>)}</section>}
+      </>}
     </motion.div>
   </motion.div>,document.body)
 }
 
-function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: LocalFood) => void; defaultName: string; defaults: { name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string; sourceLabel?: string; sourceUrl?: string } | null }) {
+function CustomFoodForm({ onSubmit, balance, defaultName, defaults }: { onSubmit: (f: LocalFood) => void; balance:MealBalance; defaultName: string; defaults: { name: string; kcal: number | null; protein?: number; carbs?: number; fat?: number; serving?: string; note?: string; sourceLabel?: string; sourceUrl?: string } | null }) {
   const [name, setName] = useState(defaultName)
   const [kcal, setKcal] = useState(defaults?.kcal == null ? '' : String(defaults.kcal))
   const [protein, setProtein] = useState(defaults?.protein == null ? '' : String(defaults.protein))
@@ -259,6 +268,7 @@ function CustomFoodForm({ onSubmit, defaultName, defaults }: { onSubmit: (f: Loc
         <p className="font-data-mono text-[11px] text-lime">Calories auto-filled from macros: {fromMacros} kcal (edit above to override).</p>
       )}
       {hasExcludedIngredients(name) && <p role="alert" className="food-source-error">This food is excluded by FitCore’s halal-only food policy.</p>}
+      {valid&&<section className="food-impact" aria-label="Meal impact preview" aria-live="polite"><h3>How this fits your day</h3><p>Preview only. Nothing is logged yet.</p><div><span>Calorie budget left</span><strong>{Math.round(balance.remaining)}<Icon name="arrow_forward" size={16}/>{Math.round(balance.remaining-kcalNum*amount)} <small>kcal</small></strong></div>{balance.remaining-kcalNum*amount<0&&<p>This portion would put you {Math.round(kcalNum*amount-balance.remaining)} kcal over your diet target—not necessarily over maintenance.</p>}<div><span>Protein still to log</span><strong>{protein.trim()===''?'Unknown for this food':`${Math.max(0,Math.round(balance.proteinRemaining-p*amount))} g${balance.partial?' or less':''}`}</strong></div>{balance.partial&&<p>Earlier meals have missing macros, so the protein gap may be overstated.</p>}</section>}
       <Press onClick={save} disabled={!valid} className="w-full py-3 rounded-full bg-lime text-on-lime font-metric-md flex items-center justify-center gap-2 disabled:opacity-40">
         <Icon name="check" size={18} /> Log this food
       </Press>

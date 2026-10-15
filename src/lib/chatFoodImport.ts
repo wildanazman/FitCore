@@ -105,4 +105,19 @@ export function parseChatFoodEstimate(raw: string): ChatFoodEstimate {
     caloriesCalculated, warning: [...warnings].join(' ') || null,
   }
 }
-export const CHAT_FOOD_PROMPT = 'Estimate my meal from my description or photo, including sauces and oil. Give the food name and ONE whole-meal total: calories (kcal), protein (g), carbs (g), fat (g). Plain English or Bahasa Melayu, bullets or a table are fine; JSON is optional. Explain the assumed portion and uncertainty. My meal: '
+export const CHAT_FOOD_PROMPT = `Tolong anggarkan nutrisi SATU hidangan yang saya makan berdasarkan penerangan atau gambar. Ambil kira nasi, lauk, sambal, sos dan minyak, tanpa mengira minyak dua kali. Jika portion tidak jelas, tanya saya dahulu. Bezakan lauk sahaja dengan set lengkap.
+
+Gunakan rujukan nutrisi yang sesuai jika tersedia. Jangan reka data rasmi restoran; nyatakan jika anggaran generik.
+
+Jawab dalam format ringkas ini untuk JUMLAH SELURUH portion yang saya makan, bukan per 100 g:
+Makanan: [nama hidangan]
+Portion: [kuantiti dan anggaran berat]
+Kalori: [angka] kcal
+Protein: [angka] g
+Carbs: [angka] g
+Fat: [angka] g
+Nota: [andaian portion dan ketidakpastian]
+
+Beri satu anggaran terbaik bagi setiap jumlah. Jika tidak dapat dianggarkan, nyatakan tidak tersedia, bukan 0. Tidak perlu JSON.
+
+Makanan saya: [GANTI INI — contoh: nasi putih 1 cawan, ayam gepuk 1 paha, tempe 2 keping dan sambal 1 sudu besar. Saya makan semuanya.]`

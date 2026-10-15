@@ -1,0 +1,47 @@
+.coach-day-fit,.coach-swap,.coach-feedback { color:var(--palette-ink); border:1px solid var(--palette-line); border-radius:16px; background:var(--palette-surface); margin:18px 0; }
+.coach-day-fit summary { min-height:68px; padding:14px 18px; display:flex; align-items:center; gap:12px; cursor:pointer; list-style:none; font-weight:750; }
+.coach-day-fit summary::-webkit-details-marker { display:none; }
+.coach-day-fit summary>span:nth-child(2) { flex:1; }
+.coach-day-fit summary small { display:block; font-size:12px; color:var(--palette-muted); margin-top:4px; font-weight:500; }
+.coach-day-fit-body,.coach-swap,.coach-feedback { padding:20px; }
+.coach-day-fit-body { border-top:1px solid var(--palette-line); }
+.coach-day-fit fieldset,.coach-feedback fieldset { border:0; margin:0; padding:0; min-width:0; }
+.coach-day-fit legend,.coach-feedback legend { font-size:13px; font-weight:700; margin-bottom:10px; }
+.coach-choice-row { display:flex; flex-wrap:wrap; gap:8px; }
+.coach-day-fit-body>fieldset+fieldset { margin-top:20px; }
+.coach-choice-row label { display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 12px; border:1px solid var(--palette-line); border-radius:10px; font-size:13px; cursor:pointer; }
+.coach-choice-row input { accent-color:var(--palette-accent); width:18px; height:18px; }
+.coach-day-fit fieldset>small { display:block; color:var(--palette-muted); font-size:12px; line-height:1.5; margin-top:10px; }
+.coach-day-fit .coach-postpone { border-top:1px solid var(--palette-line); padding-top:20px; margin-top:20px; }
+.coach-postpone>label { display:block; font-size:13px; font-weight:650; }
+.coach-postpone input[type="date"] { display:block; box-sizing:border-box; width:100%; min-width:0; max-width:100%; min-height:48px; margin-top:8px; padding:10px; border:1px solid var(--palette-line); border-radius:10px; background:var(--palette-surface); color:var(--palette-ink); font:inherit; }
+.coach-postpone button:disabled { opacity:.5; cursor:not-allowed; }
+.coach-day-fit button { transition:none; }
+.coach-workspace .coach-session .coach-day-fit button:focus-visible { outline:2px solid var(--palette-accent); outline-offset:3px; }
+.coach-day-fit input:focus-visible { outline:2px solid var(--palette-accent); outline-offset:3px; }
+.coach-choice-row button { min-height:44px; flex:1; padding:10px 12px; border:1px solid var(--palette-line); border-radius:10px; font-size:13px; color:var(--palette-ink); background:var(--palette-surface); }
+.coach-choice-row button[aria-pressed="true"],.coach-swap-options button[aria-pressed="true"] { background:var(--palette-tint); color:var(--palette-accent); border-color:var(--palette-accent); }
+.coach-volume-switch { display:flex; gap:12px; align-items:flex-start; padding:18px 0; font-size:14px; cursor:pointer; }
+.coach-volume-switch input { width:20px; height:20px; flex-shrink:0; margin-top:2px; accent-color:var(--palette-accent); }
+.coach-volume-switch small { display:block; margin-top:4px; color:var(--palette-muted); font-size:12px; line-height:1.5; }
+.coach-day-fit p,.coach-swap p,.coach-feedback p { font-size:13px; line-height:1.65; color:var(--palette-muted); }
+.coach-swap header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+.coach-swap header small,.coach-feedback-eyebrow { color:var(--palette-accent); font-size:11px; font-weight:750; letter-spacing:.04em; }
+.coach-swap h3,.coach-feedback h3 { margin:8px 0 12px; font-size:22px; line-height:1.2; letter-spacing:-.025em; }
+.coach-swap header button { flex-shrink:0; min-width:44px; min-height:44px; }
+.coach-swap-search { display:block; font-size:12px; font-weight:700; margin:20px 0 12px; }
+.coach-swap-search input { display:block; width:100%; margin-top:8px; min-height:46px; padding:10px 12px; background:var(--palette-surface); border:1px solid var(--palette-line); border-radius:10px; color:var(--palette-ink); }
+.coach-swap-options { display:grid; gap:8px; max-height:320px; overflow:auto; }
+.coach-swap-options button { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; text-align:left; border:1px solid var(--palette-line); border-radius:12px; min-height:68px; }
+.coach-swap-options strong { font-size:14px; display:block; }
+.coach-swap-options small { display:block; font-size:12px; color:var(--palette-muted); margin-top:5px; }
+.coach-swap-confirm,.coach-feedback-next { border-top:1px solid var(--palette-line); margin-top:20px; padding-top:16px; }
+.coach-feedback-next>strong { font-size:14px; }
+.coach-day-fit button:focus-visible,.coach-swap button:focus-visible,.coach-feedback button:focus-visible { outline:2px solid var(--palette-accent); outline-offset:3px; }
+.workout-voice { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding-bottom:16px; }
+.workout-voice button { min-height:44px; padding:8px 12px; border:1px solid var(--palette-line); border-radius:10px; font-size:13px; }
+.workout-voice small { font-size:12px; color:var(--palette-muted); }
+.workout-next-step { padding:16px 18px; margin:12px 0; border-left:3px solid var(--palette-gold-ink); background:var(--palette-gold-bg); color:var(--palette-gold-ink); border-radius:0 12px 12px 0; }
+.workout-next-step>strong { font-size:14px; }
+.workout-next-step p { margin:8px 0 0; color:inherit; font-size:13px; }
+@media(max-width:380px){.coach-choice-row button{flex-basis:100%}.coach-swap,.coach-feedback,.coach-day-fit-body{padding:16px}}

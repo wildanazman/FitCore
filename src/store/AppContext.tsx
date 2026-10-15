@@ -4,8 +4,10 @@ import { clearState, emptyState, loadState, saveState, seedForProfile, persistIm
 import { generatePlan, scheduledRunKey } from '../lib/plan'
 import { latestMeasured } from '../lib/body'
 import { togglePlannedTask } from '../lib/dietPlanner'
+import { setQuickWorkout } from '../lib/quickWorkout'
 
 type Action =
+  | { type: 'quickWorkout'; date:string; title:string; done:boolean }
   | { type: 'restore'; state: AppState }
   | { type: 'acknowledgeStreak'; days: number[] }
   | { type: 'onboard'; profile: UserProfile }
@@ -33,6 +35,7 @@ function currentWeight(state: AppState): number {
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'quickWorkout': return {...state,sessions:setQuickWorkout(state.sessions,action.date,action.title,action.done)}
     case 'restore': return action.state
     case 'acknowledgeStreak':
       return { ...state, streakMilestonesSeen: [...new Set([...(state.streakMilestonesSeen ?? []), ...action.days])] }
@@ -129,6 +132,7 @@ interface Ctx {
   addPhoto: (photo: ProgressPhoto) => void
   removePhoto: (id: string) => void
   addSession: (session: PlanSession) => void
+  setWorkoutComplete: (date:string, title:string, done:boolean) => void
   removeSession: (id: string) => void
   toggleSession: (id: string) => void
   addDietTask: (task: DietTask) => void
@@ -166,6 +170,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addPhoto: (photo) => dispatch({ type: 'addPhoto', photo }),
       removePhoto: (id) => dispatch({ type: 'removePhoto', id }),
       addSession: (session) => dispatch({ type: 'addSession', session }),
+      setWorkoutComplete: (date,title,done) => dispatch({ type: 'quickWorkout', date,title,done }),
       removeSession: (id) => dispatch({ type: 'removeSession', id }),
       toggleSession: (id) => dispatch({ type: 'toggleSession', id }),
       addDietTask: (task) => dispatch({ type: 'addDietTask', task }),

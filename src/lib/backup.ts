@@ -62,6 +62,7 @@ export function parseBackup(raw: string): Backup {
       if(entry.components!==undefined)assert(Array.isArray(entry.components)&&entry.components.every(item=>record(item)&&typeof item.name==='string'&&typeof item.kcal==='number'&&['protein','carbs','fat','grams'].every(k=>item[k]===undefined||typeof item[k]==='number')))
       for(const field of ['photo','nutritionSource','nutritionSourceUrl','foodEntryId','completedAt','source'])if(entry[field]!==undefined)assert(typeof entry[field]==='string')
       if(key==='sessions') {
+        if(entry.completionOnly!==undefined)assert(typeof entry.completionOnly==='boolean')
         assert(['run','strength','sport','rest'].includes(String(entry.type)) && ['running','strength','sport','manual'].includes(String(entry.plan)))
         if(entry.runBrief!==undefined)assert(record(entry.runBrief) && typeof entry.runBrief.pace==='string' && typeof entry.runBrief.note==='string' && Array.isArray(entry.runBrief.steps) && entry.runBrief.steps.every(s=>record(s)&&typeof s.label==='string'&&typeof s.value==='string'))
         if(entry.strengthLog!==undefined)assert(record(entry.strengthLog) && Array.isArray(entry.strengthLog.sets) && entry.strengthLog.sets.every(s=>record(s)&&typeof s.reps==='number'&&typeof s.weightKg==='number'))
@@ -79,6 +80,28 @@ export function parseBackup(raw: string): Backup {
   if(p.strengthCoach!==undefined){const c=p.strengthCoach;assert(record(c)&&typeof c.gym==='boolean'&&typeof c.clearance==='boolean'&&['new','regular'].includes(String(c.experience))&&[30,45,60].includes(Number(c.minutes))&&['balanced','muscle'].includes(String(c.focus))&&(c.split===undefined||['balanced','muscle-days'].includes(String(c.split)))&&(c.techniques===undefined||['auto','straight'].includes(String(c.techniques)))&&typeof c.startDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(c.startDate)&&todayISO(parseISO(c.startDate))===c.startDate&&Array.isArray(c.days)&&c.days.length>=2&&c.days.length<=5&&c.days.every(d=>typeof d==='number'&&Number.isInteger(d)&&d>=0&&d<=6)&&new Set(c.days).size===c.days.length&&validCoachDays(c.days as number[],c.split as 'balanced'|'muscle-days'|undefined))}
   if(state.streakMilestonesSeen!==undefined)assert(Array.isArray(state.streakMilestonesSeen)&&state.streakMilestonesSeen.every(v=>typeof v==='number'))
   if(p.strengthWorkouts!==undefined){assert(record(p.strengthWorkouts)&&Object.keys(p.strengthWorkouts).length<=1000);for(const [date,ids] of Object.entries(p.strengthWorkouts)){assert(/^\d{4}-\d{2}-\d{2}$/.test(date)&&todayISO(parseISO(date))===date&&Array.isArray(ids)&&ids.length<=30&&ids.every(id=>typeof id==='string'&&id.length<=100)&&new Set(ids).size===ids.length)}}
+  const validStrengthDate=(date:string)=>/^\d{4}-\d{2}-\d{2}$/.test(date)&&todayISO(parseISO(date))===date
+  if(p.strengthDaySettings!==undefined){
+    assert(record(p.strengthDaySettings)&&Object.keys(p.strengthDaySettings).length<=1000)
+    for(const [date,settings] of Object.entries(p.strengthDaySettings)){
+      assert(validStrengthDate(date)&&record(settings))
+      if(settings.minutes!==undefined)assert([30,45,60].includes(Number(settings.minutes))&&typeof settings.minutes==='number')
+      if(settings.lighter!==undefined)assert(typeof settings.lighter==='boolean')
+      if(settings.venue!==undefined)assert(['home','gym'].includes(String(settings.venue)))
+      if(settings.equipment!==undefined)assert(Array.isArray(settings.equipment)&&settings.equipment.length<=4&&settings.equipment.every(g=>['mat','dumbbell','bench','kettlebell'].includes(String(g))))
+      for(const key of ['movedFrom','templateDate','postponedTo'])if(settings[key]!==undefined)assert(typeof settings[key]==='string'&&validStrengthDate(settings[key] as string))
+      if(settings.title!==undefined)assert(typeof settings.title==='string'&&settings.title.length<=200)
+      if(settings.skipCardio!==undefined)assert(typeof settings.skipCardio==='boolean')
+      if(settings.cardio!==undefined)assert(record(settings.cardio)&&['walk','run'].includes(String(settings.cardio.mode))&&[10,15,20,30].includes(Number(settings.cardio.minutes)))
+      if(settings.prescriptions!==undefined){assert(record(settings.prescriptions)&&Object.keys(settings.prescriptions).length<=30);for(const [id,prescription] of Object.entries(settings.prescriptions)){assert(id.length<=100&&record(prescription));for(const key of ['sets','reps','rest'])assert(typeof prescription[key]==='number'&&Number.isInteger(prescription[key])&&Number(prescription[key])>0&&Number(prescription[key])<=(key==='sets'?20:key==='reps'?600:900))}}
+      if(settings.swaps!==undefined){assert(record(settings.swaps)&&Object.keys(settings.swaps).length<=30);for(const [id,replacement] of Object.entries(settings.swaps))assert(id.length<=100&&typeof replacement==='string'&&replacement.length<=100)}
+    }
+  }
+  if(p.strengthFeedback!==undefined){
+    assert(Array.isArray(p.strengthFeedback)&&p.strengthFeedback.length<=1000)
+    const dates=new Set<string>()
+    for(const feedback of p.strengthFeedback){assert(record(feedback)&&typeof feedback.date==='string'&&validStrengthDate(feedback.date)&&!dates.has(feedback.date));dates.add(feedback.date);assert(['easy','right','hard'].includes(String(feedback.effort))&&typeof feedback.pain==='boolean'&&Array.isArray(feedback.exerciseIds)&&feedback.exerciseIds.length<=30&&feedback.exerciseIds.every(id=>typeof id==='string'&&id.length<=100))}
+  }
   if(record(p.strengthCoach)&&p.strengthCoach.treadmill!==undefined){const t=p.strengthCoach.treadmill;assert(record(t)&&['walk','run'].includes(String(t.mode))&&[10,15,20,30].includes(Number(t.minutes))&&Array.isArray(t.days)&&t.days.length>0&&t.days.length<=7&&t.days.every(d=>Number.isInteger(d)&&Number(d)>=0&&Number(d)<=6)&&new Set(t.days).size===t.days.length)}
   return { format:'fitcore-backup', version:1, exportedAt:typeof data.exportedAt==='string'?data.exportedAt:'', theme:typeof data.theme==='string'?data.theme:'classic', state: { ...(state as unknown as AppState), profile: { ...(p as unknown as AppState['profile']), anthropicApiKey:'', geminiModel:geminiModelOrDefault(p.geminiModel) } } }
 }

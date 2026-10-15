@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -9,19 +9,47 @@
     <link rel="icon" type="image/svg+xml" href="/fitcore-icon.svg?v=2" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/fitcore-apple-180-v2.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&family=Inter:wght@400;500;700&family=JetBrains+Mono:wght@500&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" href="/fonts/hanken-grotesk.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      html,body{margin:0;background:#f4f6fa;color:#17253a}
+      #app-startup{box-sizing:border-box;min-height:100dvh;display:grid;place-content:center;padding:32px;font:16px/1.5 system-ui,sans-serif}
+      #app-startup[hidden]{display:none}
+      #app-startup strong{color:#2453ee;font-size:28px;letter-spacing:-.03em}
+      #app-startup p{max-width:32ch;margin:12px 0;color:#627089}
+      #app-startup button{background:#2453ee;color:white;border:0;border-radius:12px;min-height:44px;padding:12px 20px;font:600 16px system-ui,sans-serif}
+      #app-startup button[hidden]{display:none}
+    </style>
   </head>
   <body>
+    <div id="app-startup" role="status" aria-live="polite">
+      <strong>fitcore.</strong>
+      <p id="startup-message">Opening your dashboard…</p>
+      <button id="startup-retry" type="button" hidden>Retry opening FitCore</button>
+      <noscript>Enable JavaScript to open FitCore. Your saved logs have not been removed.</noscript>
+    </div>
     <div id="root"></div>
+    <script>
+      (() => {
+        const panel = document.getElementById('app-startup');
+        const message = document.getElementById('startup-message');
+        const retry = document.getElementById('startup-retry');
+        let ready = false;
+        function stalled() {
+          if (ready) return;
+          message.textContent = 'Taking longer than usual. Check your connection and retry. Retrying does not clear your saved logs.';
+          retry.hidden = false;
+        }
+        const timer = setTimeout(stalled, 12000);
+        window.addEventListener('fitcore:ready', () => {
+          ready = true; clearTimeout(timer); panel.hidden = true;
+        }, { once: true });
+        window.addEventListener('error', event => {
+          if (event.target instanceof HTMLScriptElement || event.target instanceof HTMLLinkElement) stalled();
+        }, true);
+        window.addEventListener('pageshow', event => { if (event.persisted && !ready) stalled(); });
+        retry.addEventListener('click', () => window.location.reload());
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
